@@ -23,7 +23,7 @@ export function AppShell({ activeStep, children, userLabel, planLabel }: Props) 
         <div className="sidebar-brand">
           <BrandLogo variant="white" className="sidebar-logo-full" />
           <BrandLogo variant="icon" className="sidebar-logo-icon" />
-          <span>NEW APP</span>
+          {/*<span>NEW APP</span>*/}
         </div>
 
         <div className="sidebar-section-title">Setup</div>

@@ -265,15 +265,15 @@ function AccountStep({ onCreated }: { onCreated: (session: LocalSession) => void
       <div className="account-hero">
         <BrandLogo variant="white" className="account-hero-logo" />
         <span className="eyebrow light">Benchmark v2</span>
-        <h1>Build the account foundation first.</h1>
+        <h1>AI-based weather forecasts.</h1>
         <p>
-          This local onboarding flow talks directly to your Spring Boot API. It creates a real user,
-          personal organization, subscription and default site in PostgreSQL before you configure a station.
+          Location-specific forecasts, analytics and alerts.
         </p>
         <div className="hero-points">
-          <div><ShieldCheck size={18} /> Uses your local SUPERADMIN token</div>
-          <div><Database size={18} /> Writes to the real local PostgreSQL schema</div>
-          <div><MapPin size={18} /> Continues into coordinate/address/map station setup</div>
+          <div><ShieldCheck size={18}/> Create an account</div>
+          <div><MapPin size={18}/> Connect your station</div>
+          <div><Database size={18}/> Get forecasts and seasonal projections</div>
+
         </div>
       </div>
 
@@ -281,7 +281,7 @@ function AccountStep({ onCreated }: { onCreated: (session: LocalSession) => void
         <div className="card-heading">
           <div>
             <span className="eyebrow">Step 1 of 4</span>
-            <h2>Create a local test user</h2>
+            <h2>Create an account</h2>
           </div>
           <div className={`health-dot ${health}`} title="Backend health" />
         </div>
@@ -289,7 +289,7 @@ function AccountStep({ onCreated }: { onCreated: (session: LocalSession) => void
         {error && <ErrorBanner message={error} />}
 
         <div className="field-grid full">
-          <Field label="API base URL">
+          <Field label="Local API base URL">
             <div className="input-with-action">
               <input value={apiBaseUrl} onChange={(e) => setApiBaseUrl(e.target.value)} required />
               <button type="button" className="mini-button" onClick={() => void checkHealth()}>Check</button>
@@ -300,7 +300,7 @@ function AccountStep({ onCreated }: { onCreated: (session: LocalSession) => void
               type="password"
               value={localAuthToken}
               onChange={(e) => setLocalAuthToken(e.target.value)}
-              placeholder="replace-with-a-long-random-development-secret"
+              placeholder="local-development-secret"
               required
             />
           </Field>
@@ -347,7 +347,7 @@ function AccountStep({ onCreated }: { onCreated: (session: LocalSession) => void
 
         <div className="dev-note">
           <CircleAlert size={18} />
-          The local token is stored in browser localStorage only for this developer flow. Do not use this mechanism in production.
+          The local token is stored in browser localStorage only for this developer flow. For testing only, this mechanism will be replaced in production.
         </div>
 
         <button className="primary-button wide" disabled={working || !localAuthToken}>
