@@ -33,21 +33,30 @@ function validateUrl(key: string, value: string, issues: ConfigurationIssue[]): 
   }
 }
 
+function getFrontendOrigin(): string {
+  if (typeof window === 'undefined' || !window.location?.origin) {
+    return '';
+  }
+
+  return window.location.origin.replace(/\/+$/, '');
+}
+
 export function loadAppConfig(): AppConfigResult {
+  const frontendOrigin = getFrontendOrigin();
   const values = {
     apiBaseUrl: readValue(import.meta.env.VITE_API_BASE_URL),
     cognitoDomain: readValue(import.meta.env.VITE_COGNITO_DOMAIN),
     cognitoClientId: readValue(import.meta.env.VITE_COGNITO_CLIENT_ID),
-    cognitoRedirectUri: readValue(import.meta.env.VITE_COGNITO_REDIRECT_URI),
-    cognitoLogoutUri: readValue(import.meta.env.VITE_COGNITO_LOGOUT_URI),
+    cognitoRedirectUri: frontendOrigin ? `${frontendOrigin}/auth/callback` : '',
+    cognitoLogoutUri: frontendOrigin ? `${frontendOrigin}/` : '',
   };
 
   const required: Array<[keyof typeof values, string]> = [
     ['apiBaseUrl', 'VITE_API_BASE_URL'],
     ['cognitoDomain', 'VITE_COGNITO_DOMAIN'],
     ['cognitoClientId', 'VITE_COGNITO_CLIENT_ID'],
-    ['cognitoRedirectUri', 'VITE_COGNITO_REDIRECT_URI'],
-    ['cognitoLogoutUri', 'VITE_COGNITO_LOGOUT_URI'],
+    ['cognitoRedirectUri', 'window.location.origin'],
+    ['cognitoLogoutUri', 'window.location.origin'],
   ];
 
   const issues: ConfigurationIssue[] = [];
@@ -60,8 +69,8 @@ export function loadAppConfig(): AppConfigResult {
 
   validateUrl('VITE_API_BASE_URL', values.apiBaseUrl, issues);
   validateUrl('VITE_COGNITO_DOMAIN', values.cognitoDomain, issues);
-  validateUrl('VITE_COGNITO_REDIRECT_URI', values.cognitoRedirectUri, issues);
-  validateUrl('VITE_COGNITO_LOGOUT_URI', values.cognitoLogoutUri, issues);
+  validateUrl('Cognito redirect URI', values.cognitoRedirectUri, issues);
+  validateUrl('Cognito logout URI', values.cognitoLogoutUri, issues);
 
   if (issues.length > 0) {
     return { ok: false, issues };

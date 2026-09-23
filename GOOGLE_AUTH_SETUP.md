@@ -78,7 +78,7 @@ Logout URL:
 http://localhost:5173/
 ```
 
-For the deployed frontend, add the corresponding CloudFront/custom-domain URLs too.
+For the deployed frontend, add the custom-domain URLs too. The application derives its callback and logout URLs from `window.location.origin`, so localhost automatically uses the localhost URLs above and production at `https://weather.benchmarklabs.com` automatically uses `https://weather.benchmarklabs.com/auth/callback` and `https://weather.benchmarklabs.com/`.
 
 ## 4. Web application configuration
 

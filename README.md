@@ -450,6 +450,15 @@ https://api-test.benchmarklabs.com
 
 and uses the Benchmark production Cognito user pool/browser client.
 
+The Cognito callback and logout URLs are **not** configured with Vite environment variables. They are derived at runtime from `window.location.origin`, so the same build logic works correctly on localhost and on the deployed custom domain:
+
+```text
+Local callback:      http://localhost:5173/auth/callback
+Production callback: https://weather.benchmarklabs.com/auth/callback
+```
+
+The corresponding logout URL is the current browser origin with a trailing `/`. Both origins must be allowed on the Cognito browser client.
+
 Do not commit secret values to `.env`.
 
 ---
