@@ -1,3 +1,34 @@
 /apps/web/node_modules/
 /node_modules/
-/apps/web/node_modules/
+
+/apps/web/node_modules/.bin/
+/apps/web/node_modules/.vite/
+/apps/web/node_modules/.vite-temp/
+/apps/web/node_modules/@benchmark/
+/apps/web/node_modules/@types/
+/apps/web/node_modules/@vitejs/
+/apps/web/node_modules/leaflet/
+/apps/web/node_modules/lucide-react/
+/apps/web/node_modules/react/
+/apps/web/node_modules/react-dom/
+/apps/web/node_modules/typescript/
+/apps/web/node_modules/vite/
+
+# Dependencies
+node_modules/
+
+# Build/cache output
+dist/
+.vite/
+
+# IDE
+.idea/
+
+# Patch/merge backup files
+*.orig
+
+# IDE
+.idea/
+
+# Patch/merge backup files
+*.orig
