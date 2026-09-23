@@ -1,0 +1,11 @@
+:root {
+  --benchmark-navy: #324155;
+  --benchmark-navy-deep: #273547;
+  --benchmark-red: #f23535;
+  --benchmark-blue: #365f88;
+  --benchmark-green: #008a70;
+  --benchmark-bg: #f5f7f9;
+  --benchmark-line: #dde4eb;
+  --benchmark-text-muted: #778396;
+  --benchmark-shadow: 0 12px 32px rgba(37, 49, 66, 0.08);
+}

@@ -1,66 +1,545 @@
-# Benchmark Web v2 — local onboarding foundation
+# Benchmark UI
 
-This is a clean React/Vite starting point for the new Benchmark frontend. The visual language intentionally follows the legacy Benchmark application (navy `#324155`, Benchmark red `#F23535`, compact dashboard controls, Leaflet map behavior) while the application structure and API flow target the new `benchmark-api` model.
+Benchmark Labs frontend application.
 
-## What is implemented
+The first application slice intentionally stays small:
 
-End-to-end local development flow:
+1. Sign up or log in through Amazon Cognito using OAuth 2.0 Authorization Code + PKCE, including Google federation.
+2. Call `GET /api/v1/me` with the Cognito **access token**.
+3. On first login, the backend provisions the Benchmark user, PERSONAL organization, OWNER membership, FREE subscription, entitlements, and default site.
+4. Open **Settings → Stations**.
+5. Load the user's sites and stations.
+6. Create a weather station using a name and latitude/longitude, optionally using address search and the map.
 
-1. **Create a local user** through `POST /api/v1/local/signup`.
-2. The backend creates the real PostgreSQL user, PERSONAL organization, FREE subscription, entitlements, and default site.
-3. Optionally apply a **local-only SUPERADMIN subscription override** to PRO or PREMIUM so provider behavior can be tested without Stripe.
-4. **Create a station** with any of three synchronized location methods:
-   - search an address;
-   - type latitude/longitude;
-   - click/drag a pin on the Leaflet map.
-5. Backend resolves and stores the station IANA timezone.
-6. For PREMIUM, create additional sites for frontend grouping.
-7. For PRO/PREMIUM, either:
-   - reuse an existing organization DataProvider; or
-   - create another provider credential set.
-8. Link the provider to the physical station using the station-specific provider identifier.
-9. **Verify** all records by reloading from benchmark-api and use the supplied SQL to inspect PostgreSQL directly.
+The visual language follows the Benchmark application style:
 
-Forecast functionality is deliberately not implemented yet.
+- navy application shell
+- Benchmark red accents
+- compact dashboard cards
+- Benchmark branding
+- responsive layouts for phone, iPad/tablet, and desktop
 
-## Tech
+---
 
-- React + TypeScript
-- Vite (`http://localhost:5173`)
-- Leaflet
-- OpenStreetMap base tiles
-- ArcGIS satellite tiles
-- OpenStreetMap Nominatim for local-development address lookup
+# Repository structure
 
-Nominatim is fine for this low-volume development flow. Before production, route geocoding through a supported commercial/self-hosted geocoder rather than depending on the public endpoint from the browser.
+```text
+apps/
+  web/                 React + TypeScript + Vite
+  mobile/              reserved for Expo / React Native
 
-## 1. Start benchmark-api
+packages/
+  api/                  shared Benchmark API client
+  auth/                 Cognito OAuth/PKCE web implementation
+  domain/               shared application models
+  validation/           shared station validation
+  design-tokens/        shared brand tokens
+```
 
-The backend local profile already allows Vite at `http://localhost:5173`.
+The goal is to share API, domain, validation, and business logic with the future mobile application while allowing the web and mobile user interfaces to be optimized independently.
+
+---
+
+# Responsive design
+
+Responsive design is a first-class requirement.
+
+The application currently targets:
+
+```text
+320-767px       phone
+768-1180px      tablet / iPad
+1181px+         desktop
+```
+
+## Desktop
+
+- full left navigation
+- wider content area
+- multi-column layouts where appropriate
+- station form and map displayed side-by-side when space allows
+
+## iPad / tablet
+
+- compact navigation
+- tablet-sized spacing
+- layouts adapt between one and two columns
+- station form and map stack when necessary
+
+## Phone
+
+- sticky application header
+- bottom navigation
+- single-column forms
+- touch-sized controls
+- iPhone safe-area support
+- 16px minimum input font size to prevent Safari form zoom
+
+Reduced-motion preferences are respected.
+
+## Minimum responsive QA viewports
+
+Every major screen should be tested at:
+
+```text
+390 x 844     iPhone
+430 x 932     large phone
+768 x 1024    iPad portrait
+1024 x 768    iPad landscape
+1440 x 900    desktop
+```
+
+---
+
+# Technology
+
+The current web application uses:
+
+```text
+React
+TypeScript
+Vite
+React Router
+TanStack Query
+Zod
+pnpm workspaces
+```
+
+The planned native mobile application will use:
+
+```text
+Expo
+React Native
+TypeScript
+```
+
+The mobile app should reuse the shared packages rather than duplicate business logic.
+
+---
+
+# Development prerequisites
+
+For the local development environment we standardize on:
+
+```text
+Node.js 24 LTS
+pnpm 10.15.1
+```
+
+The project intentionally uses a pinned pnpm version to keep local and CI builds reproducible.
+
+On macOS, Node versions are managed using **nvm**.
+
+Do not use the Homebrew `node@24` formula for this project.
+
+Do not rely on Corepack to select the pnpm version.
+
+---
+
+# macOS installation from scratch
+
+These instructions assume macOS with Homebrew installed.
+
+## 1. Install nvm
+
+Check whether nvm is already installed:
 
 ```bash
-export DB_USERNAME=benchmark
-export DB_PASSWORD=benchmark-local-password
-export INFLUXDB_TOKEN=benchmark-local-token
+brew list --versions nvm
+```
 
-export LOCAL_AUTH_ENABLED=true
-export LOCAL_AUTH_TOKEN='replace-with-a-long-random-development-secret'
+If it is not installed:
 
-mvn spring-boot:run -Dspring-boot.run.profiles=local
+```bash
+brew install nvm
+```
+
+Create the nvm working directory:
+
+```bash
+mkdir -p ~/.nvm
+```
+
+Add the following configuration to `~/.zshrc`:
+
+```bash
+cat >> ~/.zshrc <<'EOF'
+export NVM_DIR="$HOME/.nvm"
+[ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && source "/opt/homebrew/opt/nvm/nvm.sh"
+[ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && source "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"
+EOF
+```
+
+Reload the shell:
+
+```bash
+source ~/.zshrc
+```
+
+Verify that nvm is available:
+
+```bash
+command -v nvm
+nvm --version
+```
+
+Expected:
+
+```text
+nvm
+```
+
+followed by the installed nvm version.
+
+---
+
+# 2. Install Node.js 24
+
+Install Node 24:
+
+```bash
+nvm install 24
+```
+
+Use Node 24:
+
+```bash
+nvm use 24
+```
+
+Make Node 24 the default for new terminal sessions:
+
+```bash
+nvm alias default 24
 ```
 
 Verify:
 
 ```bash
-curl http://localhost:8080/actuator/health
+node -v
+npm -v
+which node
 ```
 
-## 2. Start this frontend
+Expected Node version:
+
+```text
+v24.x.x
+```
+
+`which node` should point somewhere under:
+
+```text
+~/.nvm/versions/node/
+```
+
+For example:
+
+```text
+/Users/your-user/.nvm/versions/node/v24.x.x/bin/node
+```
+
+---
+
+# 3. Disable Corepack
+
+Corepack can interfere with the project's pinned pnpm version.
+
+Disable it:
 
 ```bash
-cp .env.example .env
-npm install
-npm run dev
+corepack disable
+```
+
+---
+
+# 4. Install the required pnpm version
+
+Remove any existing global pnpm installation:
+
+```bash
+npm uninstall -g pnpm
+```
+
+Install the exact pnpm version used by this project:
+
+```bash
+npm install -g pnpm@10.15.1
+```
+
+Refresh the shell command cache:
+
+```bash
+hash -r
+```
+
+Verify:
+
+```bash
+pnpm --version
+which pnpm
+```
+
+Expected:
+
+```text
+10.15.1
+```
+
+`which pnpm` should normally point into the active nvm Node installation:
+
+```text
+~/.nvm/versions/node/v24.x.x/bin/pnpm
+```
+
+You can verify the complete environment with:
+
+```bash
+node -v
+npm -v
+pnpm --version
+which node
+which pnpm
+```
+
+The important results are:
+
+```text
+Node.js: v24.x.x
+pnpm:    10.15.1
+```
+
+---
+
+# 5. Clone or open the repository
+
+Example:
+
+```bash
+cd /Users/your-user/path/to/benchmark-web-ui
+```
+
+The repository root should contain:
+
+```text
+package.json
+pnpm-workspace.yaml
+apps/
+packages/
+```
+
+---
+
+# 6. Clean previous dependency installations
+
+If this is a completely fresh checkout, this step is harmless.
+
+If dependencies were previously installed using another Node or pnpm version, clean them first:
+
+```bash
+rm -rf node_modules
+rm -rf apps/web/node_modules
+rm -rf packages/*/node_modules
+```
+
+Do **not** delete:
+
+```text
+pnpm-lock.yaml
+```
+
+The lockfile should remain committed so dependency versions are reproducible.
+
+---
+
+# 7. Install dependencies
+
+Run from the repository root:
+
+```bash
+pnpm install
+```
+
+The repository is a pnpm workspace, so this installs dependencies for all workspace packages.
+
+You should see something similar to:
+
+```text
+Scope: all workspace projects
+```
+
+---
+
+# 8. Approve required dependency build scripts
+
+pnpm may display:
+
+```text
+Ignored build scripts: esbuild.
+Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
+```
+
+This is expected.
+
+Run:
+
+```bash
+pnpm approve-builds
+```
+
+Select:
+
+```text
+esbuild
+```
+
+Typically:
+
+```text
+Space    select
+Enter    confirm
+```
+
+Then rebuild it:
+
+```bash
+pnpm rebuild esbuild
+```
+
+---
+
+# 9. Verify the application builds
+
+Run:
+
+```bash
+pnpm build
+```
+
+The root build command runs the web application build:
+
+```text
+pnpm --filter @benchmark/web build
+```
+
+The build must complete successfully before starting development or deploying.
+
+---
+
+# 10. Configure the web application
+
+Create the local environment file:
+
+```bash
+cp apps/web/.env.example apps/web/.env
+```
+
+The example configuration contains the current Benchmark development/production integration values needed by the frontend.
+
+Review:
+
+```bash
+cat apps/web/.env
+```
+
+The application currently connects to:
+
+```text
+https://api-test.benchmarklabs.com
+```
+
+and uses the Benchmark production Cognito user pool/browser client.
+
+Do not commit secret values to `.env`.
+
+---
+
+# Google authentication
+
+Google login support is built into the frontend.
+
+Enable it with:
+
+```env
+VITE_GOOGLE_AUTH_ENABLED=true
+```
+
+Disable the button temporarily with:
+
+```env
+VITE_GOOGLE_AUTH_ENABLED=false
+```
+
+Google authentication requires Google to be configured as an identity provider in Amazon Cognito.
+
+See:
+
+```text
+GOOGLE_AUTH_SETUP.md
+```
+
+for the infrastructure and Google OAuth configuration.
+
+The authentication path is:
+
+```text
+Google
+   ↓
+Amazon Cognito
+   ↓
+Cognito access token
+   ↓
+Benchmark API
+```
+
+The Benchmark backend does not authenticate Google tokens directly.
+
+---
+
+# Cognito local callback configuration
+
+For local development, the Cognito browser app client must allow:
+
+```text
+http://localhost:5173/auth/callback
+```
+
+as a callback URL.
+
+It must also allow:
+
+```text
+http://localhost:5173/
+```
+
+as a logout URL.
+
+---
+
+# API CORS
+
+When the Vite application runs locally, browser requests originate from:
+
+```text
+http://localhost:5173
+```
+
+The deployed Benchmark API must therefore allow this origin in its CORS configuration during local development.
+
+API:
+
+```text
+https://api-test.benchmarklabs.com
+```
+
+---
+
+# Run locally
+
+Start the Vite development server:
+
+```bash
+pnpm dev
 ```
 
 Open:
@@ -69,86 +548,352 @@ Open:
 http://localhost:5173
 ```
 
-The first screen asks for the same `LOCAL_AUTH_TOKEN` exported for the API.
+Vite will automatically reload the application when source files change.
 
-## Local authentication flow
+---
 
-The signup request sends only:
+# Standard daily development workflow
 
-```http
-X-Local-Auth-Token: <LOCAL_AUTH_TOKEN>
+After the initial machine setup, you do **not** need to reinstall Node or pnpm every time.
+
+Open a terminal and verify:
+
+```bash
+node -v
+pnpm --version
 ```
 
-so the request executes as the bootstrapped local SUPERADMIN.
-
-After signup returns the new PostgreSQL `userId`, normal application requests send:
-
-```http
-X-Local-Auth-Token: <LOCAL_AUTH_TOKEN>
-X-Local-User-Id: <new user UUID>
-```
-
-This exercises normal organization membership and entitlement checks as the real test user.
-
-The token and test user identifiers are stored in browser localStorage for convenience. This is intentionally development-only behavior.
-
-## Plan testing
-
-Every new user is correctly created as FREE by the backend.
-
-For this local frontend only, the account screen can immediately call the existing SUPERADMIN subscription override endpoint to simulate:
+Expected:
 
 ```text
-FREE     → 1 station
-PRO      → 1 station + observations
-PREMIUM  → selected station limit + multiple sites + observations
+v24.x.x
+10.15.1
 ```
 
-Stripe remains the production billing source of truth.
+Then:
 
-## PostgreSQL verification
-
-The final wizard screen generates SQL using the actual returned IDs. Equivalent manual queries are:
-
-```sql
-SELECT * FROM users ORDER BY created_at DESC;
-SELECT * FROM organizations ORDER BY created_at DESC;
-SELECT * FROM organization_memberships ORDER BY created_at DESC;
-SELECT * FROM subscriptions ORDER BY created_at DESC;
-SELECT * FROM sites ORDER BY created_at DESC;
-SELECT * FROM weather_stations ORDER BY created_at DESC;
-SELECT id, organization_id, name, provider, region FROM data_providers ORDER BY created_at DESC;
+```bash
+cd /Users/your-user/path/to/benchmark-web-ui
+pnpm install
+pnpm dev
 ```
 
-Important relationship checks:
+You normally only need `pnpm install` when dependencies or the lockfile change.
 
-```sql
-SELECT
-    s.name AS station_name,
-    s.latitude,
-    s.longitude,
-    s.time_zone,
-    s.provider_station_id,
-    dp.name AS data_provider_name,
-    dp.provider
-FROM weather_stations s
-LEFT JOIN data_providers dp ON dp.id = s.data_provider_id
-ORDER BY s.created_at DESC;
+For normal daily development:
+
+```bash
+cd /Users/your-user/path/to/benchmark-web-ui
+pnpm dev
 ```
 
-Provider secret columns intentionally are not rendered by the frontend API responses.
+---
 
-## Expected test path
+# Production build
 
-For the most complete first test, choose **PRO** on the account screen:
+Before submitting or deploying frontend changes:
 
-1. Create user.
-2. Confirm the default site is loaded.
-3. Search an address or click the map.
-4. Create one station.
-5. Confirm a timezone is returned.
-6. Create a WeatherLink provider.
-7. Enter a provider station ID and link it.
-8. Use the Verify step and PostgreSQL SQL.
+```bash
+pnpm install
+pnpm build
+```
 
-Then repeat with **PREMIUM** to validate multiple sites and higher station capacity.
+Both commands must complete successfully.
+
+The AWS frontend pipeline will eventually perform the same reproducible installation and build using the pinned Node/pnpm toolchain.
+
+---
+
+# Backend endpoints currently used
+
+The first frontend slice calls:
+
+```text
+GET  /api/v1/me
+GET  /api/v1/organizations/{organizationId}/sites
+GET  /api/v1/organizations/{organizationId}/stations
+POST /api/v1/organizations/{organizationId}/stations
+```
+
+Station creation uses:
+
+```json
+{
+  "siteId": "uuid",
+  "name": "North Field",
+  "latitude": 40.123,
+  "longitude": -96.456,
+  "metadata": null
+}
+```
+
+The backend resolves and stores the station timezone.
+
+---
+
+# Authentication design
+
+The Benchmark backend expects a Cognito OAuth **access token**.
+
+The web application therefore uses:
+
+```text
+OAuth 2.0
+Authorization Code Flow
+PKCE
+```
+
+The basic flow is:
+
+```text
+Browser
+   ↓
+Cognito Hosted Login / Google
+   ↓
+Authorization Code
+   ↓
+PKCE token exchange
+   ↓
+Cognito access token
+   ↓
+Benchmark API
+```
+
+After authentication the frontend calls:
+
+```text
+GET /api/v1/me
+```
+
+The backend handles first-login application provisioning.
+
+Tokens are currently stored in:
+
+```text
+sessionStorage
+```
+
+for the browser implementation.
+
+The future Expo application should use native secure storage instead of browser storage.
+
+---
+
+# Google authentication flow
+
+When the user chooses Google:
+
+```text
+Benchmark login page
+      ↓
+Cognito authorize endpoint
+      ↓
+identity_provider=Google
+      ↓
+Google login
+      ↓
+Cognito
+      ↓
+PKCE callback
+      ↓
+Cognito access token
+      ↓
+Benchmark API
+```
+
+The backend therefore continues to see normal Cognito-authenticated requests regardless of whether the user signed in with:
+
+```text
+email/password
+```
+
+or:
+
+```text
+Google
+```
+
+---
+
+# Future mobile application
+
+The native mobile application will live under:
+
+```text
+apps/mobile
+```
+
+and use:
+
+```text
+Expo
+React Native
+TypeScript
+```
+
+Do not duplicate shared backend/domain logic in the mobile application.
+
+The mobile application should consume:
+
+```text
+@benchmark/api
+@benchmark/domain
+@benchmark/validation
+@benchmark/design-tokens
+```
+
+Authentication should use a mobile-specific adapter and secure native token storage.
+
+The intended architecture is:
+
+```text
+                     Benchmark API
+                          ↑
+                          │
+                    packages/api
+                          ↑
+              ┌───────────┴───────────┐
+              │                       │
+         React Web               Expo Mobile
+         apps/web                apps/mobile
+              │                       │
+              └──── shared packages ──┘
+```
+
+This allows the web interface to remain optimized for desktop/tablet/browser use while the native application can provide a proper iOS/Android experience.
+
+---
+
+# Troubleshooting
+
+## `Cannot find matching keyid`
+
+If you see an error similar to:
+
+```text
+Cannot find matching keyid
+```
+
+from Corepack, do not upgrade the project's pnpm version.
+
+Make sure Corepack is disabled:
+
+```bash
+corepack disable
+```
+
+Then reinstall the pinned pnpm version:
+
+```bash
+npm uninstall -g pnpm
+npm install -g pnpm@10.15.1
+hash -r
+```
+
+Verify:
+
+```bash
+pnpm --version
+```
+
+Expected:
+
+```text
+10.15.1
+```
+
+---
+
+## `ERR_PNPM_BAD_PM_VERSION`
+
+If you see:
+
+```text
+ERR_PNPM_BAD_PM_VERSION
+```
+
+check:
+
+```bash
+pnpm --version
+```
+
+This project expects:
+
+```text
+10.15.1
+```
+
+Fix it with:
+
+```bash
+corepack disable
+
+npm uninstall -g pnpm
+npm install -g pnpm@10.15.1
+
+hash -r
+
+pnpm --version
+```
+
+---
+
+## `Ignored build scripts: esbuild`
+
+Run:
+
+```bash
+pnpm approve-builds
+```
+
+Select:
+
+```text
+esbuild
+```
+
+Then:
+
+```bash
+pnpm rebuild esbuild
+```
+
+and retry:
+
+```bash
+pnpm build
+```
+
+---
+
+## Verify the complete frontend toolchain
+
+When troubleshooting, run:
+
+```bash
+command -v nvm
+nvm --version
+
+node -v
+npm -v
+pnpm --version
+
+which node
+which npm
+which pnpm
+```
+
+The intended environment is:
+
+```text
+nvm        installed and loaded
+Node.js    24.x LTS
+pnpm       10.15.1
+```
+
+Node and pnpm should normally resolve through:
+
+```text
+~/.nvm/versions/node/...
+```

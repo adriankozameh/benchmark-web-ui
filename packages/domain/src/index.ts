@@ -1,12 +1,5 @@
 export type Plan = 'FREE' | 'PRO' | 'PREMIUM';
 
-export type LocalSession = {
-  apiBaseUrl: string;
-  localAuthToken: string;
-  userId: string;
-  organizationId: string;
-};
-
 export type OrganizationSummary = {
   id: string;
   name: string;
@@ -30,23 +23,6 @@ export type CurrentUser = {
   email: string;
   displayName: string | null;
   organizations: OrganizationSummary[];
-};
-
-export type LocalSignupResponse = {
-  userId: string;
-  username: string;
-  email: string;
-  displayName: string;
-  organizations: Array<{
-    organizationId: string;
-    name: string;
-    type: string;
-    role: string;
-    plan: Plan;
-    subscriptionStatus: string;
-    seatLimit: number;
-    stationLimit: number;
-  }>;
 };
 
 export type Site = {
@@ -74,25 +50,12 @@ export type WeatherStation = {
   updatedAt: string;
 };
 
-export type DataProvider = {
-  id: string;
-  organizationId: string;
+export type CreateStationInput = {
+  siteId: string | null;
   name: string;
-  provider: string;
-  region: string | null;
-  apiKeyConfigured: boolean;
-  apiKeySecretConfigured: boolean;
-  usernameConfigured: boolean;
-  passwordConfigured: boolean;
-  tokenConfigured: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type StationDataProvider = {
-  stationId: string;
-  providerStationId: string;
-  dataProvider: DataProvider;
+  latitude: number;
+  longitude: number;
+  metadata?: Record<string, unknown> | null;
 };
 
 export type ApiErrorPayload = {

@@ -16,7 +16,11 @@ const LOGOS: Record<BrandLogoVariant, string> = {
 };
 
 export function BrandLogo({ variant = 'blue', className }: Props) {
-  const classes = ['brand-logo', className].filter(Boolean).join(' ');
-
-  return <img className={classes} src={LOGOS[variant]} alt="Benchmark Labs" />;
+  return (
+    <img
+      className={['brand-logo', className].filter(Boolean).join(' ')}
+      src={LOGOS[variant]}
+      alt="Benchmark Labs"
+    />
+  );
 }

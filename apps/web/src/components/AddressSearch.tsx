@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 
-type Suggestion = {
+export type LocationSuggestion = {
   displayName: string;
   latitude: number;
   longitude: number;
 };
 
 type Props = {
-  onSelect: (suggestion: Suggestion) => void;
+  onSelect: (suggestion: LocationSuggestion) => void;
 };
 
 export function AddressSearch({ onSelect }: Props) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Suggestion[]>([]);
+  const [results, setResults] = useState<LocationSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const requestId = useRef(0);
@@ -30,8 +30,7 @@ export function AddressSearch({ onSelect }: Props) {
     const timer = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const url =
-          `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&q=${encodeURIComponent(trimmed)}`;
+        const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&q=${encodeURIComponent(trimmed)}`;
         const response = await fetch(url, { headers: { Accept: 'application/json' } });
         if (!response.ok) throw new Error(`Geocoding failed (${response.status})`);
         const json = (await response.json()) as Array<Record<string, unknown>>;
@@ -68,7 +67,7 @@ export function AddressSearch({ onSelect }: Props) {
       <input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        onFocus={() => results.length && setOpen(true)}
+        onFocus={() => results.length > 0 && setOpen(true)}
         placeholder="Search street address, city, farm, or place"
       />
       {open && (

@@ -30,10 +30,7 @@ export function MapPicker({ latitude, longitude, onChange }: Props) {
 
     const satellite = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      {
-        attribution: '&copy; Esri, ArcGIS',
-        maxZoom: 19,
-      },
+      { attribution: '&copy; Esri, ArcGIS', maxZoom: 19 },
     );
 
     const map = L.map(containerRef.current, {
@@ -66,7 +63,6 @@ export function MapPicker({ latitude, longitude, onChange }: Props) {
     if (!map || latitude == null || longitude == null) return;
 
     const point = L.latLng(latitude, longitude);
-
     if (!markerRef.current) {
       const icon = L.divIcon({
         className: 'benchmark-map-pin-wrap',
@@ -74,7 +70,6 @@ export function MapPicker({ latitude, longitude, onChange }: Props) {
         iconSize: [34, 42],
         iconAnchor: [17, 40],
       });
-
       const marker = L.marker(point, { draggable: true, icon }).addTo(map);
       marker.on('dragend', () => {
         const next = marker.getLatLng();

@@ -1,26 +1,12 @@
 {
-  "name": "benchmark-web-v2",
+  "name": "benchmark-ui",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "packageManager": "pnpm@10.15.1",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "leaflet": "^1.9.4",
-    "lucide-react": "^0.468.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {
-    "@types/leaflet": "^1.9.16",
-    "@types/react": "^19.0.2",
-    "@types/react-dom": "^19.0.2",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.5"
+    "dev": "pnpm --filter @benchmark/web dev",
+    "dev:web": "pnpm --filter @benchmark/web dev",
+    "build": "pnpm --filter @benchmark/web build",
+    "typecheck": "pnpm --filter @benchmark/web typecheck"
   }
 }
