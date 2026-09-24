@@ -11,6 +11,8 @@ const RANGES = [
   { label: '16 days', hours: 384 },
 ] as const;
 
+const HOUR_MS = 60 * 60 * 1000;
+
 const COLORS = ['#e44d47', '#2479ab', '#8061bd', '#319978', '#db9031', '#637897', '#a54683', '#6e8335'];
 const FIRST_METRICS = [
   'TEMPERATURE', 'RELATIVE_HUMIDITY', 'PRECIPITATION_QUANTITY',
@@ -84,6 +86,7 @@ export function ForecastDashboard({
 }) {
   const [stationId, setStationId] = useState(stations[0]?.id ?? '');
   const [rangeHours, setRangeHours] = useState<number>(72);
+  const [windowStart, setWindowStart] = useState(() => Math.floor(Date.now() / HOUR_MS) * HOUR_MS);
   const [refreshKey, setRefreshKey] = useState(0);
   const [points, setPoints] = useState<ForecastPoint[]>([]);
   const [forecastTimeZone, setForecastTimeZone] = useState<{ stationId: string; value: string } | null>(null);
@@ -104,9 +107,11 @@ export function ForecastDashboard({
     setError(null);
     setPoints([]);
 
-    const now = Date.now();
-    const from = new Date(now - 6 * 60 * 60 * 1000).toISOString();
-    const to = new Date(now + rangeHours * 60 * 60 * 1000).toISOString();
+    // Include the current forecast hour and exclude older valid times.
+    const start = Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
+    const from = new Date(start).toISOString();
+    const to = new Date(start + rangeHours * HOUR_MS).toISOString();
+    setWindowStart(start);
     void api.getStationForecast(organizationId, selectedStationId, from, to)
       .then((response) => {
         if (!current) return;
@@ -127,6 +132,15 @@ export function ForecastDashboard({
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [api, organizationId, selectedStationId, stationTimeZone, rangeHours, refreshKey, onUnauthorized]);
+
+  useEffect(() => {
+    // Keep the displayed range current when the dashboard stays open across an hour boundary.
+    const timer = window.setTimeout(
+      () => setRefreshKey((key) => key + 1),
+      HOUR_MS - (Date.now() % HOUR_MS) + 1000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [windowStart]);
 
   const providers = useMemo(() => [...new Set(points.map((point) => point.provider))].sort(), [points]);
   const metrics = useMemo(() => {
@@ -202,7 +216,8 @@ export function ForecastDashboard({
           <div className="forecast-chart-grid">
             {metrics.map((metric) => (
               <MetricChart key={metric} metric={metric} points={points}
-                providers={visibleProviders} colors={colors} timeZone={timeZone} />
+                providers={visibleProviders} colors={colors} timeZone={timeZone}
+                windowStart={windowStart} windowEnd={windowStart + rangeHours * HOUR_MS} />
             ))}
           </div>
           {metrics.length === 0 && <div className="forecast-empty">No numeric metrics were returned.</div>}
@@ -219,12 +234,14 @@ const RIGHT = 14;
 const TOP = 16;
 const BOTTOM = 31;
 
-function MetricChart({ metric, points, providers, colors, timeZone }: {
+function MetricChart({ metric, points, providers, colors, timeZone, windowStart, windowEnd }: {
   metric: string;
   points: ForecastPoint[];
   providers: string[];
   colors: Record<string, string>;
   timeZone: string;
+  windowStart: number;
+  windowEnd: number;
 }) {
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const directionMetric = WIND_DIRECTIONS[metric];
@@ -236,8 +253,8 @@ function MetricChart({ metric, points, providers, colors, timeZone }: {
   const all = series.flatMap((item) => item.points);
   const times = [...new Set(all.map((point) => point.time))].sort((a, b) => a - b);
   const values = all.map((point) => point.values[metric]);
-  const minTime = times[0];
-  const maxTime = times[times.length - 1];
+  const minTime = windowStart;
+  const maxTime = windowEnd;
   const low = Math.min(...values);
   const high = Math.max(...values);
   const padding = Math.max((high - low) * 0.08, Math.abs(high) * 0.01, 0.1);
