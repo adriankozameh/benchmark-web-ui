@@ -58,11 +58,12 @@ const WIND_DIRECTIONS: Record<string, string> = {
 
 type ForecastPoint = StationTimeSeriesPoint & { time: number };
 
-function utcLabel(timestamp: number, includeTime = false): string {
+function localLabel(timestamp: number | string, timeZone: string, includeTime = false, includeOffset = false): string {
   return new Intl.DateTimeFormat('en-US', {
-    timeZone: 'UTC', month: 'short', day: 'numeric',
+    timeZone, month: 'short', day: 'numeric',
     ...(includeTime ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' as const } : {}),
-  }).format(timestamp);
+    ...(includeOffset ? { timeZoneName: 'shortOffset' as const } : {}),
+  }).format(typeof timestamp === 'string' ? new Date(timestamp) : timestamp);
 }
 
 function metricLabel(metric: string): string {
@@ -85,12 +86,16 @@ export function ForecastDashboard({
   const [rangeHours, setRangeHours] = useState<number>(72);
   const [refreshKey, setRefreshKey] = useState(0);
   const [points, setPoints] = useState<ForecastPoint[]>([]);
+  const [forecastTimeZone, setForecastTimeZone] = useState<{ stationId: string; value: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hiddenProviders, setHiddenProviders] = useState<string[]>([]);
 
   const selectedStationId = stations.some((station) => station.id === stationId)
     ? stationId : stations[0]?.id ?? '';
+  const stationTimeZone = stations.find((station) => station.id === selectedStationId)?.timeZone ?? 'UTC';
+  const timeZone = forecastTimeZone?.stationId === selectedStationId
+    ? forecastTimeZone.value : stationTimeZone;
 
   useEffect(() => {
     if (!selectedStationId) return;
@@ -105,6 +110,7 @@ export function ForecastDashboard({
     void api.getStationForecast(organizationId, selectedStationId, from, to)
       .then((response) => {
         if (!current) return;
+        setForecastTimeZone({ stationId: selectedStationId, value: response.timeZone || stationTimeZone });
         setPoints(response.points
           .map((point) => ({ ...point, time: Date.parse(point.utcDateTime) }))
           .filter((point) => Number.isFinite(point.time) && point.provider && point.values)
@@ -120,7 +126,7 @@ export function ForecastDashboard({
       })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
-  }, [api, organizationId, selectedStationId, rangeHours, refreshKey, onUnauthorized]);
+  }, [api, organizationId, selectedStationId, stationTimeZone, rangeHours, refreshKey, onUnauthorized]);
 
   const providers = useMemo(() => [...new Set(points.map((point) => point.provider))].sort(), [points]);
   const metrics = useMemo(() => {
@@ -150,7 +156,7 @@ export function ForecastDashboard({
         <div>
           <span className="eyebrow">Latest forecast</span>
           <h2>Compare forecast providers</h2>
-          <p>Each line shows one provider's forecast at the same UTC time. Only returned metrics are displayed.</p>
+          <p>Compare providers at the same moment. Times are shown in the selected station's local time zone.</p>
         </div>
         <button type="button" className="secondary-button" onClick={() => setRefreshKey((key) => key + 1)} disabled={loading}>
           <RefreshCw size={15} /> Refresh
@@ -196,7 +202,7 @@ export function ForecastDashboard({
           <div className="forecast-chart-grid">
             {metrics.map((metric) => (
               <MetricChart key={metric} metric={metric} points={points}
-                providers={visibleProviders} colors={colors} />
+                providers={visibleProviders} colors={colors} timeZone={timeZone} />
             ))}
           </div>
           {metrics.length === 0 && <div className="forecast-empty">No numeric metrics were returned.</div>}
@@ -213,11 +219,12 @@ const RIGHT = 14;
 const TOP = 16;
 const BOTTOM = 31;
 
-function MetricChart({ metric, points, providers, colors }: {
+function MetricChart({ metric, points, providers, colors, timeZone }: {
   metric: string;
   points: ForecastPoint[];
   providers: string[];
   colors: Record<string, string>;
+  timeZone: string;
 }) {
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const directionMetric = WIND_DIRECTIONS[metric];
@@ -255,12 +262,14 @@ function MetricChart({ metric, points, providers, colors }: {
 
   return (
     <section className="forecast-chart-card" aria-label={`${metricLabel(metric)} forecast chart`}>
-      <div className="forecast-chart-heading"><h3>{metricLabel(metric)}</h3><span>{activeTime === null ? 'UTC' : `${utcLabel(activeTime, true)} UTC`}</span></div>
+      <div className="forecast-chart-heading"><h3>{metricLabel(metric)}</h3>
+        <span>{activeTime === null ? timeZone
+          : localLabel(active[0]?.point?.localDateTime ?? activeTime, timeZone, true, true)}</span></div>
       {directionMetric && <p className="forecast-wind-convention">Arrows point toward where the wind comes from · degrees clockwise from true north</p>}
       {all.length === 0 ? <div className="forecast-chart-blank">Select a provider to view this metric.</div> : (
         <>
           <svg className="forecast-plot" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img"
-            aria-label={`${metricLabel(metric)} by provider, ${utcLabel(minTime)} to ${utcLabel(maxTime)} UTC${directionMetric ? '; arrows point toward the wind source' : ''}`}
+            aria-label={`${metricLabel(metric)} by provider, ${localLabel(minTime, timeZone)} to ${localLabel(maxTime, timeZone)} ${timeZone}${directionMetric ? '; arrows point toward the wind source' : ''}`}
             onPointerMove={move} onPointerLeave={() => setHoverTime(null)}>
             {[0, 0.5, 1].map((fraction) => {
               const rowY = TOP + fraction * (HEIGHT - TOP - BOTTOM);
@@ -272,7 +281,7 @@ function MetricChart({ metric, points, providers, colors }: {
             {[0, 0.25, 0.5, 0.75, 1].map((fraction) => (
               <text key={fraction} x={LEFT + fraction * (WIDTH - LEFT - RIGHT)} y={HEIGHT - 6}
                 textAnchor={fraction === 0 ? 'start' : fraction === 1 ? 'end' : 'middle'}
-                className="forecast-axis">{utcLabel(minTime + fraction * (maxTime - minTime), maxTime - minTime <= 48 * 60 * 60 * 1000)}</text>
+                className="forecast-axis">{localLabel(minTime + fraction * (maxTime - minTime), timeZone, maxTime - minTime <= 48 * 60 * 60 * 1000)}</text>
             ))}
             {activeTime !== null && <line x1={x(activeTime)} x2={x(activeTime)} y1={TOP} y2={HEIGHT - BOTTOM}
               stroke="#9aa9b8" strokeDasharray="4 4" pointerEvents="none" />}

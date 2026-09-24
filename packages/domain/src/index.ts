@@ -52,6 +52,7 @@ export type WeatherStation = {
 
 export type StationTimeSeriesPoint = {
   utcDateTime: string;
+  localDateTime?: string | null;
   provider: string;
   hoursFrom0Time: number | null;
   values: Record<string, number>;
@@ -60,6 +61,7 @@ export type StationTimeSeriesPoint = {
 export type StationTimeSeries = {
   organizationId: string;
   stationId: string;
+  timeZone?: string | null;
   series: string;
   from: string;
   to: string;
