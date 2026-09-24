@@ -50,6 +50,23 @@ export type WeatherStation = {
   updatedAt: string;
 };
 
+export type StationTimeSeriesPoint = {
+  utcDateTime: string;
+  provider: string;
+  hoursFrom0Time: number | null;
+  values: Record<string, number>;
+};
+
+export type StationTimeSeries = {
+  organizationId: string;
+  stationId: string;
+  series: string;
+  from: string;
+  to: string;
+  count: number;
+  points: StationTimeSeriesPoint[];
+};
+
 export type CreateStationInput = {
   siteId: string | null;
   name: string;

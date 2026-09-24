@@ -3,6 +3,7 @@ import type {
   CreateStationInput,
   CurrentUser,
   Site,
+  StationTimeSeries,
   WeatherStation,
 } from '@benchmark/domain';
 
@@ -74,6 +75,18 @@ export class BenchmarkApi {
 
   listStations(organizationId: string): Promise<WeatherStation[]> {
     return this.request(`/api/v1/organizations/${organizationId}/stations`);
+  }
+
+  getStationForecast(
+    organizationId: string,
+    stationId: string,
+    from: string,
+    to: string,
+  ): Promise<StationTimeSeries> {
+    const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/stations/${encodeURIComponent(stationId)}/timeseries/forecast`;
+    const params = new URLSearchParams({ from, to });
+    return this.request(`${path}?${params}`);
   }
 
   createStation(organizationId: string, input: CreateStationInput): Promise<WeatherStation> {
