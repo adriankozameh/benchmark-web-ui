@@ -10,6 +10,11 @@ The first application slice intentionally stays small:
 4. Open **Settings → Stations**.
 5. Load the user's sites and stations.
 6. Create a weather station using a name and latitude/longitude, optionally using address search and the map.
+7. Open **Dashboard** to chart the latest forecast for that station. Each metric returned by the API has a separate chart, with one line for every available forecast provider.
+
+The dashboard calls `GET /api/v1/organizations/{organizationId}/stations/{stationId}/timeseries/forecast` with a Cognito access token. Pick a station and a 24-hour, 3-day, 7-day, or 16-day window; use the provider chips to compare or hide individual providers. Dates on charts are UTC. The charts show only data returned for the selected station; missing provider points are not filled in. An empty state appears when no forecast is available.
+
+Wind speed and transport wind speed show their matching direction as black arrows centered on each provider's speed line at every timestamp with a direction value. Arrows point toward the direction the wind **comes from**, clockwise from true north (0°/360° = north, 90° = east); hover for the exact bearing. Direction-only line charts are omitted when a matching speed series exists, since bearings wrap at 360°. No arrow is shown if that datapoint has no direction value.
 
 The visual language follows the Benchmark application style:
 

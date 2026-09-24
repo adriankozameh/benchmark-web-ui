@@ -20,6 +20,7 @@ import { hasValidationErrors, validateStation } from '@benchmark/validation';
 import type { StationValidationErrors } from '@benchmark/validation';
 import { AddressSearch } from './components/AddressSearch';
 import { BrandLogo } from './components/BrandLogo';
+import { ForecastDashboard } from './components/ForecastDashboard';
 import { MapPicker } from './components/MapPicker';
 import { loadAppConfig } from './config';
 import type { AppConfig, ConfigurationIssue } from './config';
@@ -75,6 +76,10 @@ function ConfiguredApp({ config }: { config: AppConfig }) {
   const [authenticated, setAuthenticated] = useState(() => auth.isAuthenticated());
   const [callbackState, setCallbackState] = useState<LoadState>('idle');
   const [callbackError, setCallbackError] = useState<string | null>(null);
+  const onUnauthorized = useCallback(() => {
+    auth.clear();
+    setAuthenticated(false);
+  }, [auth]);
 
   useEffect(() => {
     if (window.location.pathname !== '/auth/callback') return;
@@ -119,10 +124,7 @@ function ConfiguredApp({ config }: { config: AppConfig }) {
     <AuthenticatedApp
       api={api}
       onLogout={() => auth.logout()}
-      onUnauthorized={() => {
-        auth.clear();
-        setAuthenticated(false);
-      }}
+      onUnauthorized={onUnauthorized}
     />
   );
 }
@@ -260,6 +262,20 @@ function AuthenticatedApp({
   const [stations, setStations] = useState<WeatherStation[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState<'dashboard' | 'settings'>(
+    () => window.location.pathname === '/dashboard' ? 'dashboard' : 'settings',
+  );
+
+  useEffect(() => {
+    const handlePopState = () => setPage(window.location.pathname === '/dashboard' ? 'dashboard' : 'settings');
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  function navigate(nextPage: 'dashboard' | 'settings') {
+    window.history.pushState({}, '', `/${nextPage}`);
+    setPage(nextPage);
+  }
 
   const organization = useMemo(
     () => me?.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? me?.organizations[0] ?? null,
@@ -315,17 +331,20 @@ function AuthenticatedApp({
         <BrandLogo variant="icon" className="sidebar-icon-logo" />
         <div className="sidebar-label">Workspace</div>
         <nav className="sidebar-nav">
-          <button type="button" className="nav-item disabled" disabled>
-            <Gauge size={17} /> <span>Dashboard</span><small>Soon</small>
+          <button type="button" className={`nav-item ${page === 'dashboard' ? 'active' : ''}`}
+            aria-current={page === 'dashboard' ? 'page' : undefined} onClick={() => navigate('dashboard')}>
+            <Gauge size={17} /> <span>Dashboard</span>
           </button>
-          <button type="button" className="nav-item active">
+          <button type="button" className={`nav-item ${page === 'settings' ? 'active' : ''}`}
+            aria-current={page === 'settings' ? 'page' : undefined} onClick={() => navigate('settings')}>
             <Settings size={17} /> <span>Settings</span>
           </button>
         </nav>
 
         <div className="sidebar-label settings-label">Settings</div>
         <nav className="sidebar-nav">
-          <button type="button" className="nav-item active secondary-active">
+          <button type="button" className={`nav-item ${page === 'settings' ? 'active secondary-active' : ''}`}
+            onClick={() => navigate('settings')}>
             <MapPin size={17} /> <span>Stations</span>
           </button>
           <button type="button" className="nav-item disabled" disabled>
@@ -356,8 +375,8 @@ function AuthenticatedApp({
             <BrandLogo variant="icon" />
           </div>
           <div className="topbar-title">
-            <span className="eyebrow">Settings</span>
-            <h1>Weather stations</h1>
+            <span className="eyebrow">{page === 'dashboard' ? 'Dashboard' : 'Settings'}</span>
+            <h1>{page === 'dashboard' ? 'Forecasts' : 'Weather stations'}</h1>
           </div>
           <div className="topbar-actions">
             {organization && <span className={`plan-pill ${organization.plan.toLowerCase()}`}>{organization.plan}</span>}
@@ -375,25 +394,23 @@ function AuthenticatedApp({
             </div>
           )}
 
-          {organization && (
-            <StationSettings
-              api={api}
-              organizationId={organization.id}
-              stationLimit={organization.stationLimit}
-              sites={sites}
-              stations={stations}
-              onCreated={refresh}
-            />
-          )}
+          {organization && (page === 'dashboard'
+            ? <ForecastDashboard api={api} organizationId={organization.id} stations={stations}
+                onUnauthorized={onUnauthorized} />
+            : <StationSettings api={api} organizationId={organization.id}
+                stationLimit={organization.stationLimit} sites={sites} stations={stations}
+                onCreated={refresh} />)}
         </div>
       </main>
 
       <nav className="mobile-bottom-nav" aria-label="Primary navigation">
-        <button type="button" disabled aria-label="Dashboard coming soon">
+        <button type="button" className={page === 'dashboard' ? 'active' : ''}
+          aria-current={page === 'dashboard' ? 'page' : undefined} onClick={() => navigate('dashboard')}>
           <Gauge size={20} />
           <span>Dashboard</span>
         </button>
-        <button type="button" className="active" aria-current="page">
+        <button type="button" className={page === 'settings' ? 'active' : ''}
+          aria-current={page === 'settings' ? 'page' : undefined} onClick={() => navigate('settings')}>
           <MapPin size={20} />
           <span>Stations</span>
         </button>
