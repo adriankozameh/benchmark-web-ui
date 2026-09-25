@@ -70,7 +70,7 @@ export function ObservationsDashboard({
   const viewDays = viewFrom && viewThrough
     ? (Date.parse(`${viewThrough}T00:00:00Z`) - Date.parse(`${viewFrom}T00:00:00Z`)) / DAY_MS + 1
     : 0;
-  const validView = viewDays >= 1 && viewDays <= 31 && viewThrough <= today;
+  const validView = viewDays >= 1 && viewFrom >= earliestDay && viewThrough <= today;
   const validBackfill = backfillFrom >= earliestDay && backfillFrom <= backfillThrough
     && backfillThrough < today;
 
@@ -83,16 +83,25 @@ export function ObservationsDashboard({
     setLoading(true);
     setQueryError(null);
     setPoints([]);
-    void api.getStationObservations(organizationId, selectedStationId,
-      `${viewFrom}T00:00:00Z`, `${addUtcDays(viewThrough, 1)}T00:00:00Z`)
-      .then((response) => {
+    void (async () => {
+      const endExclusive = addUtcDays(viewThrough, 1);
+      const rows: ChartPoint[] = [];
+      for (let day = viewFrom; day < endExclusive;) {
+        // The API accepts at most 31 days. Adjacent half-open windows cover the
+        // selected year without overlap or missing the last UTC hour.
+        const next = addUtcDays(day, 31);
+        const end = next < endExclusive ? next : endExclusive;
+        const response = await api.getStationObservations(organizationId, selectedStationId,
+          `${day}T00:00:00Z`, `${end}T00:00:00Z`);
         if (!current) return;
         setResponseZone({ stationId: selectedStationId, value: response.timeZone || stationZone });
-        setPoints(response.points
+        rows.push(...response.points
           .map((point) => ({ ...point, time: Date.parse(point.utcDateTime) }))
-          .filter((point) => Number.isFinite(point.time) && point.provider && point.values)
-          .sort((a, b) => a.time - b.time));
-      })
+          .filter((point) => Number.isFinite(point.time) && point.provider && point.values));
+        day = end;
+      }
+      if (current) setPoints(rows.sort((a, b) => a.time - b.time));
+    })()
       .catch((cause: unknown) => {
         if (!current) return;
         if (cause instanceof BenchmarkApiError && cause.status === 401) {
@@ -182,7 +191,7 @@ export function ObservationsDashboard({
       </label>
     </div>
     {!validView && <div className="alert error"><CircleAlert size={18} />
-      {t('Choose 1 to 31 UTC days to view.', language)}</div>}
+      {t('Choose a UTC range within the last 12 months to view.', language)}</div>}
     {queryError && <div className="alert error"><CircleAlert size={18} />{queryError}</div>}
     {loading && <div className="forecast-empty"><LoaderCircle className="spin" size={20} />
       {t('Loading observations…', language)}</div>}
