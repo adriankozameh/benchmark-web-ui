@@ -1,7 +1,9 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { CheckCircle2, CircleAlert, LoaderCircle } from 'lucide-react';
+import { CheckCircle2, CircleAlert, LoaderCircle, MapPin } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { DataProvider, Plan, ProviderCredentials, Site, UserLanguage, WeatherStation } from '@benchmark/domain';
+import { AddressSearch } from './AddressSearch';
+import { MapPicker } from './MapPicker';
 import { errorMessage, t } from '../language';
 
 const HARDWARE_PROVIDERS = [
@@ -69,6 +71,10 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const mapLatitude = latitude.trim() !== '' && Number(latitude) >= -90 && Number(latitude) <= 90
+    ? Number(latitude) : null;
+  const mapLongitude = longitude.trim() !== '' && Number(longitude) >= -180 && Number(longitude) <= 180
+    ? Number(longitude) : null;
 
   useEffect(() => {
     setName(station.name);
@@ -258,6 +264,24 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
         <label className="field"><span>{t('Latitude', language)}</span><input type="number" step="any" min={-90} max={90} value={latitude} onChange={(event) => setLatitude(event.target.value)} required disabled={!canChangeLocation} /></label>
         <label className="field"><span>{t('Longitude', language)}</span><input type="number" step="any" min={-180} max={180} value={longitude} onChange={(event) => setLongitude(event.target.value)} required disabled={!canChangeLocation} /></label>
       </div>
+      {canChangeLocation && <>
+        <div className="field">
+          <span>{t('Find location', language)}</span>
+          <AddressSearch language={language} onSelect={(location) => {
+            setLatitude(location.latitude.toFixed(6));
+            setLongitude(location.longitude.toFixed(6));
+          }} />
+          <small>{t('Search, enter coordinates, or click the map.', language)}</small>
+        </div>
+        <div className="station-details-map">
+          <MapPicker latitude={mapLatitude} longitude={mapLongitude} language={language}
+            onChange={(nextLatitude, nextLongitude) => {
+              setLatitude(nextLatitude.toFixed(6));
+              setLongitude(nextLongitude.toFixed(6));
+            }} />
+          <div className="map-caption"><MapPin size={15} /> {t('Click or drag the pin to place the station.', language)}</div>
+        </div>
+      </>}
       <p className="station-details-hint">{canChangeLocation
         ? t('Time zone is calculated from the station coordinates.', language)
         : t('Location is fixed on the FREE plan. Upgrade to PRO or PREMIUM to change it.', language)} {station.timeZone}</p>

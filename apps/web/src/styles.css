@@ -164,6 +164,8 @@ button { color: inherit; }
 .station-details-section + .station-details-section { padding-top: 22px; border-top: 1px solid #edf0f3; }
 .station-details-section h4 { margin: 0; font-size: 15px; }
 .station-details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.station-details-map { overflow: hidden; border: 1px solid #e2e7ec; border-radius: 8px; }
+.station-details-map .map-picker { min-height: 320px; }
 .station-details-hint { margin: 0; color: #657386; font-size: 11px; line-height: 1.5; }
 .station-hardware-upgrade { padding: 18px 0 4px; border-top: 1px solid #edf0f3; }
 .station-details .field input:disabled { background: #f4f6f8; color: #637186; cursor: not-allowed; }
