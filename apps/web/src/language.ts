@@ -65,6 +65,25 @@ const spanish: Record<string, string> = {
   'Metric (°C, m/s, mm)': 'Métrico (°C, m/s, mm)',
   'Imperial (°F, mph, in)': 'Imperial (°F, mph, pulgadas)',
   'Save preferences': 'Guardar preferencias', Saved: 'Guardado',
+  Organization: 'Organización', 'Active organization': 'Organización activa',
+  'Invite people': 'Invitar personas',
+  'Only organization owners and admins can manage invitations.':
+    'Solo los propietarios y administradores pueden gestionar invitaciones.',
+  'Invite someone to join your organization using their email address.':
+    'Invita a alguien a tu organización con su dirección de correo.',
+  'Seat limit:': 'Límite de usuarios:',
+  'Email address': 'Correo electrónico', Role: 'Rol', Member: 'Miembro', Admin: 'Administrador',
+  'Send invitation': 'Enviar invitación', Invitations: 'Invitaciones',
+  'Loading invitations…': 'Cargando invitaciones…', 'No invitations yet.': 'Todavía no hay invitaciones.',
+  'Invitation sent. The recipient can accept it from their email.':
+    'Invitación enviada. El destinatario puede aceptarla desde su correo.',
+  'Invitation created. Email delivery may take a moment.':
+    'Invitación creada. El correo puede tardar unos instantes en llegar.',
+  'Invitation resent.': 'Invitación reenviada.', 'Invitation revoked.': 'Invitación revocada.',
+  'Local preview link:': 'Enlace de prueba local:', Expires: 'Vence',
+  'Email delivery failed. Resend the invitation.': 'No se pudo enviar el correo. Reenvía la invitación.',
+  Resend: 'Reenviar', Revoke: 'Revocar',
+  PENDING: 'Pendiente', EXPIRED: 'Vencida', ACCEPTED: 'Aceptada', REVOKED: 'Revocada',
   'Primary navigation': 'Navegación principal',
   'Coming soon': 'Próximamente',
   'Station observations will appear here.': 'Las observaciones de las estaciones aparecerán aquí.',

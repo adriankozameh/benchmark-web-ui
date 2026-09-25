@@ -25,6 +25,23 @@ export type CurrentUser = {
   organizations: OrganizationSummary[];
 };
 
+export type OrganizationInvitation = {
+  id: string;
+  organizationId: string;
+  email: string;
+  role: 'MEMBER' | 'ADMIN';
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+  deliveryStatus: string;
+  deliveryAttemptedAt: string | null;
+};
+
+export type CreatedOrganizationInvitation = {
+  invitation: OrganizationInvitation;
+  localPreviewUrl: string | null;
+};
+
 export type DisplayUnits = 'METRIC' | 'IMPERIAL';
 export type UserLanguage = 'en' | 'es';
 export type UserSettings = {

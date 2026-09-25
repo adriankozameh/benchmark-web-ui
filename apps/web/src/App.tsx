@@ -25,6 +25,7 @@ import { AddressSearch } from './components/AddressSearch';
 import { BrandLogo } from './components/BrandLogo';
 import { ForecastDashboard } from './components/ForecastDashboard';
 import { ObservationsDashboard } from './components/ObservationsDashboard';
+import { OrganizationInvitations } from './components/OrganizationInvitations';
 import { MapPicker } from './components/MapPicker';
 import { StationHardwareEditor } from './components/StationHardwareEditor';
 import { errorMessage, t } from './language';
@@ -47,6 +48,9 @@ const emptyDraft: StationDraft = {
   longitude: '',
 };
 
+const INVITATION_TOKEN_KEY = 'benchmark.pendingInvitationToken';
+const ACTIVE_ORGANIZATION_KEY = 'benchmark.activeOrganizationId';
+
 function readError(error: unknown): string {
   if (error instanceof BenchmarkApiError) return error.message;
   if (error instanceof Error) return error.message;
@@ -64,6 +68,17 @@ function App() {
 }
 
 function ConfiguredApp({ config }: { config: AppConfig }) {
+  const [invitationToken] = useState(() => {
+    if (window.location.pathname === '/invitations/accept') {
+      const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
+      if (token) sessionStorage.setItem(INVITATION_TOKEN_KEY, token);
+      if (window.location.hash) window.history.replaceState({}, '', '/invitations/accept');
+    } else if (window.location.pathname === '/' && sessionStorage.getItem(INVITATION_TOKEN_KEY)) {
+      // Cognito logout returns to /; restore the pending invitation for another account.
+      window.history.replaceState({}, '', '/invitations/accept');
+    }
+    return sessionStorage.getItem(INVITATION_TOKEN_KEY);
+  });
   const auth = useMemo(
     () =>
       new CognitoPkceAuth({
@@ -98,7 +113,7 @@ function ConfiguredApp({ config }: { config: AppConfig }) {
         if (cancelled) return;
         setAuthenticated(true);
         setCallbackState('success');
-        window.history.replaceState({}, '', '/');
+        window.history.replaceState({}, '', invitationToken ? '/invitations/accept' : '/');
       })
       .catch((error) => {
         if (cancelled) return;
@@ -109,13 +124,18 @@ function ConfiguredApp({ config }: { config: AppConfig }) {
     return () => {
       cancelled = true;
     };
-  }, [auth]);
+  }, [auth, invitationToken]);
 
   if (window.location.pathname === '/auth/callback' && callbackState !== 'success') {
     return <AuthCallback state={callbackState} error={callbackError} />;
   }
 
   if (!authenticated) {
+    if (window.location.pathname === '/invitations/accept') {
+      return <InvitationSignIn token={invitationToken}
+        onLogin={() => void auth.begin('login')} onSignup={() => void auth.begin('signup')}
+        onGoogle={() => void auth.beginWithProvider('Google')} googleEnabled={config.googleAuthEnabled} />;
+    }
     return (
       <AuthScreen
         onLogin={() => void auth.begin('login')}
@@ -124,6 +144,15 @@ function ConfiguredApp({ config }: { config: AppConfig }) {
         googleEnabled={config.googleAuthEnabled}
       />
     );
+  }
+
+  if (window.location.pathname === '/invitations/accept') {
+    return <InvitationAcceptance api={api} token={invitationToken}
+      onSwitchAccount={() => auth.logout()} onAccepted={(organizationId) => {
+        sessionStorage.removeItem(INVITATION_TOKEN_KEY);
+        if (organizationId) sessionStorage.setItem(ACTIVE_ORGANIZATION_KEY, organizationId);
+        window.location.replace('/settings/account');
+      }} />;
   }
 
   return (
@@ -183,6 +212,70 @@ function AuthCallback({ state, error }: { state: LoadState; error: string | null
       )}
     </div>
   );
+}
+
+function InvitationSignIn({ token, onLogin, onSignup, onGoogle, googleEnabled }: {
+  token: string | null;
+  onLogin: () => void;
+  onSignup: () => void;
+  onGoogle: () => void;
+  googleEnabled: boolean;
+}) {
+  return <div className="callback-screen invitation-accept-screen">
+    <BrandLogo variant="blue" className="callback-logo" />
+    {!token ? <><h1>Invitation link is missing</h1><p>Open the invitation link from your email.</p></> : <>
+      <h1>Join your Benchmark organization</h1>
+      <p>Sign in or create an account with the email address that received the invitation.</p>
+      <button type="button" className="primary-button" onClick={onLogin}>Log in with email</button>
+      <button type="button" className="secondary-button" onClick={onSignup}>Create account with email</button>
+      {googleEnabled && <button type="button" className="secondary-button" onClick={onGoogle}>Continue with Google</button>}
+    </>}
+  </div>;
+}
+
+function InvitationAcceptance({ api, token, onSwitchAccount, onAccepted }: {
+  api: BenchmarkApi;
+  token: string | null;
+  onSwitchAccount: () => void;
+  onAccepted: (organizationId: string | null) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function accept() {
+    if (!token || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const before = await api.getMe();
+      await api.acceptInvitation(token);
+      try {
+        const after = await api.getMe();
+        const existing = new Set(before.organizations.map((organization) => organization.id));
+        const joined = after.organizations.find((organization) => !existing.has(organization.id));
+        onAccepted(joined?.id ?? null);
+      } catch {
+        // Acceptance succeeded. Let the account page retry loading organizations.
+        onAccepted(null);
+      }
+    } catch (cause) {
+      setError(readError(cause));
+      setBusy(false);
+    }
+  }
+
+  return <div className="callback-screen invitation-accept-screen">
+    <BrandLogo variant="blue" className="callback-logo" />
+    <h1>Accept your invitation</h1>
+    <p>Your signed-in email must match the address that received the invitation.</p>
+    {!token ? <p>Invitation link is missing. Open the link from your email.</p> : <>
+      {error && <div className="alert error"><CircleAlert size={18} /><span>{error}</span></div>}
+      <button type="button" className="primary-button" disabled={busy} onClick={() => { void accept(); }}>
+        {busy && <LoaderCircle className="spin" size={16} />} Accept invitation
+      </button>
+      <button type="button" className="text-button" disabled={busy} onClick={onSwitchAccount}>Use a different account</button>
+    </>}
+  </div>;
 }
 
 function GoogleMark() {
@@ -293,6 +386,7 @@ function AuthenticatedApp({
     `/${route.section}/${route.page}`, []);
 
   const [me, setMe] = useState<CurrentUser | null>(null);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState(() => sessionStorage.getItem(ACTIVE_ORGANIZATION_KEY));
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
   const [stations, setStations] = useState<WeatherStation[]>([]);
@@ -316,8 +410,9 @@ function AuthenticatedApp({
   }, [parseRoute]);
 
   const organization = useMemo(
-    () => me?.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? me?.organizations[0] ?? null,
-    [me],
+    () => me?.organizations.find((item) => item.id === selectedOrganizationId && item.organizationStatus === 'ACTIVE')
+      ?? me?.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? me?.organizations[0] ?? null,
+    [me, selectedOrganizationId],
   );
 
   const refresh = useCallback(async () => {
@@ -325,8 +420,9 @@ function AuthenticatedApp({
     setError(null);
     try {
       const nextMe = await api.getMe();
-      const nextOrganization =
-        nextMe.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? nextMe.organizations[0];
+      const nextOrganization = nextMe.organizations.find((item) =>
+        item.id === sessionStorage.getItem(ACTIVE_ORGANIZATION_KEY) && item.organizationStatus === 'ACTIVE')
+        ?? nextMe.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? nextMe.organizations[0];
       if (!nextOrganization) throw new Error('No Benchmark organization is available for this account.');
 
       const [nextSettings, nextSites, nextStations] = await Promise.all([
@@ -514,9 +610,26 @@ function AuthenticatedApp({
               }} />
           )}
 
-          {route.section === 'settings' && route.page === 'account' && userSettings && (
+          {route.section === 'settings' && route.page === 'account' && userSettings && <>
+            {organization && me && me.organizations.length > 1 && <section className="station-form-card account-organization">
+              <h2>{t('Organization', language)}</h2>
+              <label className="field"><span>{t('Active organization', language)}</span>
+                <select value={organization.id} onChange={(event) => {
+                  const id = event.target.value;
+                  sessionStorage.setItem(ACTIVE_ORGANIZATION_KEY, id);
+                  setSelectedOrganizationId(id);
+                  void refresh();
+                }}>
+                  {me.organizations.filter((item) => item.organizationStatus === 'ACTIVE').map((item) =>
+                    <option key={item.id} value={item.id}>{item.name}</option>)}
+                </select>
+              </label>
+            </section>}
             <UserPreferences settings={userSettings} onSave={saveSettings} onUnauthorized={onUnauthorized} />
-          )}
+            {organization && <OrganizationInvitations api={api} organizationId={organization.id}
+              organizationRole={organization.role} seatLimit={organization.seatLimit}
+              language={language} onUnauthorized={onUnauthorized} />}
+          </>}
         </div>
       </main>
 

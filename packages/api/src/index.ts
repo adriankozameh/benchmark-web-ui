@@ -2,6 +2,8 @@ import type {
   ApiErrorPayload,
   ObservationBackfillResponse,
   DailyStationObservations,
+  OrganizationInvitation,
+  CreatedOrganizationInvitation,
   CreateStationInput,
   CurrentUser,
   CreateDataProviderInput,
@@ -74,6 +76,29 @@ export class BenchmarkApi {
 
   getMe(): Promise<CurrentUser> {
     return this.request('/api/v1/me');
+  }
+
+  listInvitations(organizationId: string): Promise<OrganizationInvitation[]> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/invitations`);
+  }
+
+  inviteUser(organizationId: string, email: string, role: 'MEMBER' | 'ADMIN'): Promise<CreatedOrganizationInvitation> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/invitations`,
+      { method: 'POST', body: { email, role } });
+  }
+
+  resendInvitation(organizationId: string, invitationId: string): Promise<CreatedOrganizationInvitation> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/invitations/${encodeURIComponent(invitationId)}/resend`, { method: 'POST' });
+  }
+
+  revokeInvitation(organizationId: string, invitationId: string): Promise<void> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/invitations/${encodeURIComponent(invitationId)}`, { method: 'DELETE', expectNoContent: true });
+  }
+
+  acceptInvitation(token: string): Promise<unknown> {
+    return this.request('/api/v1/invitations/accept', { method: 'POST', body: { token } });
   }
 
   getUserSettings(): Promise<UserSettings> {
