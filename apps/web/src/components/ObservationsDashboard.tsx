@@ -14,6 +14,12 @@ const ORDER = [
   'WIND_SPEED', 'WIND_GUST', 'WIND_DIRECTION',
 ];
 const COLORS = ['#e44d47', '#2479ab', '#8061bd', '#319978'];
+const VIEW_PRESETS = [
+  { label: '1 month', months: 1 },
+  { label: '3 months', months: 3 },
+  { label: '6 months', months: 6 },
+  { label: '1 year', months: 12 },
+] as const;
 
 function utcDay(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -23,10 +29,13 @@ function addUtcDays(day: string, days: number): string {
   return utcDay(new Date(Date.parse(`${day}T00:00:00Z`) + days * DAY_MS));
 }
 
-function earliestBackfillDay(today: string): string {
+function monthsBefore(today: string, months: number): string {
   const [year, month, day] = today.split('-').map(Number);
-  const lastDayOfMonth = new Date(Date.UTC(year - 1, month, 0)).getUTCDate();
-  return utcDay(new Date(Date.UTC(year - 1, month - 1, Math.min(day, lastDayOfMonth))));
+  const targetMonth = new Date(Date.UTC(year, month - 1 - months, 1));
+  const lastDayOfMonth = new Date(Date.UTC(targetMonth.getUTCFullYear(),
+    targetMonth.getUTCMonth() + 1, 0)).getUTCDate();
+  targetMonth.setUTCDate(Math.min(day, lastDayOfMonth));
+  return utcDay(targetMonth);
 }
 
 export function ObservationsDashboard({
@@ -65,7 +74,7 @@ export function ObservationsDashboard({
   const timeZone = responseZone?.stationId === selectedStationId ? responseZone.value : stationZone;
   const hasHardware = Boolean(selectedStation?.dataProviderId && selectedStation?.providerStationId);
   const canBackfill = plan === 'PREMIUM' && hasHardware;
-  const earliestDay = earliestBackfillDay(today);
+  const earliestDay = monthsBefore(today, 12);
 
   const viewDays = viewFrom && viewThrough
     ? (Date.parse(`${viewThrough}T00:00:00Z`) - Date.parse(`${viewFrom}T00:00:00Z`)) / DAY_MS + 1
@@ -189,6 +198,16 @@ export function ObservationsDashboard({
       <label className="field"><span>{t('View through (UTC day)', language)}</span>
         <input type="date" value={viewThrough} max={today} onChange={(event) => setViewThrough(event.target.value)} />
       </label>
+      <div className="forecast-range observation-presets" role="group" aria-label={t('View range', language)}>
+        {VIEW_PRESETS.map(({ label, months }) => {
+          const selected = viewFrom === monthsBefore(today, months) && viewThrough === today;
+          return <button type="button" key={months} className={selected ? 'selected' : ''}
+            aria-pressed={selected} onClick={() => {
+              setViewFrom(monthsBefore(today, months));
+              setViewThrough(today);
+            }}>{t(label, language)}</button>;
+        })}
+      </div>
     </div>
     {!validView && <div className="alert error"><CircleAlert size={18} />
       {t('Choose a UTC range within the last 12 months to view.', language)}</div>}

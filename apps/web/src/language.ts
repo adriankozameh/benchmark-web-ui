@@ -77,6 +77,8 @@ const spanish: Record<string, string> = {
   'Choose 1 to 31 UTC days to view.': 'Selecciona entre 1 y 31 días UTC para visualizar.',
   'Choose a UTC range within the last 12 months to view.':
     'Selecciona un período UTC dentro de los últimos 12 meses para visualizar.',
+  'View range': 'Período a visualizar',
+  '1 month': '1 mes', '3 months': '3 meses', '6 months': '6 meses', '1 year': '1 año',
   'Loading observations…': 'Cargando observaciones…',
   'No observations were returned for this station and time range.':
     'No hay observaciones para esta estación y período.',
