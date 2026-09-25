@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { CircleAlert, LoaderCircle, RefreshCw } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
-import type { DisplayUnits, UserLanguage, WeatherStation } from '@benchmark/domain';
+import type { DailyStationObservation, DisplayUnits, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { displayMetricValue } from '../forecastUnits';
 import { errorMessage, t } from '../language';
 import { MetricChart } from './ForecastDashboard';
@@ -38,6 +38,10 @@ function monthsBefore(today: string, months: number): string {
   return utcDay(targetMonth);
 }
 
+function presentValues(entries: [string, number | null][]): Record<string, number> {
+  return Object.fromEntries(entries.filter((entry): entry is [string, number] => entry[1] !== null));
+}
+
 export function ObservationsDashboard({
   api, organizationId, stations, plan, units, language, onUnauthorized, focusStationId,
 }: {
@@ -50,14 +54,14 @@ export function ObservationsDashboard({
   onUnauthorized: () => void;
   focusStationId?: string | null;
 }) {
-  const today = utcDay(new Date());
+  const utcToday = utcDay(new Date());
   const [stationId, setStationId] = useState(focusStationId ?? stations[0]?.id ?? '');
   const [viewFrom, setViewFrom] = useState(() => addUtcDays(utcDay(new Date()), -6));
   const [viewThrough, setViewThrough] = useState(() => utcDay(new Date()));
   const [backfillFrom, setBackfillFrom] = useState(() => addUtcDays(utcDay(new Date()), -30));
   const [backfillThrough, setBackfillThrough] = useState(() => addUtcDays(utcDay(new Date()), -1));
   const [refreshKey, setRefreshKey] = useState(0);
-  const [points, setPoints] = useState<ChartPoint[]>([]);
+  const [days, setDays] = useState<DailyStationObservation[]>([]);
   const [responseZone, setResponseZone] = useState<{ stationId: string; value: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [queryError, setQueryError] = useState<string | null>(null);
@@ -72,6 +76,9 @@ export function ObservationsDashboard({
   const selectedStation = stations.find((station) => station.id === selectedStationId);
   const stationZone = selectedStation?.timeZone || 'UTC';
   const timeZone = responseZone?.stationId === selectedStationId ? responseZone.value : stationZone;
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
   const hasHardware = Boolean(selectedStation?.dataProviderId && selectedStation?.providerStationId);
   const canBackfill = plan === 'PREMIUM' && hasHardware;
   const earliestDay = monthsBefore(today, 12);
@@ -80,37 +87,24 @@ export function ObservationsDashboard({
     ? (Date.parse(`${viewThrough}T00:00:00Z`) - Date.parse(`${viewFrom}T00:00:00Z`)) / DAY_MS + 1
     : 0;
   const validView = viewDays >= 1 && viewFrom >= earliestDay && viewThrough <= today;
-  const validBackfill = backfillFrom >= earliestDay && backfillFrom <= backfillThrough
-    && backfillThrough < today;
+  const validBackfill = backfillFrom >= monthsBefore(utcToday, 12) && backfillFrom <= backfillThrough
+    && backfillThrough < utcToday;
 
   useEffect(() => {
     if (!selectedStationId || !validView) {
-      setPoints([]);
+      setDays([]);
       return;
     }
     let current = true;
     setLoading(true);
     setQueryError(null);
-    setPoints([]);
-    void (async () => {
-      const endExclusive = addUtcDays(viewThrough, 1);
-      const rows: ChartPoint[] = [];
-      for (let day = viewFrom; day < endExclusive;) {
-        // The API accepts at most 31 days. Adjacent half-open windows cover the
-        // selected year without overlap or missing the last UTC hour.
-        const next = addUtcDays(day, 31);
-        const end = next < endExclusive ? next : endExclusive;
-        const response = await api.getStationObservations(organizationId, selectedStationId,
-          `${day}T00:00:00Z`, `${end}T00:00:00Z`);
+    setDays([]);
+    void api.getDailyStationObservations(organizationId, selectedStationId, viewFrom, viewThrough)
+      .then((response) => {
         if (!current) return;
-        setResponseZone({ stationId: selectedStationId, value: response.timeZone || stationZone });
-        rows.push(...response.points
-          .map((point) => ({ ...point, time: Date.parse(point.utcDateTime) }))
-          .filter((point) => Number.isFinite(point.time) && point.provider && point.values));
-        day = end;
-      }
-      if (current) setPoints(rows.sort((a, b) => a.time - b.time));
-    })()
+        setResponseZone({ stationId: selectedStationId, value: response.timeZone });
+        setDays(response.days);
+      })
       .catch((cause: unknown) => {
         if (!current) return;
         if (cause instanceof BenchmarkApiError && cause.status === 401) {
@@ -129,23 +123,42 @@ export function ObservationsDashboard({
     setQueuedDays(null);
   }, [selectedStationId]);
 
-  const providers = useMemo(() => [...new Set(points.map((point) => point.provider))].sort(), [points]);
+  const dailyMax = useMemo(() => days.map((day): ChartPoint => ({
+    provider: day.provider, utcDateTime: day.utcDateTime, localDateTime: day.localDateTime,
+    hoursFrom0Time: null, time: Date.parse(day.utcDateTime),
+    values: presentValues([
+      ['TEMPERATURE', day.temperatureMax], ['RELATIVE_HUMIDITY', day.relativeHumidityMax],
+      ['PRECIPITATION_QUANTITY', day.precipitationTotal], ['WIND_SPEED', day.windSpeedMax],
+      ['WIND_DIRECTION', day.windDirectionAtMax],
+    ]),
+  })), [days]);
+  const dailyMin = useMemo(() => days.map((day): ChartPoint => ({
+    provider: day.provider, utcDateTime: day.utcDateTime, localDateTime: day.localDateTime,
+    hoursFrom0Time: null, time: Date.parse(day.utcDateTime),
+    values: presentValues([
+      ['TEMPERATURE', day.temperatureMin], ['RELATIVE_HUMIDITY', day.relativeHumidityMin],
+    ]),
+  })), [days]);
+  const providers = useMemo(() => [...new Set(dailyMax.map((point) => point.provider))].sort(), [dailyMax]);
   const colors = Object.fromEntries(providers.map((provider, index) => [provider, COLORS[index % COLORS.length]]));
   const metrics = useMemo(() => {
-    const available = [...new Set(points.flatMap((point) => Object.entries(point.values)
+    const available = [...new Set(dailyMax.flatMap((point) => Object.entries(point.values)
       .filter(([, value]) => Number.isFinite(value)).map(([name]) => name)))];
-    return available.filter((metric) => metric !== 'WIND_DIRECTION' || !available.includes('WIND_SPEED'))
+    return available.filter((metric) => ['TEMPERATURE', 'RELATIVE_HUMIDITY',
+      'PRECIPITATION_QUANTITY', 'WIND_SPEED'].includes(metric))
       .sort((a, b) => {
         const ai = ORDER.indexOf(a);
         const bi = ORDER.indexOf(b);
         return (ai < 0 ? Infinity : ai) - (bi < 0 ? Infinity : bi) || a.localeCompare(b);
       });
-  }, [points]);
-  const displayPoints = useMemo(() => points.map((point) => ({
+  }, [dailyMax]);
+  const convertPoints = (source: ChartPoint[]) => source.map((point) => ({
     ...point,
     values: Object.fromEntries(Object.entries(point.values)
       .map(([metric, value]) => [metric, displayMetricValue(metric, value, units)])),
-  })), [points, units]);
+  }));
+  const displayMax = convertPoints(dailyMax);
+  const displayMin = convertPoints(dailyMin);
 
   async function submitBackfill(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -178,7 +191,7 @@ export function ObservationsDashboard({
       <div>
         <span className="eyebrow">{t('Station observations', language)}</span>
         <h2>{t('Observed weather', language)}</h2>
-        <p>{t("Hourly observations use the selected station's local time zone.", language)}</p>
+        <p>{t("Daily observations use the selected station's local calendar date.", language)}</p>
       </div>
       <button type="button" className="secondary-button" disabled={loading}
         onClick={() => setRefreshKey((key) => key + 1)}>
@@ -192,10 +205,10 @@ export function ObservationsDashboard({
           {stations.map((station) => <option key={station.id} value={station.id}>{station.name}</option>)}
         </select>
       </label>
-      <label className="field"><span>{t('View from (UTC day)', language)}</span>
+      <label className="field"><span>{t('View from (local day)', language)}</span>
         <input type="date" value={viewFrom} max={today} onChange={(event) => setViewFrom(event.target.value)} />
       </label>
-      <label className="field"><span>{t('View through (UTC day)', language)}</span>
+      <label className="field"><span>{t('View through (local day)', language)}</span>
         <input type="date" value={viewThrough} max={today} onChange={(event) => setViewThrough(event.target.value)} />
       </label>
       <div className="forecast-range observation-presets" role="group" aria-label={t('View range', language)}>
@@ -210,24 +223,34 @@ export function ObservationsDashboard({
       </div>
     </div>
     {!validView && <div className="alert error"><CircleAlert size={18} />
-      {t('Choose a UTC range within the last 12 months to view.', language)}</div>}
+      {t('Choose local dates within the last 12 months to view.', language)}</div>}
     {queryError && <div className="alert error"><CircleAlert size={18} />{queryError}</div>}
     {loading && <div className="forecast-empty"><LoaderCircle className="spin" size={20} />
       {t('Loading observations…', language)}</div>}
-    {!loading && validView && !queryError && points.length === 0 &&
+    {!loading && validView && !queryError && days.length === 0 &&
       <div className="forecast-empty">{t('No observations were returned for this station and time range.', language)}</div>}
-    {!loading && !queryError && points.length > 0 && <>
+    {!loading && !queryError && days.length > 0 && <>
       <div className="forecast-provider-filter"><span>{t('Providers', language)}</span>
         {providers.map((provider) => <span className="observation-provider" key={provider}>
           <i style={{ background: colors[provider] }} />{provider.replaceAll('_', ' ')}
         </span>)}
       </div>
       <div className="forecast-chart-grid">
-        {metrics.map((metric) => <MetricChart key={metric} chartKind="observation" metric={metric}
-          points={displayPoints} providers={providers} colors={colors} timeZone={timeZone}
-          windowStart={Date.parse(`${viewFrom}T00:00:00Z`)}
-          windowEnd={Date.parse(`${addUtcDays(viewThrough, 1)}T00:00:00Z`)}
-          units={units} language={language} />)}
+        {metrics.flatMap((metric) => {
+          const bounds = metric === 'TEMPERATURE' || metric === 'RELATIVE_HUMIDITY';
+          const chart = (kind: 'max' | 'min') => <MetricChart key={`${metric}-${kind}`}
+            chartKind="observation" metric={metric}
+            title={`${t(metric === 'PRECIPITATION_QUANTITY' ? 'Precipitation'
+              : metric === 'RELATIVE_HUMIDITY' ? 'Relative humidity'
+                : metric === 'TEMPERATURE' ? 'Temperature' : metric === 'WIND_SPEED' ? 'Wind speed' : metric, language)} · ${t(metric === 'PRECIPITATION_QUANTITY' ? 'Daily total'
+              : kind === 'min' ? 'Daily minimum' : 'Daily maximum', language)}`}
+            points={kind === 'min' ? displayMin : displayMax}
+            providers={providers} colors={colors} timeZone={timeZone}
+            windowStart={Date.parse(`${addUtcDays(viewFrom, -1)}T00:00:00Z`)}
+            windowEnd={Date.parse(`${addUtcDays(viewThrough, 2)}T00:00:00Z`)}
+            units={units} language={language} />;
+          return bounds ? [chart('max'), chart('min')] : [chart('max')];
+        })}
       </div>
     </>}
 
@@ -237,11 +260,11 @@ export function ObservationsDashboard({
       {!canBackfill ? <p>{t('Historical imports require PREMIUM and a connected station provider.', language)}</p>
         : <form onSubmit={(event) => { void submitBackfill(event); }}>
           <label className="field"><span>{t('First UTC day', language)}</span>
-            <input type="date" required min={earliestDay} max={addUtcDays(today, -1)}
+            <input type="date" required min={monthsBefore(utcToday, 12)} max={addUtcDays(utcToday, -1)}
               value={backfillFrom} onChange={(event) => setBackfillFrom(event.target.value)} />
           </label>
           <label className="field"><span>{t('Last UTC day', language)}</span>
-            <input type="date" required min={backfillFrom || earliestDay} max={addUtcDays(today, -1)}
+            <input type="date" required min={backfillFrom || monthsBefore(utcToday, 12)} max={addUtcDays(utcToday, -1)}
               value={backfillThrough} onChange={(event) => setBackfillThrough(event.target.value)} />
           </label>
           <button type="submit" className="primary-button" disabled={!validBackfill || backfillBusy}>

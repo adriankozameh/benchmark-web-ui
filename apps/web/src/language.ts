@@ -72,8 +72,15 @@ const spanish: Record<string, string> = {
   'Observed weather': 'Datos meteorológicos observados',
   "Hourly observations use the selected station's local time zone.":
     'Las observaciones horarias se muestran en la zona horaria local de la estación seleccionada.',
+  "Daily observations use the selected station's local calendar date.":
+    'Los valores diarios usan la fecha local de la estación seleccionada.',
+  'Daily total': 'Total diario', 'Daily minimum': 'Mínimo diario', 'Daily maximum': 'Máximo diario',
   'View from (UTC day)': 'Ver desde (día UTC)',
   'View through (UTC day)': 'Ver hasta (día UTC)',
+  'View from (local day)': 'Ver desde (día local)',
+  'View through (local day)': 'Ver hasta (día local)',
+  'Choose local dates within the last 12 months to view.':
+    'Selecciona fechas locales dentro de los últimos 12 meses para visualizar.',
   'Choose 1 to 31 UTC days to view.': 'Selecciona entre 1 y 31 días UTC para visualizar.',
   'Choose a UTC range within the last 12 months to view.':
     'Selecciona un período UTC dentro de los últimos 12 meses para visualizar.',

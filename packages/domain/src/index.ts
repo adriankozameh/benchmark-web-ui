@@ -119,6 +119,30 @@ export type StationTimeSeries = {
   points: StationTimeSeriesPoint[];
 };
 
+export type DailyStationObservation = {
+  localDate: string;
+  utcDateTime: string;
+  localDateTime: string;
+  provider: string;
+  temperatureMax: number | null;
+  temperatureMin: number | null;
+  relativeHumidityMax: number | null;
+  relativeHumidityMin: number | null;
+  precipitationTotal: number | null;
+  windSpeedMax: number | null;
+  windDirectionAtMax: number | null;
+};
+
+export type DailyStationObservations = {
+  organizationId: string;
+  stationId: string;
+  timeZone: string;
+  from: string;
+  to: string;
+  count: number;
+  days: DailyStationObservation[];
+};
+
 export type ObservationBackfillResponse = {
   organizationId: string;
   stationId: string;

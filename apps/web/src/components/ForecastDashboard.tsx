@@ -275,12 +275,13 @@ const RIGHT = 14;
 const TOP = 16;
 const BOTTOM = 31;
 
-export function MetricChart({ metric, points, providers, colors, timeZone, windowStart, windowEnd, units, language, chartKind = 'forecast' }: {
+export function MetricChart({ metric, points, providers, colors, timeZone, windowStart, windowEnd, units, language, chartKind = 'forecast', title }: {
   metric: string;
   points: ChartPoint[];
   units: DisplayUnits;
   language: UserLanguage;
   chartKind?: 'forecast' | 'observation';
+  title?: string;
   providers: string[];
   colors: Record<string, string>;
   timeZone: string;
@@ -323,7 +324,7 @@ export function MetricChart({ metric, points, providers, colors, timeZone, windo
 
   return (
     <section className="forecast-chart-card" aria-label={`${metricLabel(metric, language)} ${t(chartKind === 'forecast' ? 'forecast chart' : 'observation chart', language)}${metricUnit(metric, units) ? ` ${t('in', language)} ${metricUnit(metric, units)}` : ''}`}>
-      <div className="forecast-chart-heading"><h3>{metricLabel(metric, language)}{metricUnit(metric, units) ? ` (${metricUnit(metric, units)})` : ''}</h3>
+      <div className="forecast-chart-heading"><h3>{title ?? metricLabel(metric, language)}{metricUnit(metric, units) ? ` (${metricUnit(metric, units)})` : ''}</h3>
         <span>{activeTime === null ? timeZone
           : localLabel(active[0]?.point?.localDateTime ?? activeTime, timeZone, language, true, true)}</span></div>
       {directionMetric && <p className="forecast-wind-convention">{t('Arrows point toward where the wind comes from · degrees clockwise from true north', language)}</p>}

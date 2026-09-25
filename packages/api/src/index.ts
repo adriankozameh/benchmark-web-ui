@@ -1,6 +1,7 @@
 import type {
   ApiErrorPayload,
   ObservationBackfillResponse,
+  DailyStationObservations,
   CreateStationInput,
   CurrentUser,
   CreateDataProviderInput,
@@ -111,6 +112,17 @@ export class BenchmarkApi {
   ): Promise<StationTimeSeries> {
     const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
       `/stations/${encodeURIComponent(stationId)}/timeseries/observations`;
+    return this.request(`${path}?${new URLSearchParams({ from, to })}`);
+  }
+
+  getDailyStationObservations(
+    organizationId: string,
+    stationId: string,
+    from: string,
+    to: string,
+  ): Promise<DailyStationObservations> {
+    const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/stations/${encodeURIComponent(stationId)}/timeseries/observations/daily`;
     return this.request(`${path}?${new URLSearchParams({ from, to })}`);
   }
 
