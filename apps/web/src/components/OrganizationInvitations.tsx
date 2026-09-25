@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { CircleAlert, LoaderCircle, MailPlus } from 'lucide-react';
+import { CircleAlert, LoaderCircle, MailPlus, RefreshCw } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { OrganizationInvitation, UserLanguage } from '@benchmark/domain';
 import { errorMessage, locale, t } from '../language';
@@ -22,6 +22,19 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
   const [notice, setNotice] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const canInvite = organizationRole === 'OWNER' || organizationRole === 'ADMIN';
+
+  async function refreshDelivery() {
+    setLoading(true);
+    setError(null);
+    try {
+      setInvitations(await api.listInvitations(organizationId));
+    } catch (cause) {
+      if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
+      else setError(errorMessage(cause, language));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!canInvite) return;
@@ -90,11 +103,16 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
       {error && <div className="alert error compact"><CircleAlert size={17} /><span>{error}</span></div>}
       {notice && <p role="status" className="invitation-notice">{notice}</p>}
       {previewUrl && <p className="invitation-notice">{t('Local preview link:', language)} <a href={previewUrl}>{previewUrl}</a></p>}
-      <h3>{t('Invitations', language)}</h3>
+      <div className="invitation-list-heading"><h3>{t('Invitations', language)}</h3>
+        <button type="button" className="secondary-button" disabled={loading || busy !== null}
+          onClick={() => { void refreshDelivery(); }}><RefreshCw size={15} />{t('Refresh delivery status', language)}</button>
+      </div>
       {loading ? <p><LoaderCircle className="spin" size={16} /> {t('Loading invitations…', language)}</p>
         : invitations.length === 0 ? <p>{t('No invitations yet.', language)}</p>
           : <div className="invitation-list">{invitations.map((invitation) => <div key={invitation.id} className="invitation-row">
             <div><strong>{invitation.email}</strong><span>{t(invitation.role === 'ADMIN' ? 'Admin' : 'Member', language)} · {t(invitation.status, language)} · {t('Expires', language)} {new Intl.DateTimeFormat(locale(language), { dateStyle: 'medium' }).format(new Date(invitation.expiresAt))}</span>
+              <span>{t('Email:', language)} {t(invitation.deliveryStatus === 'SENT' ? 'Accepted by email provider'
+                : invitation.deliveryStatus === 'FAILED' ? 'Delivery failed' : 'Sending pending', language)}</span>
               {invitation.deliveryStatus === 'FAILED' && <span>{t('Email delivery failed. Resend the invitation.', language)}</span>}
             </div>
             {(invitation.status === 'PENDING' || invitation.status === 'EXPIRED') && <div className="invitation-actions">
