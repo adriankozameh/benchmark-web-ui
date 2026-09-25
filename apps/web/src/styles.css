@@ -577,3 +577,23 @@ button { color: inherit; }
   color: #fff;
   white-space: nowrap;
 }
+
+.future-dashboard-page {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+.future-dashboard-page h2 { margin: 8px 0 6px; }
+.future-dashboard-page p { margin: 0; color: #728198; }
+.future-dashboard-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  background: var(--benchmark-surface, #f4f7fa);
+  color: var(--benchmark-navy, #34455a);
+}

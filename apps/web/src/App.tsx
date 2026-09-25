@@ -1,9 +1,12 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   CheckCircle2,
+  ChartNoAxesCombined,
   ChevronRight,
   CircleAlert,
   Gauge,
+  History,
   LoaderCircle,
   LogOut,
   MapPin,
@@ -94,7 +97,7 @@ function ConfiguredApp({ config }: { config: AppConfig }) {
         if (cancelled) return;
         setAuthenticated(true);
         setCallbackState('success');
-        window.history.replaceState({}, '', '/settings');
+        window.history.replaceState({}, '', '/');
       })
       .catch((error) => {
         if (cancelled) return;
@@ -259,6 +262,35 @@ function AuthenticatedApp({
   onLogout: () => void;
   onUnauthorized: () => void;
 }) {
+  type DashboardPage = 'forecast' | 'observations' | 'historic';
+  type SettingsPage = 'stations' | 'account';
+  type AppRoute =
+    | { section: 'dashboard'; page: DashboardPage }
+    | { section: 'settings'; page: SettingsPage };
+
+  const parseRoute = useCallback((pathname: string): AppRoute | null => {
+    const normalized = pathname.replace(/\/+$/, '') || '/';
+    if (normalized === '/dashboard' || normalized === '/dashboard/forecast') {
+      return { section: 'dashboard', page: 'forecast' };
+    }
+    if (normalized === '/dashboard/observations') {
+      return { section: 'dashboard', page: 'observations' };
+    }
+    if (normalized === '/dashboard/historic') {
+      return { section: 'dashboard', page: 'historic' };
+    }
+    if (normalized === '/settings' || normalized === '/settings/stations') {
+      return { section: 'settings', page: 'stations' };
+    }
+    if (normalized === '/settings/account') {
+      return { section: 'settings', page: 'account' };
+    }
+    return null;
+  }, []);
+
+  const routePath = useCallback((route: AppRoute): string =>
+    `/${route.section}/${route.page}`, []);
+
   const [me, setMe] = useState<CurrentUser | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
@@ -267,20 +299,20 @@ function AuthenticatedApp({
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState<string | null>(null);
   const languageRef = useRef<UserLanguage>('en');
-  const [page, setPage] = useState<'dashboard' | 'settings'>(
-    () => window.location.pathname === '/dashboard' ? 'dashboard' : 'settings',
-  );
+  const [route, setRoute] = useState<AppRoute | null>(() => parseRoute(window.location.pathname));
+
+  const navigate = useCallback((nextRoute: AppRoute, replace = false) => {
+    const path = routePath(nextRoute);
+    if (replace) window.history.replaceState({}, '', path);
+    else window.history.pushState({}, '', path);
+    setRoute(nextRoute);
+  }, [routePath]);
 
   useEffect(() => {
-    const handlePopState = () => setPage(window.location.pathname === '/dashboard' ? 'dashboard' : 'settings');
+    const handlePopState = () => setRoute(parseRoute(window.location.pathname));
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  function navigate(nextPage: 'dashboard' | 'settings') {
-    window.history.pushState({}, '', `/${nextPage}`);
-    setPage(nextPage);
-  }
+  }, [parseRoute]);
 
   const organization = useMemo(
     () => me?.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? me?.organizations[0] ?? null,
@@ -334,7 +366,19 @@ function AuthenticatedApp({
     void refresh();
   }, [refresh]);
 
-  if (state === 'loading' && !me) {
+  // Only choose a default destination when the user entered through the app root
+  // (or another unknown URL). Explicit deep links are always preserved.
+  useEffect(() => {
+    if (state !== 'success' || route !== null) return;
+    navigate(
+      stations.length > 0
+        ? { section: 'dashboard', page: 'forecast' }
+        : { section: 'settings', page: 'stations' },
+      true,
+    );
+  }, [navigate, route, state, stations.length]);
+
+  if ((state === 'loading' && !me) || route === null) {
     return (
       <div className="callback-screen">
         <BrandLogo variant="blue" className="callback-logo" />
@@ -345,6 +389,18 @@ function AuthenticatedApp({
     );
   }
 
+  const dashboardNav = [
+    { page: 'forecast' as const, label: 'Forecast', icon: ChartNoAxesCombined },
+    { page: 'observations' as const, label: 'Observations', icon: RadioTower },
+    { page: 'historic' as const, label: 'Historic', icon: History },
+  ];
+
+  const headerTitle = route.section === 'dashboard'
+    ? route.page === 'forecast' ? 'Forecast'
+      : route.page === 'observations' ? 'Observations'
+      : 'Historic'
+    : route.page === 'account' ? 'Account' : 'Weather stations';
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -352,29 +408,44 @@ function AuthenticatedApp({
         <BrandLogo variant="icon" className="sidebar-icon-logo" />
         <div className="sidebar-label">{t('Workspace', language)}</div>
         <nav className="sidebar-nav">
-          <button type="button" className={`nav-item ${page === 'dashboard' ? 'active' : ''}`}
-            aria-current={page === 'dashboard' ? 'page' : undefined} onClick={() => navigate('dashboard')}>
+          <button type="button" className={`nav-item ${route.section === 'dashboard' ? 'active' : ''}`}
+            aria-current={route.section === 'dashboard' ? 'page' : undefined}
+            onClick={() => navigate({ section: 'dashboard', page: 'forecast' })}>
             <Gauge size={17} /> <span>{t('Dashboard', language)}</span>
           </button>
-          <button type="button" className={`nav-item ${page === 'settings' ? 'active' : ''}`}
-            aria-current={page === 'settings' ? 'page' : undefined} onClick={() => navigate('settings')}>
+          <button type="button" className={`nav-item ${route.section === 'settings' ? 'active' : ''}`}
+            aria-current={route.section === 'settings' ? 'page' : undefined}
+            onClick={() => navigate({ section: 'settings', page: 'stations' })}>
             <Settings size={17} /> <span>{t('Settings', language)}</span>
           </button>
         </nav>
 
-        <div className="sidebar-label settings-label">{t('Settings', language)}</div>
+        <div className="sidebar-label settings-label">
+          {t(route.section === 'dashboard' ? 'Dashboard' : 'Settings', language)}
+        </div>
         <nav className="sidebar-nav">
-          <button type="button" className={`nav-item ${page === 'settings' ? 'active secondary-active' : ''}`}
-            onClick={() => navigate('settings')}>
-            <MapPin size={17} /> <span>{t('Stations', language)}</span>
-          </button>
-          <button type="button" className="nav-item disabled" disabled>
-            <RadioTower size={17} /> <span>{t('Data providers', language)}</span><small>{t('Soon', language)}</small>
-          </button>
-          <button type="button" className={`nav-item ${page === 'settings' ? 'secondary-active' : ''}`}
-            onClick={() => navigate('settings')}>
-            <UserRound size={17} /> <span>{t('Account', language)}</span>
-          </button>
+          {route.section === 'dashboard' ? dashboardNav.map(({ page, label, icon: Icon }) => (
+            <button type="button" key={page}
+              className={`nav-item ${route.page === page ? 'secondary-active' : ''}`}
+              aria-current={route.page === page ? 'page' : undefined}
+              onClick={() => navigate({ section: 'dashboard', page })}>
+              <Icon size={17} /> <span>{t(label, language)}</span>
+            </button>
+          )) : <>
+            <button type="button" className={`nav-item ${route.page === 'stations' ? 'secondary-active' : ''}`}
+              aria-current={route.page === 'stations' ? 'page' : undefined}
+              onClick={() => navigate({ section: 'settings', page: 'stations' })}>
+              <MapPin size={17} /> <span>{t('Stations', language)}</span>
+            </button>
+            <button type="button" className="nav-item disabled" disabled>
+              <RadioTower size={17} /> <span>{t('Data providers', language)}</span><small>{t('Soon', language)}</small>
+            </button>
+            <button type="button" className={`nav-item ${route.page === 'account' ? 'secondary-active' : ''}`}
+              aria-current={route.page === 'account' ? 'page' : undefined}
+              onClick={() => navigate({ section: 'settings', page: 'account' })}>
+              <UserRound size={17} /> <span>{t('Account', language)}</span>
+            </button>
+          </>}
         </nav>
 
         <div className="sidebar-bottom">
@@ -397,8 +468,8 @@ function AuthenticatedApp({
             <BrandLogo variant="icon" />
           </div>
           <div className="topbar-title">
-            <span className="eyebrow">{t(page === 'dashboard' ? 'Dashboard' : 'Settings', language)}</span>
-            <h1>{t(page === 'dashboard' ? 'Forecasts' : 'Weather stations', language)}</h1>
+            <span className="eyebrow">{t(route.section === 'dashboard' ? 'Dashboard' : 'Settings', language)}</span>
+            <h1>{t(headerTitle, language)}</h1>
           </div>
           <div className="topbar-actions">
             {organization && <span className={`plan-pill ${organization.plan.toLowerCase()}`}>{t(organization.plan, language)}</span>}
@@ -416,37 +487,74 @@ function AuthenticatedApp({
             </div>
           )}
 
-          {organization && (page === 'dashboard'
-            ? <ForecastDashboard api={api} organizationId={organization.id} stations={stations} units={units} language={language}
-                focusStationId={stationToView}
-                onUnauthorized={onUnauthorized} />
-            : <>
-                {userSettings && <UserPreferences settings={userSettings} onSave={saveSettings} onUnauthorized={onUnauthorized} />}
-                <StationSettings api={api} organizationId={organization.id}
-                  stationLimit={organization.stationLimit} sites={sites} stations={stations}
-                  onCreated={refresh} language={language} onUnauthorized={onUnauthorized} plan={organization.plan}
-                  onLocationChanged={(stationId) => { setStationToView(stationId); navigate('dashboard'); }} />
-              </>)}
+          {organization && route.section === 'dashboard' && route.page === 'forecast' && (
+            <ForecastDashboard api={api} organizationId={organization.id} stations={stations} units={units} language={language}
+              focusStationId={stationToView} onUnauthorized={onUnauthorized} />
+          )}
+
+          {organization && route.section === 'dashboard' && route.page === 'observations' && (
+            <FutureDashboardPage icon={<RadioTower size={28} />} title={t('Observations', language)}
+              description={t('Station observations will appear here.', language)} language={language} />
+          )}
+
+          {organization && route.section === 'dashboard' && route.page === 'historic' && (
+            <FutureDashboardPage icon={<History size={28} />} title={t('Historic', language)}
+              description={t('Historical weather data will appear here.', language)} language={language} />
+          )}
+
+          {organization && route.section === 'settings' && route.page === 'stations' && (
+            <StationSettings api={api} organizationId={organization.id}
+              stationLimit={organization.stationLimit} sites={sites} stations={stations}
+              onCreated={refresh} language={language} onUnauthorized={onUnauthorized} plan={organization.plan}
+              onLocationChanged={(stationId) => {
+                setStationToView(stationId);
+                navigate({ section: 'dashboard', page: 'forecast' });
+              }} />
+          )}
+
+          {route.section === 'settings' && route.page === 'account' && userSettings && (
+            <UserPreferences settings={userSettings} onSave={saveSettings} onUnauthorized={onUnauthorized} />
+          )}
         </div>
       </main>
 
       <nav className="mobile-bottom-nav" aria-label={t('Primary navigation', language)}>
-        <button type="button" className={page === 'dashboard' ? 'active' : ''}
-          aria-current={page === 'dashboard' ? 'page' : undefined} onClick={() => navigate('dashboard')}>
+        <button type="button" className={route.section === 'dashboard' ? 'active' : ''}
+          aria-current={route.section === 'dashboard' ? 'page' : undefined}
+          onClick={() => navigate({ section: 'dashboard', page: 'forecast' })}>
           <Gauge size={20} />
           <span>{t('Dashboard', language)}</span>
         </button>
-        <button type="button" className={page === 'settings' ? 'active' : ''}
-          aria-current={page === 'settings' ? 'page' : undefined} onClick={() => navigate('settings')}>
+        <button type="button" className={route.section === 'settings' && route.page === 'stations' ? 'active' : ''}
+          aria-current={route.section === 'settings' && route.page === 'stations' ? 'page' : undefined}
+          onClick={() => navigate({ section: 'settings', page: 'stations' })}>
           <MapPin size={20} />
           <span>{t('Stations', language)}</span>
         </button>
-        <button type="button" onClick={() => navigate('settings')} aria-label={t('Account', language)}>
+        <button type="button" className={route.section === 'settings' && route.page === 'account' ? 'active' : ''}
+          aria-current={route.section === 'settings' && route.page === 'account' ? 'page' : undefined}
+          onClick={() => navigate({ section: 'settings', page: 'account' })} aria-label={t('Account', language)}>
           <UserRound size={20} />
           <span>{t('Account', language)}</span>
         </button>
       </nav>
     </div>
+  );
+}
+
+function FutureDashboardPage({ icon, title, description, language }: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  language: UserLanguage;
+}) {
+  return (
+    <section className="station-form-card future-dashboard-page">
+      <div className="future-dashboard-icon">{icon}</div>
+      <span className="eyebrow">{t('Coming soon', language)}</span>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </section>
   );
 }
 

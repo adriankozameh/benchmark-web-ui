@@ -2,7 +2,8 @@ import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
   Workspace: 'Espacio de trabajo', Dashboard: 'Panel', Settings: 'Configuración', Stations: 'Estaciones',
-  Forecasts: 'Pronósticos', 'Weather stations': 'Estaciones meteorológicas', Account: 'Cuenta',
+  Forecasts: 'Pronósticos', Forecast: 'Pronóstico', Observations: 'Observaciones', Historic: 'Histórico',
+  'Weather stations': 'Estaciones meteorológicas', Account: 'Cuenta',
   'Data providers': 'Proveedores de datos', Soon: 'Pronto', 'Log out': 'Cerrar sesión',
   'Preparing your account…': 'Preparando tu cuenta…',
   'Loading your Benchmark organization and station settings.': 'Cargando tu organización y tus estaciones.',
@@ -65,6 +66,9 @@ const spanish: Record<string, string> = {
   'Imperial (°F, mph, in)': 'Imperial (°F, mph, pulgadas)',
   'Save preferences': 'Guardar preferencias', Saved: 'Guardado',
   'Primary navigation': 'Navegación principal',
+  'Coming soon': 'Próximamente',
+  'Station observations will appear here.': 'Las observaciones de las estaciones aparecerán aquí.',
+  'Historical weather data will appear here.': 'Los datos meteorológicos históricos aparecerán aquí.',
   'Benchmark user': 'Usuario de Benchmark', plan: 'plan',
   'Station location map': 'Mapa de ubicación de la estación',
   'Base map': 'Mapa base', Satellite: 'Satélite',
