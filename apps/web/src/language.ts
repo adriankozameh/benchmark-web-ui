@@ -68,6 +68,29 @@ const spanish: Record<string, string> = {
   'Primary navigation': 'Navegación principal',
   'Coming soon': 'Próximamente',
   'Station observations will appear here.': 'Las observaciones de las estaciones aparecerán aquí.',
+  'Station observations': 'Observaciones de la estación',
+  'Observed weather': 'Datos meteorológicos observados',
+  "Hourly observations use the selected station's local time zone.":
+    'Las observaciones horarias se muestran en la zona horaria local de la estación seleccionada.',
+  'View from (UTC day)': 'Ver desde (día UTC)',
+  'View through (UTC day)': 'Ver hasta (día UTC)',
+  'Choose 1 to 31 UTC days to view.': 'Selecciona entre 1 y 31 días UTC para visualizar.',
+  'Loading observations…': 'Cargando observaciones…',
+  'No observations were returned for this station and time range.':
+    'No hay observaciones para esta estación y período.',
+  'Add a station in Settings to see its observations.':
+    'Agrega una estación en Configuración para ver sus observaciones.',
+  'Load historical station data': 'Cargar datos históricos de la estación',
+  'Request complete UTC days from your linked station provider. Existing hourly values are updated as data arrives.':
+    'Solicita días UTC completos al proveedor conectado. Los valores horarios existentes se actualizan al llegar nuevos datos.',
+  'Historical imports require PREMIUM and a connected station provider.':
+    'Las importaciones históricas requieren PREMIUM y un proveedor conectado a la estación.',
+  'First UTC day': 'Primer día UTC', 'Last UTC day': 'Último día UTC',
+  'Queuing days…': 'Encolando días…', 'Load historical data': 'Cargar datos históricos',
+  'Days queued:': 'Días encolados:',
+  'Import runs in the background. Refresh the charts to see new data.':
+    'La importación continúa en segundo plano. Actualiza los gráficos para ver los datos nuevos.',
+  'observation chart': 'gráfico de observaciones',
   'Historical weather data will appear here.': 'Los datos meteorológicos históricos aparecerán aquí.',
   'Benchmark user': 'Usuario de Benchmark', plan: 'plan',
   'Station location map': 'Mapa de ubicación de la estación',

@@ -24,6 +24,7 @@ import type { StationValidationErrors } from '@benchmark/validation';
 import { AddressSearch } from './components/AddressSearch';
 import { BrandLogo } from './components/BrandLogo';
 import { ForecastDashboard } from './components/ForecastDashboard';
+import { ObservationsDashboard } from './components/ObservationsDashboard';
 import { MapPicker } from './components/MapPicker';
 import { StationHardwareEditor } from './components/StationHardwareEditor';
 import { errorMessage, t } from './language';
@@ -498,8 +499,9 @@ function AuthenticatedApp({
           )}
 
           {organization && route.section === 'dashboard' && route.page === 'historic' && (
-            <FutureDashboardPage icon={<History size={28} />} title={t('Historic', language)}
-              description={t('Historical weather data will appear here.', language)} language={language} />
+            <ObservationsDashboard api={api} organizationId={organization.id} stations={stations}
+              plan={organization.plan} units={units} language={language} focusStationId={stationToView}
+              onUnauthorized={onUnauthorized} />
           )}
 
           {organization && route.section === 'settings' && route.page === 'stations' && (

@@ -5,6 +5,7 @@ cp .env.example .env
 cd ../..
 corepack enable
 pnpm install
+pnpm build
 pnpm dev
 ```
 

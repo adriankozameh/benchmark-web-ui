@@ -119,6 +119,14 @@ export type StationTimeSeries = {
   points: StationTimeSeriesPoint[];
 };
 
+export type ObservationBackfillResponse = {
+  organizationId: string;
+  stationId: string;
+  from: string;
+  to: string;
+  queuedDays: number;
+};
+
 export type CreateStationInput = {
   siteId: string | null;
   name: string;

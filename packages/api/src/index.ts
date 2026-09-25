@@ -1,5 +1,6 @@
 import type {
   ApiErrorPayload,
+  ObservationBackfillResponse,
   CreateStationInput,
   CurrentUser,
   CreateDataProviderInput,
@@ -100,6 +101,30 @@ export class BenchmarkApi {
       `/stations/${encodeURIComponent(stationId)}/timeseries/forecast`;
     const params = new URLSearchParams({ from, to });
     return this.request(`${path}?${params}`);
+  }
+
+  getStationObservations(
+    organizationId: string,
+    stationId: string,
+    from: string,
+    to: string,
+  ): Promise<StationTimeSeries> {
+    const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/stations/${encodeURIComponent(stationId)}/timeseries/observations`;
+    return this.request(`${path}?${new URLSearchParams({ from, to })}`);
+  }
+
+  requestObservationBackfill(
+    organizationId: string,
+    stationId: string,
+    from: string,
+    to: string,
+  ): Promise<ObservationBackfillResponse> {
+    return this.request(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/stations/${encodeURIComponent(stationId)}/observations/backfill`,
+      { method: 'POST', body: { from, to } },
+    );
   }
 
   createStation(organizationId: string, input: CreateStationInput): Promise<WeatherStation> {

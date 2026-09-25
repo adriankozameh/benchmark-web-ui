@@ -60,7 +60,7 @@ const WIND_DIRECTIONS: Record<string, string> = {
   TRANSPORT_WIND_SPEED: 'TRANSPORT_WIND_DIRECTION',
 };
 
-type ForecastPoint = StationTimeSeriesPoint & { time: number };
+export type ChartPoint = StationTimeSeriesPoint & { time: number };
 
 function localLabel(timestamp: number | string, timeZone: string, language: UserLanguage, includeTime = false, includeOffset = false): string {
   return new Intl.DateTimeFormat(locale(language), {
@@ -101,7 +101,7 @@ export function ForecastDashboard({
   const [windowStart, setWindowStart] = useState(() => Math.floor(Date.now() / HOUR_MS) * HOUR_MS);
   const [refreshKey, setRefreshKey] = useState(0);
   const [locationPollAttempts, setLocationPollAttempts] = useState(0);
-  const [points, setPoints] = useState<ForecastPoint[]>([]);
+  const [points, setPoints] = useState<ChartPoint[]>([]);
   const [forecastTimeZone, setForecastTimeZone] = useState<{ stationId: string; value: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -275,11 +275,12 @@ const RIGHT = 14;
 const TOP = 16;
 const BOTTOM = 31;
 
-function MetricChart({ metric, points, providers, colors, timeZone, windowStart, windowEnd, units, language }: {
+export function MetricChart({ metric, points, providers, colors, timeZone, windowStart, windowEnd, units, language, chartKind = 'forecast' }: {
   metric: string;
-  points: ForecastPoint[];
+  points: ChartPoint[];
   units: DisplayUnits;
   language: UserLanguage;
+  chartKind?: 'forecast' | 'observation';
   providers: string[];
   colors: Record<string, string>;
   timeZone: string;
@@ -321,7 +322,7 @@ function MetricChart({ metric, points, providers, colors, timeZone, windowStart,
   }
 
   return (
-    <section className="forecast-chart-card" aria-label={`${metricLabel(metric, language)} ${t('forecast chart', language)}${metricUnit(metric, units) ? ` ${t('in', language)} ${metricUnit(metric, units)}` : ''}`}>
+    <section className="forecast-chart-card" aria-label={`${metricLabel(metric, language)} ${t(chartKind === 'forecast' ? 'forecast chart' : 'observation chart', language)}${metricUnit(metric, units) ? ` ${t('in', language)} ${metricUnit(metric, units)}` : ''}`}>
       <div className="forecast-chart-heading"><h3>{metricLabel(metric, language)}{metricUnit(metric, units) ? ` (${metricUnit(metric, units)})` : ''}</h3>
         <span>{activeTime === null ? timeZone
           : localLabel(active[0]?.point?.localDateTime ?? activeTime, timeZone, language, true, true)}</span></div>
@@ -347,7 +348,7 @@ function MetricChart({ metric, points, providers, colors, timeZone, windowStart,
               stroke="#9aa9b8" strokeDasharray="4 4" pointerEvents="none" />}
             {series.map(({ provider, points: providerPoints }) => {
               // Gaps in a provider's timestamps remain gaps in its line.
-              const chunks: ForecastPoint[][] = [];
+              const chunks: ChartPoint[][] = [];
               const intervals = providerPoints.slice(1).map((point, index) => point.time - providerPoints[index].time)
                 .filter((interval) => interval > 0).sort((a, b) => a - b);
               const cadence = intervals[Math.floor(intervals.length / 2)] ?? 60 * 60 * 1000;

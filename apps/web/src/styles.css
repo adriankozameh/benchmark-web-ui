@@ -562,6 +562,18 @@ button { color: inherit; }
 .forecast-chart-values > span { display: inline-flex; align-items: center; gap: 5px; }
 .forecast-chart-values strong { color: var(--benchmark-navy); }
 .forecast-chart-blank { min-height: 140px; display: grid; place-items: center; color: #8c98a8; font-size: 11px; }
+.observation-controls { justify-content: flex-start; }
+.observation-controls .field { min-width: min(195px, 100%); }
+.observation-provider { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #dce4ea; border-radius: 100px; background: white; padding: 7px 10px; color: var(--benchmark-navy); font-size: 11px; font-weight: 700; }
+.observation-provider i { width: 9px; height: 9px; display: inline-block; border-radius: 50%; }
+.observation-backfill { margin-top: 20px; padding: 18px; border: 1px solid var(--benchmark-line); border-radius: 11px; background: white; }
+.observation-backfill h3 { margin: 0 0 6px; font-size: 15px; }
+.observation-backfill p { margin: 0 0 14px; color: #657386; font-size: 11px; line-height: 1.5; }
+.observation-backfill form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.observation-backfill .field { min-width: min(190px, 100%); }
+.observation-backfill .primary-button { min-height: 40px; }
+.observation-backfill .observation-backfill-status { margin: 14px 0 0; color: #216d52; }
+.observation-backfill .alert { margin-top: 14px; }
 @media (max-width: 1020px) { .forecast-chart-grid { grid-template-columns: 1fr; } }
 @media (max-width: 767px) {
   .forecast-dashboard .page-heading-row .secondary-button { width: auto; }
