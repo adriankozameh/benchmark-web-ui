@@ -75,6 +75,7 @@ const spanish: Record<string, string> = {
   "Daily observations use the selected station's local calendar date.":
     'Los valores diarios usan la fecha local de la estación seleccionada.',
   'Daily total': 'Total diario', 'Daily minimum': 'Mínimo diario', 'Daily maximum': 'Máximo diario',
+  'Daily range': 'Máximo y mínimo diarios', Maximum: 'Máximo', Minimum: 'Mínimo',
   'View from (UTC day)': 'Ver desde (día UTC)',
   'View through (UTC day)': 'Ver hasta (día UTC)',
   'View from (local day)': 'Ver desde (día local)',

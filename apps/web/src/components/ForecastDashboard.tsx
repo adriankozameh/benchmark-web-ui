@@ -275,9 +275,10 @@ const RIGHT = 14;
 const TOP = 16;
 const BOTTOM = 31;
 
-export function MetricChart({ metric, points, providers, colors, timeZone, windowStart, windowEnd, units, language, chartKind = 'forecast', title }: {
+export function MetricChart({ metric, points, secondaryPoints, providers, colors, timeZone, windowStart, windowEnd, units, language, chartKind = 'forecast', title }: {
   metric: string;
   points: ChartPoint[];
+  secondaryPoints?: ChartPoint[];
   units: DisplayUnits;
   language: UserLanguage;
   chartKind?: 'forecast' | 'observation';
@@ -290,11 +291,14 @@ export function MetricChart({ metric, points, providers, colors, timeZone, windo
 }) {
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const directionMetric = WIND_DIRECTIONS[metric];
-  const series = useMemo(() => providers.map((provider) => ({
-    provider,
-    points: points.filter((point) => point.provider === provider &&
-      typeof point.values[metric] === 'number' && Number.isFinite(point.values[metric])),
-  })), [points, providers, metric]);
+  const series = useMemo(() => providers.flatMap((provider) => {
+    const matching = (source: ChartPoint[]) => source.filter((point) => point.provider === provider &&
+      typeof point.values[metric] === 'number' && Number.isFinite(point.values[metric]));
+    return [
+      { provider, bound: 'max' as const, points: matching(points) },
+      ...(secondaryPoints ? [{ provider, bound: 'min' as const, points: matching(secondaryPoints) }] : []),
+    ];
+  }), [points, secondaryPoints, providers, metric]);
   const all = series.flatMap((item) => item.points);
   const times = [...new Set(all.map((point) => point.time))].sort((a, b) => a - b);
   const values = all.map((point) => point.values[metric]);
@@ -312,6 +316,7 @@ export function MetricChart({ metric, points, providers, colors, timeZone, windo
     : null;
   const active = series.map((item) => ({
     provider: item.provider,
+    bound: item.bound,
     point: item.points.find((point) => point.time === activeTime),
   })).filter((item) => item.point !== undefined);
 
@@ -327,6 +332,10 @@ export function MetricChart({ metric, points, providers, colors, timeZone, windo
       <div className="forecast-chart-heading"><h3>{title ?? metricLabel(metric, language)}{metricUnit(metric, units) ? ` (${metricUnit(metric, units)})` : ''}</h3>
         <span>{activeTime === null ? timeZone
           : localLabel(active[0]?.point?.localDateTime ?? activeTime, timeZone, language, true, true)}</span></div>
+      {secondaryPoints && <div className="observation-range-legend">
+        <span><i />{t('Daily maximum', language)}</span>
+        <span><i className="minimum" />{t('Daily minimum', language)}</span>
+      </div>}
       {directionMetric && <p className="forecast-wind-convention">{t('Arrows point toward where the wind comes from · degrees clockwise from true north', language)}</p>}
       {all.length === 0 ? <div className="forecast-chart-blank">{t('Select a provider to view this metric.', language)}</div> : (
         <>
@@ -347,7 +356,7 @@ export function MetricChart({ metric, points, providers, colors, timeZone, windo
             ))}
             {activeTime !== null && <line x1={x(activeTime)} x2={x(activeTime)} y1={TOP} y2={HEIGHT - BOTTOM}
               stroke="#9aa9b8" strokeDasharray="4 4" pointerEvents="none" />}
-            {series.map(({ provider, points: providerPoints }) => {
+            {series.map(({ provider, bound, points: providerPoints }) => {
               // Gaps in a provider's timestamps remain gaps in its line.
               const chunks: ChartPoint[][] = [];
               const intervals = providerPoints.slice(1).map((point, index) => point.time - providerPoints[index].time)
@@ -357,27 +366,32 @@ export function MetricChart({ metric, points, providers, colors, timeZone, windo
                 if (!chunks.length || point.time - chunks[chunks.length - 1].at(-1)!.time > Math.max(2 * 60 * 60 * 1000, cadence * 1.5)) chunks.push([]);
                 chunks.at(-1)!.push(point);
               }
-              return <g key={provider} fill="none" stroke={colors[provider]} strokeWidth="2.5" strokeLinejoin="round">
+              return <g key={`${provider}-${bound}`} fill="none" stroke={colors[provider]}
+                strokeWidth={bound === 'min' ? '2' : '2.5'}
+                strokeDasharray={bound === 'min' && secondaryPoints ? '6 4' : undefined}
+                strokeLinejoin="round">
                 {chunks.map((chunk, index) => chunk.length === 1
                   ? <circle key={index} cx={x(chunk[0].time)} cy={y(chunk[0].values[metric])} r="3" fill={colors[provider]} />
                   : <path key={index} d={chunk.map((point, position) =>
                     `${position === 0 ? 'M' : 'L'}${x(point.time).toFixed(2)} ${y(point.values[metric]).toFixed(2)}`).join(' ')} />)}
-                {directionMetric && providerPoints
+                {directionMetric && bound === 'max' && providerPoints
                   .filter((point) => Number.isFinite(point.values[directionMetric]))
                   .map((point) => <WindArrow key={point.time}
                     x={x(point.time)} y={y(point.values[metric])}
                     angle={point.values[directionMetric]} />)}
               </g>;
             })}
-            {!directionMetric && active.map(({ provider, point }) => <circle key={provider} cx={x(point!.time)} cy={y(point!.values[metric])}
-              r="5" fill={colors[provider]} stroke="white" strokeWidth="2" pointerEvents="none" />)}
+            {!directionMetric && active.map(({ provider, bound, point }) => <circle key={`${provider}-${bound}`}
+              cx={x(point!.time)} cy={y(point!.values[metric])}
+              r="5" fill={bound === 'min' && secondaryPoints ? 'white' : colors[provider]}
+              stroke={colors[provider]} strokeWidth="2" pointerEvents="none" />)}
           </svg>
           <div className="forecast-chart-values" aria-live="off">
             {activeTime === null ? <span>{t('Move over the chart to compare values.', language)}</span> : active.length === 0
               ? <span>{t('No values at this time.', language)}</span>
-              : active.map(({ provider, point }) => <span key={provider}>
+              : active.map(({ provider, bound, point }) => <span key={`${provider}-${bound}`}>
                 <i style={{ background: colors[provider] }} />
-                {PROVIDER_LABELS[provider] ?? provider.replaceAll('_', ' ')} <strong>{formatMetricValue(metric, point!.values[metric], units, language)}{metricUnit(metric, units) ? ` ${metricUnit(metric, units)}` : ''}</strong>
+                {PROVIDER_LABELS[provider] ?? provider.replaceAll('_', ' ')}{secondaryPoints ? ` ${t(bound === 'max' ? 'Maximum' : 'Minimum', language)}` : ''} <strong>{formatMetricValue(metric, point!.values[metric], units, language)}{metricUnit(metric, units) ? ` ${metricUnit(metric, units)}` : ''}</strong>
                 {directionMetric && Number.isFinite(point!.values[directionMetric]) &&
                   <span>· {formatValue(((point!.values[directionMetric] % 360) + 360) % 360, language)}° {t('clockwise from N', language)}</span>}
               </span>)}

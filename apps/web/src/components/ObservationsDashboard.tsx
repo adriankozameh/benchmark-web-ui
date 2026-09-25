@@ -236,20 +236,19 @@ export function ObservationsDashboard({
         </span>)}
       </div>
       <div className="forecast-chart-grid">
-        {metrics.flatMap((metric) => {
+        {metrics.map((metric) => {
           const bounds = metric === 'TEMPERATURE' || metric === 'RELATIVE_HUMIDITY';
-          const chart = (kind: 'max' | 'min') => <MetricChart key={`${metric}-${kind}`}
+          return <MetricChart key={metric}
             chartKind="observation" metric={metric}
             title={`${t(metric === 'PRECIPITATION_QUANTITY' ? 'Precipitation'
               : metric === 'RELATIVE_HUMIDITY' ? 'Relative humidity'
                 : metric === 'TEMPERATURE' ? 'Temperature' : metric === 'WIND_SPEED' ? 'Wind speed' : metric, language)} · ${t(metric === 'PRECIPITATION_QUANTITY' ? 'Daily total'
-              : kind === 'min' ? 'Daily minimum' : 'Daily maximum', language)}`}
-            points={kind === 'min' ? displayMin : displayMax}
+              : bounds ? 'Daily range' : 'Daily maximum', language)}`}
+            points={displayMax} secondaryPoints={bounds ? displayMin : undefined}
             providers={providers} colors={colors} timeZone={timeZone}
             windowStart={Date.parse(`${addUtcDays(viewFrom, -1)}T00:00:00Z`)}
             windowEnd={Date.parse(`${addUtcDays(viewThrough, 2)}T00:00:00Z`)}
             units={units} language={language} />;
-          return bounds ? [chart('max'), chart('min')] : [chart('max')];
         })}
       </div>
     </>}
