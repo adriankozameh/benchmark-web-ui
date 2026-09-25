@@ -70,6 +70,56 @@ const spanish: Record<string, string> = {
   'Search street address, city, farm, or place': 'Busca una dirección, ciudad, finca o lugar',
   'Searching…': 'Buscando…', 'No matching locations': 'No se encontraron ubicaciones',
   'Station name is required.': 'El nombre de la estación es obligatorio.',
+  'Station details': 'Detalles de la estación',
+  'Station location': 'Ubicación de la estación',
+  'Location is fixed on the FREE plan. Upgrade to PRO or PREMIUM to change it.':
+    'La ubicación queda fija en el plan GRATIS. Actualiza a PRO o PREMIUM para cambiarla.',
+  'Weather station hardware setup is available on the PREMIUM plan.':
+    'La configuración del equipo meteorológico está disponible con el plan PREMIUM.',
+  'Time zone is calculated from the station coordinates.': 'La zona horaria se calcula a partir de las coordenadas de la estación.',
+  'Additional station metadata (JSON)': 'Metadatos adicionales de la estación (JSON)',
+  'For hardware fields such as STATION_TYPE. Never put API keys or passwords here.':
+    'Para datos del equipo como STATION_TYPE. Nunca ingreses claves API ni contraseñas aquí.',
+  'Save station details': 'Guardar detalles de la estación',
+  'Weather station hardware': 'Equipo de la estación meteorológica',
+  'Provider accounts can be reused by multiple stations. Each station has its own hardware ID.':
+    'Varias estaciones pueden usar la misma cuenta del proveedor. Cada estación tiene su propio ID de equipo.',
+  'Loading provider accounts…': 'Cargando cuentas de proveedores…',
+  'Provider account': 'Cuenta del proveedor',
+  'Select a provider account': 'Selecciona una cuenta del proveedor',
+  'Create a new provider account': 'Crear una cuenta del proveedor',
+  'Hardware station ID': 'ID de la estación en el proveedor',
+  'Device ID, station ID, or MAC address': 'ID de equipo, ID de estación o dirección MAC',
+  'Provider account name': 'Nombre de la cuenta del proveedor',
+  'e.g. Farm weather stations': 'p. ej., estaciones de la finca',
+  'Hardware provider': 'Proveedor del equipo',
+  'Credentials already saved:': 'Credenciales ya guardadas:',
+  'Leave credential fields blank to keep saved values.': 'Deja las credenciales en blanco para conservar las guardadas.',
+  'API key': 'Clave API', 'API key secret': 'Secreto de la clave API',
+  Username: 'Usuario', Password: 'Contraseña', 'Access token': 'Token de acceso',
+  Region: 'Región', None: 'Ninguna',
+  'Changing saved credentials affects every station using this provider account.':
+    'Cambiar estas credenciales afecta a todas las estaciones que usan esta cuenta del proveedor.',
+  'Save hardware connection': 'Guardar conexión del equipo',
+  'Disconnect hardware': 'Desvincular equipo',
+  'Currently connected to:': 'Actualmente conectada a:',
+  'Observation provider access is unavailable for this account.':
+    'Esta cuenta no tiene acceso a los proveedores de observaciones.',
+  'Enter a station name and valid coordinates.': 'Ingresa un nombre y coordenadas válidas.',
+  'Station metadata must be valid JSON.': 'Los metadatos de la estación deben ser JSON válido.',
+  'Station metadata must be a JSON object.': 'Los metadatos de la estación deben ser un objeto JSON.',
+  'Keep credentials in provider fields, not station metadata.':
+    'Ingresa las credenciales en los campos del proveedor, no en los metadatos de la estación.',
+  'Enter a valid hardware station ID (up to 255 characters).':
+    'Ingresa un ID de estación válido (hasta 255 caracteres).',
+  'Enter a name for the provider account.': 'Ingresa un nombre para la cuenta del proveedor.',
+  'Choose a provider account or create one.': 'Selecciona una cuenta del proveedor o crea una nueva.',
+  'The selected provider account is no longer available.': 'La cuenta del proveedor seleccionada ya no está disponible.',
+  'Missing required credential:': 'Falta la credencial obligatoria:',
+  'An access token or API key is required for this provider.':
+    'Este proveedor requiere un token de acceso o una clave API.',
+  'Provider account saved, but linking the station failed. Try saving the connection again.':
+    'La cuenta del proveedor se guardó, pero no se pudo vincular la estación. Vuelve a guardar la conexión.',
   'Station name must be 200 characters or fewer.': 'El nombre de la estación debe tener 200 caracteres o menos.',
   'Latitude is required.': 'La latitud es obligatoria.',
   'Latitude must be between -90 and 90.': 'La latitud debe estar entre -90 y 90.',

@@ -57,6 +57,48 @@ export type WeatherStation = {
   updatedAt: string;
 };
 
+export type DataProvider = {
+  id: string;
+  organizationId: string;
+  name: string;
+  provider: string;
+  region: string | null;
+  apiKeyConfigured: boolean;
+  apiKeySecretConfigured: boolean;
+  usernameConfigured: boolean;
+  passwordConfigured: boolean;
+  tokenConfigured: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProviderCredentials = {
+  apiKey?: string;
+  apiKeySecret?: string;
+  username?: string;
+  password?: string;
+  token?: string;
+};
+
+export type CreateDataProviderInput = ProviderCredentials & {
+  name: string;
+  provider: string;
+  region?: string;
+};
+
+export type UpdateDataProviderInput = ProviderCredentials & {
+  name?: string;
+  region?: string;
+};
+
+export type UpdateStationInput = {
+  name?: string;
+  siteId?: string;
+  latitude?: number;
+  longitude?: number;
+  metadata?: Record<string, unknown>;
+};
+
 export type StationTimeSeriesPoint = {
   utcDateTime: string;
   localDateTime?: string | null;

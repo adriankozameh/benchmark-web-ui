@@ -15,13 +15,14 @@ import {
 } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import { CognitoPkceAuth } from '@benchmark/auth';
-import type { CurrentUser, Site, UserSettings, WeatherStation, UserLanguage, DisplayUnits } from '@benchmark/domain';
+import type { CurrentUser, Site, UserSettings, WeatherStation, UserLanguage, DisplayUnits, Plan } from '@benchmark/domain';
 import { hasValidationErrors, validateStation } from '@benchmark/validation';
 import type { StationValidationErrors } from '@benchmark/validation';
 import { AddressSearch } from './components/AddressSearch';
 import { BrandLogo } from './components/BrandLogo';
 import { ForecastDashboard } from './components/ForecastDashboard';
 import { MapPicker } from './components/MapPicker';
+import { StationHardwareEditor } from './components/StationHardwareEditor';
 import { errorMessage, t } from './language';
 import { loadAppConfig } from './config';
 import type { AppConfig, ConfigurationIssue } from './config';
@@ -421,7 +422,7 @@ function AuthenticatedApp({
                 {userSettings && <UserPreferences settings={userSettings} onSave={saveSettings} onUnauthorized={onUnauthorized} />}
                 <StationSettings api={api} organizationId={organization.id}
                   stationLimit={organization.stationLimit} sites={sites} stations={stations}
-                  onCreated={refresh} language={language} />
+                  onCreated={refresh} language={language} onUnauthorized={onUnauthorized} plan={organization.plan} />
               </>)}
         </div>
       </main>
@@ -520,6 +521,8 @@ function StationSettings({
   stations,
   onCreated,
   language,
+  onUnauthorized,
+  plan,
 }: {
   api: BenchmarkApi;
   organizationId: string;
@@ -528,8 +531,11 @@ function StationSettings({
   stations: WeatherStation[];
   onCreated: () => Promise<void>;
   language: UserLanguage;
+  onUnauthorized: () => void;
+  plan: Plan;
 }) {
   const [showForm, setShowForm] = useState(stations.length === 0);
+  const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [draft, setDraft] = useState<StationDraft>(() => ({ ...emptyDraft, siteId: sites[0]?.id ?? '' }));
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -601,7 +607,9 @@ function StationSettings({
       {stations.length > 0 && (
         <div className="station-list-card">
           {stations.map((station) => (
-            <div className="station-row" key={station.id}>
+            <button className={`station-row ${selectedStationId === station.id ? 'selected' : ''}`} type="button"
+              key={station.id} aria-expanded={selectedStationId === station.id}
+              onClick={() => setSelectedStationId((current) => current === station.id ? null : station.id)}>
               <div className="station-icon"><MapPin size={17} /></div>
               <div>
                 <strong>{station.name}</strong>
@@ -611,10 +619,16 @@ function StationSettings({
                 <span>{station.timeZone}</span>
                 <small>{t(station.status, language)}</small>
               </div>
-            </div>
+              <ChevronRight className="station-row-chevron" size={17} aria-hidden="true" />
+            </button>
           ))}
         </div>
       )}
+
+      {stations.filter((station) => station.id === selectedStationId).map((station) =>
+        <StationHardwareEditor key={station.id} api={api} organizationId={organizationId}
+          station={station} sites={sites} language={language} onChanged={onCreated}
+          onUnauthorized={onUnauthorized} plan={plan} />)}
 
       {showForm && !atLimit && (
         <form className="station-form-card" onSubmit={submit}>

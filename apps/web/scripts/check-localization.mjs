@@ -8,6 +8,7 @@ const files = [
   'src/components/AddressSearch.tsx',
   'src/components/MapPicker.tsx',
   'src/components/ForecastDashboard.tsx',
+  'src/components/StationHardwareEditor.tsx',
   '../../packages/validation/src/index.ts',
 ];
 const translationSource = ts.createSourceFile('language.ts', fs.readFileSync(path.join(root, 'src/language.ts'), 'utf8'), ts.ScriptTarget.Latest, true);

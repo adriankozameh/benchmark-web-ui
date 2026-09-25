@@ -12,6 +12,24 @@ forecast charts, and API errors using the language stored in user settings. Logi
 Cognito are unchanged. Third-party place names follow their provider's available localization.
 Deploy backend migration V7 and the settings endpoint before deploying this frontend.
 
+## Weather station hardware
+
+In Settings → Stations, select an existing station to edit its name, site, location,
+or station metadata. The same panel links a provider account and its vendor station ID.
+On FREE, the saved location is fixed. PRO and PREMIUM can change coordinates; the
+backend recalculates the time zone. Only PREMIUM can enter station metadata or
+link observation hardware. On PREMIUM, you can choose an existing organization provider account or create one with a vendor
+API key, API secret, username, password, token, and region as needed. Credentials
+are never returned by the API; the panel shows only which fields are configured.
+Changing a shared provider account affects all stations using it. Disconnecting a
+station keeps the reusable provider account. The backend already exposes these
+station and provider endpoints; provider ingestion still depends on the relevant
+provider strategy and observation dispatch being enabled.
+
+The existing backend stores provider credentials as text in PostgreSQL. Restrict
+database access and arrange encryption or external secret storage before putting
+sensitive hardware credentials into a production provider account.
+
 Benchmark Labs frontend application.
 
 The first application slice intentionally stays small:

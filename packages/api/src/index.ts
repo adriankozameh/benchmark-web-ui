@@ -2,6 +2,10 @@ import type {
   ApiErrorPayload,
   CreateStationInput,
   CurrentUser,
+  CreateDataProviderInput,
+  DataProvider,
+  UpdateDataProviderInput,
+  UpdateStationInput,
   UserSettings,
   Site,
   StationTimeSeries,
@@ -102,6 +106,40 @@ export class BenchmarkApi {
     return this.request(`/api/v1/organizations/${organizationId}/stations`, {
       method: 'POST',
       body: input,
+    });
+  }
+
+  updateStation(organizationId: string, stationId: string, input: UpdateStationInput): Promise<WeatherStation> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/stations/${encodeURIComponent(stationId)}`, {
+      method: 'PATCH', body: input,
+    });
+  }
+
+  listDataProviders(organizationId: string): Promise<DataProvider[]> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/data-providers`);
+  }
+
+  createDataProvider(organizationId: string, input: CreateDataProviderInput): Promise<DataProvider> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/data-providers`, {
+      method: 'POST', body: input,
+    });
+  }
+
+  updateDataProvider(organizationId: string, providerId: string, input: UpdateDataProviderInput): Promise<DataProvider> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/data-providers/${encodeURIComponent(providerId)}`, {
+      method: 'PATCH', body: input,
+    });
+  }
+
+  linkStationDataProvider(organizationId: string, stationId: string, dataProviderId: string, providerStationId: string): Promise<void> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/stations/${encodeURIComponent(stationId)}/data-provider`, {
+      method: 'PUT', body: { dataProviderId, providerStationId },
+    });
+  }
+
+  unlinkStationDataProvider(organizationId: string, stationId: string): Promise<void> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/stations/${encodeURIComponent(stationId)}/data-provider`, {
+      method: 'DELETE', expectNoContent: true,
     });
   }
 }
