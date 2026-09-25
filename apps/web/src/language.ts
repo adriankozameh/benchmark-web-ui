@@ -13,6 +13,7 @@ const spanish: Record<string, string> = {
   Refresh: 'Actualizar', Station: 'Estación', Providers: 'Proveedores',
   'Forecast unavailable': 'Pronóstico no disponible', 'Loading forecasts…': 'Cargando pronósticos…',
   'No forecast data was returned for this station and time range.': 'No hay pronósticos para esta estación y período.',
+  'Forecasts for the new location are being prepared. Checking again automatically.': 'Se están preparando los pronósticos para la nueva ubicación. Se volverá a consultar automáticamente.',
   'Add a station in Settings to see its forecasts.': 'Agrega una estación en Configuración para ver pronósticos.',
   'No numeric metrics were returned.': 'No se recibieron valores numéricos.',
   'Select a provider to view this metric.': 'Selecciona un proveedor para ver esta variable.',

@@ -86,7 +86,7 @@ function formatMetricValue(metric: string, value: number, units: DisplayUnits, l
 }
 
 export function ForecastDashboard({
-  api, organizationId, stations, onUnauthorized, units, language,
+  api, organizationId, stations, onUnauthorized, units, language, focusStationId,
 }: {
   api: BenchmarkApi;
   organizationId: string;
@@ -94,11 +94,13 @@ export function ForecastDashboard({
   units: DisplayUnits;
   language: UserLanguage;
   onUnauthorized: () => void;
+  focusStationId?: string | null;
 }) {
-  const [stationId, setStationId] = useState(stations[0]?.id ?? '');
+  const [stationId, setStationId] = useState(focusStationId ?? stations[0]?.id ?? '');
   const [rangeHours, setRangeHours] = useState<number>(72);
   const [windowStart, setWindowStart] = useState(() => Math.floor(Date.now() / HOUR_MS) * HOUR_MS);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [locationPollAttempts, setLocationPollAttempts] = useState(0);
   const [points, setPoints] = useState<ForecastPoint[]>([]);
   const [forecastTimeZone, setForecastTimeZone] = useState<{ stationId: string; value: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -146,7 +148,8 @@ export function ForecastDashboard({
       })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
-  }, [api, organizationId, selectedStationId, stationTimeZone, rangeHours, refreshKey, onUnauthorized]);
+  }, [api, organizationId, selectedStationId, selectedStation?.locationRevision,
+      stationTimeZone, rangeHours, refreshKey, onUnauthorized]);
 
   useEffect(() => {
     // Keep the displayed range current when the dashboard stays open across an hour boundary.
@@ -156,6 +159,22 @@ export function ForecastDashboard({
     );
     return () => window.clearTimeout(timer);
   }, [windowStart]);
+
+  useEffect(() => {
+    setLocationPollAttempts(0);
+  }, [selectedStationId, selectedStation?.locationRevision]);
+
+  useEffect(() => {
+    if (!selectedStation?.locationRevision || loading || points.length > 0) return;
+    // The forecast API filters out the old coordinates. Poll until the scheduled provider
+    // ingestion stores the first forecast for this station's current location.
+    const delay = Math.min(30_000 * 2 ** locationPollAttempts, 300_000);
+    const timer = window.setTimeout(() => {
+      setLocationPollAttempts((attempts) => attempts + 1);
+      setRefreshKey((key) => key + 1);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [selectedStation?.locationRevision, loading, points.length, locationPollAttempts]);
 
   const providers = useMemo(() => [...new Set(points.map((point) => point.provider))].sort(), [points]);
   const displayPoints = useMemo(() => points.map((point) => ({
@@ -217,7 +236,9 @@ export function ForecastDashboard({
       {error && <div className="alert error"><CircleAlert size={18} /><div><strong>{t('Forecast unavailable', language)}</strong><span>{error}</span></div></div>}
       {loading && <div className="forecast-empty"><LoaderCircle className="spin" size={20} /> {t('Loading forecasts…', language)}</div>}
       {!loading && !error && points.length === 0 && (
-        <div className="forecast-empty">{t('No forecast data was returned for this station and time range.', language)}</div>
+        <div className="forecast-empty">{selectedStation?.locationRevision
+          ? t('Forecasts for the new location are being prepared. Checking again automatically.', language)
+          : t('No forecast data was returned for this station and time range.', language)}</div>
       )}
 
       {!loading && !error && points.length > 0 && (

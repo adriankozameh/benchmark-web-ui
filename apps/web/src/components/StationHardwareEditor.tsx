@@ -42,7 +42,7 @@ function includesCredentialKeys(value: unknown): boolean {
     /api.?key|secret|password|token|credential/i.test(key) || includesCredentialKeys(child));
 }
 
-export function StationHardwareEditor({ api, organizationId, station, sites, language, onChanged, onUnauthorized, plan }: {
+export function StationHardwareEditor({ api, organizationId, station, sites, language, onChanged, onUnauthorized, plan, onLocationChanged }: {
   api: BenchmarkApi;
   organizationId: string;
   station: WeatherStation;
@@ -51,6 +51,7 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
   onChanged: () => Promise<void>;
   onUnauthorized: () => void;
   plan: Plan;
+  onLocationChanged: (stationId: string) => void;
 }) {
   const canChangeLocation = plan === 'PRO' || plan === 'PREMIUM';
   const canConfigureHardware = plan === 'PREMIUM';
@@ -160,7 +161,11 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
         ...(canConfigureHardware ? { metadata: parsed } : {}),
       });
       await onChanged();
-      setSaved(true);
+      if (canChangeLocation && (lat !== station.latitude || lon !== station.longitude)) {
+        onLocationChanged(station.id);
+      } else {
+        setSaved(true);
+      }
     } catch (cause) { handleError(cause); }
     finally { setSaving(false); }
   }

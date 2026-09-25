@@ -263,6 +263,7 @@ function AuthenticatedApp({
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
   const [stations, setStations] = useState<WeatherStation[]>([]);
+  const [stationToView, setStationToView] = useState<string | null>(null);
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState<string | null>(null);
   const languageRef = useRef<UserLanguage>('en');
@@ -417,12 +418,14 @@ function AuthenticatedApp({
 
           {organization && (page === 'dashboard'
             ? <ForecastDashboard api={api} organizationId={organization.id} stations={stations} units={units} language={language}
+                focusStationId={stationToView}
                 onUnauthorized={onUnauthorized} />
             : <>
                 {userSettings && <UserPreferences settings={userSettings} onSave={saveSettings} onUnauthorized={onUnauthorized} />}
                 <StationSettings api={api} organizationId={organization.id}
                   stationLimit={organization.stationLimit} sites={sites} stations={stations}
-                  onCreated={refresh} language={language} onUnauthorized={onUnauthorized} plan={organization.plan} />
+                  onCreated={refresh} language={language} onUnauthorized={onUnauthorized} plan={organization.plan}
+                  onLocationChanged={(stationId) => { setStationToView(stationId); navigate('dashboard'); }} />
               </>)}
         </div>
       </main>
@@ -523,6 +526,7 @@ function StationSettings({
   language,
   onUnauthorized,
   plan,
+  onLocationChanged,
 }: {
   api: BenchmarkApi;
   organizationId: string;
@@ -533,6 +537,7 @@ function StationSettings({
   language: UserLanguage;
   onUnauthorized: () => void;
   plan: Plan;
+  onLocationChanged: (stationId: string) => void;
 }) {
   const [showForm, setShowForm] = useState(stations.length === 0);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
@@ -628,7 +633,7 @@ function StationSettings({
       {stations.filter((station) => station.id === selectedStationId).map((station) =>
         <StationHardwareEditor key={station.id} api={api} organizationId={organizationId}
           station={station} sites={sites} language={language} onChanged={onCreated}
-          onUnauthorized={onUnauthorized} plan={plan} />)}
+          onUnauthorized={onUnauthorized} plan={plan} onLocationChanged={onLocationChanged} />)}
 
       {showForm && !atLimit && (
         <form className="station-form-card" onSubmit={submit}>

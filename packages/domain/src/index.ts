@@ -55,6 +55,7 @@ export type WeatherStation = {
   status: string;
   createdAt: string;
   updatedAt: string;
+  locationRevision?: string | null;
 };
 
 export type DataProvider = {
