@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle2,
   ChevronRight,
@@ -15,13 +15,14 @@ import {
 } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import { CognitoPkceAuth } from '@benchmark/auth';
-import type { CurrentUser, Site, WeatherStation } from '@benchmark/domain';
+import type { CurrentUser, Site, UserSettings, WeatherStation, UserLanguage, DisplayUnits } from '@benchmark/domain';
 import { hasValidationErrors, validateStation } from '@benchmark/validation';
 import type { StationValidationErrors } from '@benchmark/validation';
 import { AddressSearch } from './components/AddressSearch';
 import { BrandLogo } from './components/BrandLogo';
 import { ForecastDashboard } from './components/ForecastDashboard';
 import { MapPicker } from './components/MapPicker';
+import { errorMessage, t } from './language';
 import { loadAppConfig } from './config';
 import type { AppConfig, ConfigurationIssue } from './config';
 
@@ -258,10 +259,12 @@ function AuthenticatedApp({
   onUnauthorized: () => void;
 }) {
   const [me, setMe] = useState<CurrentUser | null>(null);
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
   const [stations, setStations] = useState<WeatherStation[]>([]);
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState<string | null>(null);
+  const languageRef = useRef<UserLanguage>('en');
   const [page, setPage] = useState<'dashboard' | 'settings'>(
     () => window.location.pathname === '/dashboard' ? 'dashboard' : 'settings',
   );
@@ -291,11 +294,14 @@ function AuthenticatedApp({
         nextMe.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? nextMe.organizations[0];
       if (!nextOrganization) throw new Error('No Benchmark organization is available for this account.');
 
-      const [nextSites, nextStations] = await Promise.all([
+      const [nextSettings, nextSites, nextStations] = await Promise.all([
+        api.getUserSettings(),
         api.listSites(nextOrganization.id),
         api.listStations(nextOrganization.id),
       ]);
       setMe(nextMe);
+      setUserSettings(nextSettings);
+      languageRef.current = nextSettings.metadata.language;
       setSites(nextSites);
       setStations(nextStations);
       setState('success');
@@ -304,10 +310,23 @@ function AuthenticatedApp({
         onUnauthorized();
         return;
       }
-      setError(readError(cause));
+      setError(errorMessage(cause, languageRef.current));
       setState('error');
     }
   }, [api, onUnauthorized]);
+
+  const language: UserLanguage = userSettings?.metadata.language ?? 'en';
+  useEffect(() => {
+    document.documentElement.lang = language;
+    return () => { document.documentElement.lang = 'en'; };
+  }, [language]);
+  const units: DisplayUnits = userSettings?.metadata.units === 'IMPERIAL' ? 'IMPERIAL' : 'METRIC';
+
+  async function saveSettings(metadata: { language: UserLanguage; units: DisplayUnits }) {
+    const updated = await api.updateUserSettings(metadata);
+    setUserSettings(updated);
+    languageRef.current = updated.metadata.language;
+  }
 
   useEffect(() => {
     void refresh();
@@ -318,8 +337,8 @@ function AuthenticatedApp({
       <div className="callback-screen">
         <BrandLogo variant="blue" className="callback-logo" />
         <LoaderCircle className="spin" size={34} />
-        <h1>Preparing your account…</h1>
-        <p>Loading your Benchmark organization and station settings.</p>
+        <h1>{t('Preparing your account…', language)}</h1>
+        <p>{t('Loading your Benchmark organization and station settings.', language)}</p>
       </div>
     );
   }
@@ -329,29 +348,30 @@ function AuthenticatedApp({
       <aside className="sidebar">
         <BrandLogo variant="white" className="sidebar-logo" />
         <BrandLogo variant="icon" className="sidebar-icon-logo" />
-        <div className="sidebar-label">Workspace</div>
+        <div className="sidebar-label">{t('Workspace', language)}</div>
         <nav className="sidebar-nav">
           <button type="button" className={`nav-item ${page === 'dashboard' ? 'active' : ''}`}
             aria-current={page === 'dashboard' ? 'page' : undefined} onClick={() => navigate('dashboard')}>
-            <Gauge size={17} /> <span>Dashboard</span>
+            <Gauge size={17} /> <span>{t('Dashboard', language)}</span>
           </button>
           <button type="button" className={`nav-item ${page === 'settings' ? 'active' : ''}`}
             aria-current={page === 'settings' ? 'page' : undefined} onClick={() => navigate('settings')}>
-            <Settings size={17} /> <span>Settings</span>
+            <Settings size={17} /> <span>{t('Settings', language)}</span>
           </button>
         </nav>
 
-        <div className="sidebar-label settings-label">Settings</div>
+        <div className="sidebar-label settings-label">{t('Settings', language)}</div>
         <nav className="sidebar-nav">
           <button type="button" className={`nav-item ${page === 'settings' ? 'active secondary-active' : ''}`}
             onClick={() => navigate('settings')}>
-            <MapPin size={17} /> <span>Stations</span>
+            <MapPin size={17} /> <span>{t('Stations', language)}</span>
           </button>
           <button type="button" className="nav-item disabled" disabled>
-            <RadioTower size={17} /> <span>Data providers</span><small>Soon</small>
+            <RadioTower size={17} /> <span>{t('Data providers', language)}</span><small>{t('Soon', language)}</small>
           </button>
-          <button type="button" className="nav-item disabled" disabled>
-            <UserRound size={17} /> <span>Account</span><small>Soon</small>
+          <button type="button" className={`nav-item ${page === 'settings' ? 'secondary-active' : ''}`}
+            onClick={() => navigate('settings')}>
+            <UserRound size={17} /> <span>{t('Account', language)}</span>
           </button>
         </nav>
 
@@ -359,11 +379,11 @@ function AuthenticatedApp({
           <div className="user-summary">
             <div className="avatar">{(me?.displayName || me?.email || 'B').charAt(0).toUpperCase()}</div>
             <div className="user-summary-copy">
-              <strong>{me?.displayName || me?.email || 'Benchmark user'}</strong>
-              <span>{organization?.plan ?? 'FREE'} plan</span>
+              <strong>{me?.displayName || me?.email || t('Benchmark user', language)}</strong>
+              <span>{language === 'es' ? `${t('plan', language)} ${t(organization?.plan ?? 'FREE', language)}` : `${organization?.plan ?? 'FREE'} plan`}</span>
             </div>
           </div>
-          <button type="button" className="icon-button inverse" onClick={onLogout} aria-label="Log out">
+          <button type="button" className="icon-button inverse" onClick={onLogout} aria-label={t('Log out', language)}>
             <LogOut size={17} />
           </button>
         </div>
@@ -375,12 +395,12 @@ function AuthenticatedApp({
             <BrandLogo variant="icon" />
           </div>
           <div className="topbar-title">
-            <span className="eyebrow">{page === 'dashboard' ? 'Dashboard' : 'Settings'}</span>
-            <h1>{page === 'dashboard' ? 'Forecasts' : 'Weather stations'}</h1>
+            <span className="eyebrow">{t(page === 'dashboard' ? 'Dashboard' : 'Settings', language)}</span>
+            <h1>{t(page === 'dashboard' ? 'Forecasts' : 'Weather stations', language)}</h1>
           </div>
           <div className="topbar-actions">
-            {organization && <span className={`plan-pill ${organization.plan.toLowerCase()}`}>{organization.plan}</span>}
-            <button type="button" className="icon-button mobile-logout" onClick={onLogout} aria-label="Log out">
+            {organization && <span className={`plan-pill ${organization.plan.toLowerCase()}`}>{t(organization.plan, language)}</span>}
+            <button type="button" className="icon-button mobile-logout" onClick={onLogout} aria-label={t('Log out', language)}>
               <LogOut size={17} />
             </button>
           </div>
@@ -390,37 +410,106 @@ function AuthenticatedApp({
           {error && (
             <div className="alert error">
               <CircleAlert size={18} />
-              <div><strong>Unable to load settings</strong><span>{error}</span></div>
+              <div><strong>{t('Unable to load settings', language)}</strong><span>{error}</span></div>
             </div>
           )}
 
           {organization && (page === 'dashboard'
-            ? <ForecastDashboard api={api} organizationId={organization.id} stations={stations}
+            ? <ForecastDashboard api={api} organizationId={organization.id} stations={stations} units={units} language={language}
                 onUnauthorized={onUnauthorized} />
-            : <StationSettings api={api} organizationId={organization.id}
-                stationLimit={organization.stationLimit} sites={sites} stations={stations}
-                onCreated={refresh} />)}
+            : <>
+                {userSettings && <UserPreferences settings={userSettings} onSave={saveSettings} onUnauthorized={onUnauthorized} />}
+                <StationSettings api={api} organizationId={organization.id}
+                  stationLimit={organization.stationLimit} sites={sites} stations={stations}
+                  onCreated={refresh} language={language} />
+              </>)}
         </div>
       </main>
 
-      <nav className="mobile-bottom-nav" aria-label="Primary navigation">
+      <nav className="mobile-bottom-nav" aria-label={t('Primary navigation', language)}>
         <button type="button" className={page === 'dashboard' ? 'active' : ''}
           aria-current={page === 'dashboard' ? 'page' : undefined} onClick={() => navigate('dashboard')}>
           <Gauge size={20} />
-          <span>Dashboard</span>
+          <span>{t('Dashboard', language)}</span>
         </button>
         <button type="button" className={page === 'settings' ? 'active' : ''}
           aria-current={page === 'settings' ? 'page' : undefined} onClick={() => navigate('settings')}>
           <MapPin size={20} />
-          <span>Stations</span>
+          <span>{t('Stations', language)}</span>
         </button>
-        <button type="button" disabled aria-label="Account coming soon">
+        <button type="button" onClick={() => navigate('settings')} aria-label={t('Account', language)}>
           <UserRound size={20} />
-          <span>Account</span>
+          <span>{t('Account', language)}</span>
         </button>
       </nav>
     </div>
   );
+}
+
+function UserPreferences({ settings, onSave, onUnauthorized }: {
+  settings: UserSettings;
+  onSave: (metadata: { language: UserLanguage; units: DisplayUnits }) => Promise<void>;
+  onUnauthorized: () => void;
+}) {
+  const [language, setLanguage] = useState<UserLanguage>(settings.metadata.language);
+  const [units, setUnits] = useState<DisplayUnits>(settings.metadata.units);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setLanguage(settings.metadata.language);
+    setUnits(settings.metadata.units);
+  }, [settings]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setSaved(false);
+    setError(null);
+    try {
+      await onSave({ language, units });
+      setSaved(true);
+    } catch (cause) {
+      if (cause instanceof BenchmarkApiError && cause.status === 401) {
+        onUnauthorized();
+        return;
+      }
+      setError(errorMessage(cause, language));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return <form className="station-form-card user-preferences" onSubmit={(event) => void submit(event)}>
+    <h2>{t('Your preferences', language)}</h2>
+    <p>{t('These choices apply to all your stations and devices.', language)}</p>
+    <div className="user-preferences-fields">
+      <label className="field">
+        <span>{t('Language', language)}</span>
+        <select value={language} onChange={(event) => { setLanguage(event.target.value as UserLanguage); setSaved(false); }}>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </label>
+      <label className="field">
+        <span>{t('Units', language)}</span>
+        <select value={units} onChange={(event) => { setUnits(event.target.value as DisplayUnits); setSaved(false); }}>
+          <option value="METRIC">{t('Metric (°C, m/s, mm)', language)}</option>
+          <option value="IMPERIAL">{t('Imperial (°F, mph, in)', language)}</option>
+        </select>
+      </label>
+    </div>
+    {error && <div className="alert error compact"><CircleAlert size={17} /><span>{error}</span></div>}
+    <div className="user-preferences-actions">
+      <button className="primary-button" type="submit" disabled={saving ||
+          (language === settings.metadata.language && units === settings.metadata.units)}>
+        {saving ? <LoaderCircle className="spin" size={17} /> : <CheckCircle2 size={17} />}
+        {t('Save preferences', language)}
+      </button>
+      {saved && <span role="status">{t('Saved', language)}</span>}
+    </div>
+  </form>;
 }
 
 function StationSettings({
@@ -430,6 +519,7 @@ function StationSettings({
   sites,
   stations,
   onCreated,
+  language,
 }: {
   api: BenchmarkApi;
   organizationId: string;
@@ -437,6 +527,7 @@ function StationSettings({
   sites: Site[];
   stations: WeatherStation[];
   onCreated: () => Promise<void>;
+  language: UserLanguage;
 }) {
   const [showForm, setShowForm] = useState(stations.length === 0);
   const [draft, setDraft] = useState<StationDraft>(() => ({ ...emptyDraft, siteId: sites[0]?.id ?? '' }));
@@ -477,7 +568,7 @@ function StationSettings({
       setShowForm(false);
       await onCreated();
     } catch (cause) {
-      setFormError(readError(cause));
+      setFormError(errorMessage(cause, language));
     } finally {
       setSubmitting(false);
     }
@@ -487,22 +578,22 @@ function StationSettings({
     <>
       <section className="page-heading-row">
         <div>
-          <h2>{stations.length === 0 ? 'Set up your first station' : 'Your stations'}</h2>
+          <h2>{t(stations.length === 0 ? 'Set up your first station' : 'Your stations', language)}</h2>
           <p>
-            Benchmark uses each station's precise coordinates to resolve timezone and weather data.
+            {t("Benchmark uses each station's precise coordinates to resolve timezone and weather data.", language)}
           </p>
         </div>
         {stations.length > 0 && !showForm && (
           <button className="primary-button" type="button" onClick={() => setShowForm(true)} disabled={atLimit}>
-            <Plus size={16} /> Add station
+            <Plus size={16} /> {t('Add station', language)}
           </button>
         )}
       </section>
 
       <div className="usage-card">
         <div>
-          <span className="eyebrow">Station capacity</span>
-          <strong>{stations.length} of {stationLimit}</strong>
+          <span className="eyebrow">{t('Station capacity', language)}</span>
+          <strong>{stations.length} {t('of', language)} {stationLimit}</strong>
         </div>
         <div className="usage-track"><span style={{ width: `${Math.min(100, (stations.length / Math.max(1, stationLimit)) * 100)}%` }} /></div>
       </div>
@@ -518,7 +609,7 @@ function StationSettings({
               </div>
               <div className="station-meta">
                 <span>{station.timeZone}</span>
-                <small>{station.status}</small>
+                <small>{t(station.status, language)}</small>
               </div>
             </div>
           ))}
@@ -529,11 +620,11 @@ function StationSettings({
         <form className="station-form-card" onSubmit={submit}>
           <div className="form-card-heading">
             <div>
-              <span className="eyebrow">Station configuration</span>
-              <h3>{stations.length === 0 ? 'Tell us where your station is' : 'Add another station'}</h3>
+              <span className="eyebrow">{t('Station configuration', language)}</span>
+              <h3>{t(stations.length === 0 ? 'Tell us where your station is' : 'Add another station', language)}</h3>
             </div>
             {stations.length > 0 && (
-              <button className="text-button" type="button" onClick={() => setShowForm(false)}>Cancel</button>
+              <button className="text-button" type="button" onClick={() => setShowForm(false)}>{t('Cancel', language)}</button>
             )}
           </div>
 
@@ -542,27 +633,28 @@ function StationSettings({
           <div className="station-layout">
             <div className="station-form-fields">
               <label className="field">
-                <span>Station name</span>
+                <span>{t('Station name', language)}</span>
                 <input
                   value={draft.name}
                   onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-                  placeholder="e.g. North Field"
+                  placeholder={t('e.g. North Field', language)}
                   autoFocus
                 />
-                {fieldErrors.name && <small className="field-error">{fieldErrors.name}</small>}
+                {fieldErrors.name && <small className="field-error">{t(fieldErrors.name, language)}</small>}
               </label>
 
               <label className="field">
-                <span>Site</span>
+                <span>{t('Site', language)}</span>
                 <select value={draft.siteId} onChange={(event) => setDraft({ ...draft, siteId: event.target.value })}>
-                  {sites.map((site) => <option value={site.id} key={site.id}>{site.name}</option>)}
+                  {sites.map((site) => <option value={site.id} key={site.id}>{t(site.name, language)}</option>)}
                 </select>
-                <small>Every new account already has a Default Site.</small>
+                <small>{t('Every new account already has a Default Site.', language)}</small>
               </label>
 
               <div className="field">
-                <span>Find location</span>
+                <span>{t('Find location', language)}</span>
                 <AddressSearch
+                  language={language}
                   onSelect={(location) =>
                     setDraft((current) => ({
                       ...current,
@@ -571,40 +663,41 @@ function StationSettings({
                     }))
                   }
                 />
-                <small>Search, enter coordinates, or click the map.</small>
+                <small>{t('Search, enter coordinates, or click the map.', language)}</small>
               </div>
 
               <div className="coordinate-grid">
                 <label className="field">
-                  <span>Latitude</span>
+                  <span>{t('Latitude', language)}</span>
                   <input
                     inputMode="decimal"
                     value={draft.latitude}
                     onChange={(event) => setDraft({ ...draft, latitude: event.target.value })}
                     placeholder="40.123456"
                   />
-                  {fieldErrors.latitude && <small className="field-error">{fieldErrors.latitude}</small>}
+                  {fieldErrors.latitude && <small className="field-error">{t(fieldErrors.latitude, language)}</small>}
                 </label>
                 <label className="field">
-                  <span>Longitude</span>
+                  <span>{t('Longitude', language)}</span>
                   <input
                     inputMode="decimal"
                     value={draft.longitude}
                     onChange={(event) => setDraft({ ...draft, longitude: event.target.value })}
                     placeholder="-96.123456"
                   />
-                  {fieldErrors.longitude && <small className="field-error">{fieldErrors.longitude}</small>}
+                  {fieldErrors.longitude && <small className="field-error">{t(fieldErrors.longitude, language)}</small>}
                 </label>
               </div>
 
               <button className="primary-button wide" type="submit" disabled={submitting}>
                 {submitting ? <LoaderCircle className="spin" size={17} /> : <CheckCircle2 size={17} />}
-                {submitting ? 'Saving station…' : 'Save station'}
+                {t(submitting ? 'Saving station…' : 'Save station', language)}
               </button>
             </div>
 
             <div className="map-card">
               <MapPicker
+                language={language}
                 latitude={Number.isFinite(lat) ? lat : null}
                 longitude={Number.isFinite(lon) ? lon : null}
                 onChange={(latitude, longitude) =>
@@ -615,7 +708,7 @@ function StationSettings({
                   }))
                 }
               />
-              <div className="map-caption"><MapPin size={15} /> Click or drag the pin to place the station.</div>
+              <div className="map-caption"><MapPin size={15} /> {t('Click or drag the pin to place the station.', language)}</div>
             </div>
           </div>
         </form>
@@ -624,7 +717,7 @@ function StationSettings({
       {atLimit && (
         <div className="alert neutral">
           <CheckCircle2 size={18} />
-          <div><strong>Station capacity reached</strong><span>Your current plan allows {stationLimit} station{stationLimit === 1 ? '' : 's'}.</span></div>
+          <div><strong>{t('Station capacity reached', language)}</strong><span>{language === 'es' ? `Tu plan permite ${stationLimit} estaciones.` : `Your current plan allows ${stationLimit} station${stationLimit === 1 ? '' : 's'}.`}</span></div>
         </div>
       )}
     </>

@@ -2,6 +2,7 @@ import type {
   ApiErrorPayload,
   CreateStationInput,
   CurrentUser,
+  UserSettings,
   Site,
   StationTimeSeries,
   WeatherStation,
@@ -67,6 +68,14 @@ export class BenchmarkApi {
 
   getMe(): Promise<CurrentUser> {
     return this.request('/api/v1/me');
+  }
+
+  getUserSettings(): Promise<UserSettings> {
+    return this.request('/api/v1/me/settings');
+  }
+
+  updateUserSettings(metadata: Partial<Pick<UserSettings['metadata'], 'language' | 'units'>>): Promise<UserSettings> {
+    return this.request('/api/v1/me/settings', { method: 'PATCH', body: { metadata } });
   }
 
   listSites(organizationId: string): Promise<Site[]> {

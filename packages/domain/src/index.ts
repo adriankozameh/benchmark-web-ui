@@ -25,6 +25,13 @@ export type CurrentUser = {
   organizations: OrganizationSummary[];
 };
 
+export type DisplayUnits = 'METRIC' | 'IMPERIAL';
+export type UserLanguage = 'en' | 'es';
+export type UserSettings = {
+  userId: string;
+  metadata: { language: UserLanguage; units: DisplayUnits; [key: string]: unknown };
+};
+
 export type Site = {
   id: string;
   organizationId: string;

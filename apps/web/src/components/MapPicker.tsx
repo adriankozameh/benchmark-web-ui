@@ -1,16 +1,19 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { UserLanguage } from '@benchmark/domain';
+import { t } from '../language';
 
 type Props = {
   latitude: number | null;
   longitude: number | null;
   onChange: (latitude: number, longitude: number) => void;
+  language: UserLanguage;
 };
 
 const FALLBACK_CENTER: L.LatLngExpression = [39.5, -98.35];
 
-export function MapPicker({ latitude, longitude, onChange }: Props) {
+export function MapPicker({ latitude, longitude, onChange, language }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -40,7 +43,7 @@ export function MapPicker({ latitude, longitude, onChange }: Props) {
       zoomControl: true,
     });
 
-    L.control.layers({ 'Base map': street, Satellite: satellite }, undefined, {
+    L.control.layers({ [t('Base map', language)]: street, [t('Satellite', language)]: satellite }, undefined, {
       position: 'topright',
     }).addTo(map);
 
@@ -56,7 +59,7 @@ export function MapPicker({ latitude, longitude, onChange }: Props) {
       mapRef.current = null;
       markerRef.current = null;
     };
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -82,7 +85,7 @@ export function MapPicker({ latitude, longitude, onChange }: Props) {
 
     if (map.getZoom() < 9) map.setView(point, 11, { animate: true });
     else map.panTo(point, { animate: true });
-  }, [latitude, longitude]);
+  }, [latitude, longitude, language]);
 
-  return <div ref={containerRef} className="map-picker" aria-label="Station location map" />;
+  return <div ref={containerRef} className="map-picker" aria-label={t('Station location map', language)} />;
 }

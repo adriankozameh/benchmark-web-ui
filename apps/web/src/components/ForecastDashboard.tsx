@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import { CircleAlert, LoaderCircle, RefreshCw } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
-import type { StationTimeSeriesPoint, WeatherStation } from '@benchmark/domain';
+import type { DisplayUnits, StationTimeSeriesPoint, UserLanguage, WeatherStation } from '@benchmark/domain';
+import { displayMetricValue, metricUnit } from '../forecastUnits';
+import { errorMessage, locale, t } from '../language';
 
 const RANGES = [
   { label: '24 hours', hours: 24 },
@@ -60,28 +62,37 @@ const WIND_DIRECTIONS: Record<string, string> = {
 
 type ForecastPoint = StationTimeSeriesPoint & { time: number };
 
-function localLabel(timestamp: number | string, timeZone: string, includeTime = false, includeOffset = false): string {
-  return new Intl.DateTimeFormat('en-US', {
+function localLabel(timestamp: number | string, timeZone: string, language: UserLanguage, includeTime = false, includeOffset = false): string {
+  return new Intl.DateTimeFormat(locale(language), {
     timeZone, month: 'short', day: 'numeric',
     ...(includeTime ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' as const } : {}),
     ...(includeOffset ? { timeZoneName: 'shortOffset' as const } : {}),
   }).format(typeof timestamp === 'string' ? new Date(timestamp) : timestamp);
 }
 
-function metricLabel(metric: string): string {
-  return METRIC_LABELS[metric] ?? metric.replaceAll('_', ' ').toLowerCase();
+function metricLabel(metric: string, language: UserLanguage): string {
+  return t(METRIC_LABELS[metric] ?? metric.replaceAll('_', ' ').toLowerCase(), language);
 }
 
-function formatValue(value: number): string {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
+function formatValue(value: number, language: UserLanguage): string {
+  return new Intl.NumberFormat(locale(language), { maximumFractionDigits: 2 }).format(value);
+}
+
+function formatMetricValue(metric: string, value: number, units: DisplayUnits, language: UserLanguage): string {
+  if (units === 'IMPERIAL' && (metric === 'PRECIPITATION_QUANTITY' || metric === 'EVAPOTRANSPIRATION')) {
+    return new Intl.NumberFormat(locale(language), { maximumFractionDigits: 3 }).format(value);
+  }
+  return formatValue(value, language);
 }
 
 export function ForecastDashboard({
-  api, organizationId, stations, onUnauthorized,
+  api, organizationId, stations, onUnauthorized, units, language,
 }: {
   api: BenchmarkApi;
   organizationId: string;
   stations: WeatherStation[];
+  units: DisplayUnits;
+  language: UserLanguage;
   onUnauthorized: () => void;
 }) {
   const [stationId, setStationId] = useState(stations[0]?.id ?? '');
@@ -92,11 +103,15 @@ export function ForecastDashboard({
   const [forecastTimeZone, setForecastTimeZone] = useState<{ stationId: string; value: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const languageRef = useRef(language);
+  languageRef.current = language;
   const [hiddenProviders, setHiddenProviders] = useState<string[]>([]);
 
   const selectedStationId = stations.some((station) => station.id === stationId)
     ? stationId : stations[0]?.id ?? '';
-  const stationTimeZone = stations.find((station) => station.id === selectedStationId)?.timeZone ?? 'UTC';
+  const selectedStation = stations.find((station) => station.id === selectedStationId);
+  const stationTimeZone = selectedStation?.timeZone ?? 'UTC';
+  const displayUnits = units;
   const timeZone = forecastTimeZone?.stationId === selectedStationId
     ? forecastTimeZone.value : stationTimeZone;
 
@@ -127,7 +142,7 @@ export function ForecastDashboard({
           onUnauthorized();
           return;
         }
-        setError(cause instanceof Error ? cause.message : 'Could not load the forecast.');
+        setError(errorMessage(cause, languageRef.current));
       })
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
@@ -143,6 +158,11 @@ export function ForecastDashboard({
   }, [windowStart]);
 
   const providers = useMemo(() => [...new Set(points.map((point) => point.provider))].sort(), [points]);
+  const displayPoints = useMemo(() => points.map((point) => ({
+    ...point,
+    values: Object.fromEntries(Object.entries(point.values).map(([metric, value]) =>
+      [metric, displayMetricValue(metric, value, displayUnits)])),
+  })), [points, displayUnits]);
   const metrics = useMemo(() => {
     const available = [...new Set(points.flatMap((point) => Object.keys(point.values)))];
     // A direction is an angle: a line from 359° to 1° would misleadingly cross
@@ -161,49 +181,49 @@ export function ForecastDashboard({
   const colors = Object.fromEntries(providers.map((provider, index) => [provider, COLORS[index % COLORS.length]]));
 
   if (!stations.length) {
-    return <div className="forecast-empty">Add a station in Settings to see its forecasts.</div>;
+    return <div className="forecast-empty">{t('Add a station in Settings to see its forecasts.', language)}</div>;
   }
 
   return (
     <div className="forecast-dashboard">
       <div className="page-heading-row">
         <div>
-          <span className="eyebrow">Latest forecast</span>
-          <h2>Compare forecast providers</h2>
-          <p>Compare providers at the same moment. Times are shown in the selected station's local time zone.</p>
+          <span className="eyebrow">{t('Latest forecast', language)}</span>
+          <h2>{t('Compare forecast providers', language)}</h2>
+          <p>{t("Compare providers at the same moment. Times are shown in the selected station's local time zone.", language)}</p>
         </div>
         <button type="button" className="secondary-button" onClick={() => setRefreshKey((key) => key + 1)} disabled={loading}>
-          <RefreshCw size={15} /> Refresh
+          <RefreshCw size={15} /> {t('Refresh', language)}
         </button>
       </div>
 
       <div className="forecast-controls">
         <label className="field">
-          <span>Station</span>
+          <span>{t('Station', language)}</span>
           <select value={selectedStationId} onChange={(event) => setStationId(event.target.value)}>
             {stations.map((station) => <option key={station.id} value={station.id}>{station.name}</option>)}
           </select>
         </label>
-        <div className="forecast-range" role="group" aria-label="Forecast time range">
+        <div className="forecast-range" role="group" aria-label={t('Forecast time range', language)}>
           {RANGES.map((range) => (
             <button key={range.hours} type="button" className={rangeHours === range.hours ? 'selected' : ''}
               aria-pressed={rangeHours === range.hours} onClick={() => setRangeHours(range.hours)}>
-              {range.label}
+              {t(range.label, language)}
             </button>
           ))}
         </div>
       </div>
 
-      {error && <div className="alert error"><CircleAlert size={18} /><div><strong>Forecast unavailable</strong><span>{error}</span></div></div>}
-      {loading && <div className="forecast-empty"><LoaderCircle className="spin" size={20} /> Loading forecasts…</div>}
+      {error && <div className="alert error"><CircleAlert size={18} /><div><strong>{t('Forecast unavailable', language)}</strong><span>{error}</span></div></div>}
+      {loading && <div className="forecast-empty"><LoaderCircle className="spin" size={20} /> {t('Loading forecasts…', language)}</div>}
       {!loading && !error && points.length === 0 && (
-        <div className="forecast-empty">No forecast data was returned for this station and time range.</div>
+        <div className="forecast-empty">{t('No forecast data was returned for this station and time range.', language)}</div>
       )}
 
       {!loading && !error && points.length > 0 && (
         <>
-          <div className="forecast-provider-filter" role="group" aria-label="Visible forecast providers">
-            <span>Providers</span>
+          <div className="forecast-provider-filter" role="group" aria-label={t('Visible forecast providers', language)}>
+            <span>{t('Providers', language)}</span>
             {providers.map((provider) => (
               <button type="button" key={provider} aria-pressed={!hiddenProviders.includes(provider)}
                 className={hiddenProviders.includes(provider) ? 'muted-provider' : ''}
@@ -215,12 +235,12 @@ export function ForecastDashboard({
           </div>
           <div className="forecast-chart-grid">
             {metrics.map((metric) => (
-              <MetricChart key={metric} metric={metric} points={points}
+              <MetricChart key={metric} metric={metric} points={displayPoints} units={displayUnits} language={language}
                 providers={visibleProviders} colors={colors} timeZone={timeZone}
                 windowStart={windowStart} windowEnd={windowStart + rangeHours * HOUR_MS} />
             ))}
           </div>
-          {metrics.length === 0 && <div className="forecast-empty">No numeric metrics were returned.</div>}
+          {metrics.length === 0 && <div className="forecast-empty">{t('No numeric metrics were returned.', language)}</div>}
         </>
       )}
     </div>
@@ -234,9 +254,11 @@ const RIGHT = 14;
 const TOP = 16;
 const BOTTOM = 31;
 
-function MetricChart({ metric, points, providers, colors, timeZone, windowStart, windowEnd }: {
+function MetricChart({ metric, points, providers, colors, timeZone, windowStart, windowEnd, units, language }: {
   metric: string;
   points: ForecastPoint[];
+  units: DisplayUnits;
+  language: UserLanguage;
   providers: string[];
   colors: Record<string, string>;
   timeZone: string;
@@ -278,27 +300,27 @@ function MetricChart({ metric, points, providers, colors, timeZone, windowStart,
   }
 
   return (
-    <section className="forecast-chart-card" aria-label={`${metricLabel(metric)} forecast chart`}>
-      <div className="forecast-chart-heading"><h3>{metricLabel(metric)}</h3>
+    <section className="forecast-chart-card" aria-label={`${metricLabel(metric, language)} ${t('forecast chart', language)}${metricUnit(metric, units) ? ` ${t('in', language)} ${metricUnit(metric, units)}` : ''}`}>
+      <div className="forecast-chart-heading"><h3>{metricLabel(metric, language)}{metricUnit(metric, units) ? ` (${metricUnit(metric, units)})` : ''}</h3>
         <span>{activeTime === null ? timeZone
-          : localLabel(active[0]?.point?.localDateTime ?? activeTime, timeZone, true, true)}</span></div>
-      {directionMetric && <p className="forecast-wind-convention">Arrows point toward where the wind comes from · degrees clockwise from true north</p>}
-      {all.length === 0 ? <div className="forecast-chart-blank">Select a provider to view this metric.</div> : (
+          : localLabel(active[0]?.point?.localDateTime ?? activeTime, timeZone, language, true, true)}</span></div>
+      {directionMetric && <p className="forecast-wind-convention">{t('Arrows point toward where the wind comes from · degrees clockwise from true north', language)}</p>}
+      {all.length === 0 ? <div className="forecast-chart-blank">{t('Select a provider to view this metric.', language)}</div> : (
         <>
           <svg className="forecast-plot" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img"
-            aria-label={`${metricLabel(metric)} by provider, ${localLabel(minTime, timeZone)} to ${localLabel(maxTime, timeZone)} ${timeZone}${directionMetric ? '; arrows point toward the wind source' : ''}`}
+            aria-label={`${metricLabel(metric, language)} ${t('by provider', language)}, ${localLabel(minTime, timeZone, language)} ${t('to', language)} ${localLabel(maxTime, timeZone, language)} ${timeZone}${directionMetric ? `; ${t('arrows point toward the wind source', language)}` : ''}`}
             onPointerMove={move} onPointerLeave={() => setHoverTime(null)}>
             {[0, 0.5, 1].map((fraction) => {
               const rowY = TOP + fraction * (HEIGHT - TOP - BOTTOM);
               return <g key={fraction}>
                 <line x1={LEFT} x2={WIDTH - RIGHT} y1={rowY} y2={rowY} stroke="#edf1f5" />
-                <text x={LEFT - 9} y={rowY + 4} textAnchor="end" className="forecast-axis">{formatValue(max - fraction * (max - min))}</text>
+                <text x={LEFT - 9} y={rowY + 4} textAnchor="end" className="forecast-axis">{formatMetricValue(metric, max - fraction * (max - min), units, language)}</text>
               </g>;
             })}
             {[0, 0.25, 0.5, 0.75, 1].map((fraction) => (
               <text key={fraction} x={LEFT + fraction * (WIDTH - LEFT - RIGHT)} y={HEIGHT - 6}
                 textAnchor={fraction === 0 ? 'start' : fraction === 1 ? 'end' : 'middle'}
-                className="forecast-axis">{localLabel(minTime + fraction * (maxTime - minTime), timeZone, maxTime - minTime <= 48 * 60 * 60 * 1000)}</text>
+                className="forecast-axis">{localLabel(minTime + fraction * (maxTime - minTime), timeZone, language, maxTime - minTime <= 48 * 60 * 60 * 1000)}</text>
             ))}
             {activeTime !== null && <line x1={x(activeTime)} x2={x(activeTime)} y1={TOP} y2={HEIGHT - BOTTOM}
               stroke="#9aa9b8" strokeDasharray="4 4" pointerEvents="none" />}
@@ -328,13 +350,13 @@ function MetricChart({ metric, points, providers, colors, timeZone, windowStart,
               r="5" fill={colors[provider]} stroke="white" strokeWidth="2" pointerEvents="none" />)}
           </svg>
           <div className="forecast-chart-values" aria-live="off">
-            {activeTime === null ? <span>Move over the chart to compare values.</span> : active.length === 0
-              ? <span>No values at this time.</span>
+            {activeTime === null ? <span>{t('Move over the chart to compare values.', language)}</span> : active.length === 0
+              ? <span>{t('No values at this time.', language)}</span>
               : active.map(({ provider, point }) => <span key={provider}>
                 <i style={{ background: colors[provider] }} />
-                {PROVIDER_LABELS[provider] ?? provider.replaceAll('_', ' ')} <strong>{formatValue(point!.values[metric])}</strong>
+                {PROVIDER_LABELS[provider] ?? provider.replaceAll('_', ' ')} <strong>{formatMetricValue(metric, point!.values[metric], units, language)}{metricUnit(metric, units) ? ` ${metricUnit(metric, units)}` : ''}</strong>
                 {directionMetric && Number.isFinite(point!.values[directionMetric]) &&
-                  <span>· {formatValue(((point!.values[directionMetric] % 360) + 360) % 360)}° clockwise from N</span>}
+                  <span>· {formatValue(((point!.values[directionMetric] % 360) + 360) % 360, language)}° {t('clockwise from N', language)}</span>}
               </span>)}
           </div>
         </>

@@ -1,5 +1,17 @@
 # Benchmark UI
 
+## Personal settings
+
+Open Settings to choose English or Spanish and metric or imperial display units.
+Preferences are saved through the authenticated backend `GET/PATCH /api/v1/me/settings`
+API and apply to every station. The dashboard renders dates in the station time zone
+using the selected language, and converts supported metric forecast values only when
+displaying them. The backend response and stored measurements stay in metric units.
+The authenticated dashboard and settings pages translate their labels, validation, map controls,
+forecast charts, and API errors using the language stored in user settings. Login and
+Cognito are unchanged. Third-party place names follow their provider's available localization.
+Deploy backend migration V7 and the settings endpoint before deploying this frontend.
+
 Benchmark Labs frontend application.
 
 The first application slice intentionally stays small:
