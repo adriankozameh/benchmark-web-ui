@@ -1,6 +1,13 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  Aggregation: 'Agrupación', Daily: 'Diaria', Hourly: 'Por hora', Apply: 'Aplicar',
+  'Showing:': 'Mostrando:',
+  'Click Apply to update the charts.': 'Haz clic en Aplicar para actualizar los gráficos.',
+  'Hourly observations are available for ranges of 30 days or less. Longer ranges use daily aggregation.':
+      'Las observaciones por hora están disponibles para períodos de hasta 30 días. Los períodos más largos usan agrupación diaria.',
+  "Observations use the selected station's local calendar dates.":
+      'Las observaciones usan las fechas del calendario local de la estación seleccionada.',
   Workspace: 'Espacio de trabajo', Dashboard: 'Panel', Settings: 'Configuración', Stations: 'Estaciones',
   Forecasts: 'Pronósticos', Forecast: 'Pronóstico', Observations: 'Observaciones', Historic: 'Histórico',
   'Weather stations': 'Estaciones meteorológicas', Account: 'Cuenta',
@@ -10,7 +17,7 @@ const spanish: Record<string, string> = {
   'Unable to load settings': 'No se pudo cargar la configuración',
   'Latest forecast': 'Pronóstico reciente', 'Compare forecast providers': 'Comparar proveedores de pronósticos',
   "Compare providers at the same moment. Times are shown in the selected station's local time zone.":
-    'Compara proveedores en el mismo momento. Las horas se muestran en la zona horaria de la estación.',
+      'Compara proveedores en el mismo momento. Las horas se muestran en la zona horaria de la estación.',
   Refresh: 'Actualizar', Station: 'Estación', Providers: 'Proveedores',
   'Forecast unavailable': 'Pronóstico no disponible', 'Loading forecasts…': 'Cargando pronósticos…',
   'No forecast data was returned for this station and time range.': 'No hay pronósticos para esta estación y período.',
@@ -21,7 +28,7 @@ const spanish: Record<string, string> = {
   'Move over the chart to compare values.': 'Pasa el cursor sobre el gráfico para comparar valores.',
   'No values at this time.': 'No hay valores para esta hora.',
   'Arrows point toward where the wind comes from · degrees clockwise from true north':
-    'Las flechas apuntan hacia donde viene el viento · grados en sentido horario desde el norte verdadero',
+      'Las flechas apuntan hacia donde viene el viento · grados en sentido horario desde el norte verdadero',
   '24 hours': '24 horas', '3 days': '3 días', '7 days': '7 días', '15 days': '15 días',
   'Forecast time range': 'Período del pronóstico', 'Visible forecast providers': 'Proveedores visibles',
   'Station name': 'Nombre de la estación', Site: 'Sitio', 'Find location': 'Buscar ubicación',
@@ -45,7 +52,7 @@ const spanish: Record<string, string> = {
   'Wind speed': 'Velocidad del viento',
   'Set up your first station': 'Configura tu primera estación',
   "Benchmark uses each station's precise coordinates to resolve timezone and weather data.":
-    'Benchmark usa las coordenadas de cada estación para calcular la zona horaria y obtener datos meteorológicos.',
+      'Benchmark usa las coordenadas de cada estación para calcular la zona horaria y obtener datos meteorológicos.',
   'Station capacity': 'Capacidad de estaciones', of: 'de',
   'Station configuration': 'Configuración de estación',
   'Tell us where your station is': 'Indica dónde está tu estación',
@@ -55,7 +62,7 @@ const spanish: Record<string, string> = {
   'Search, enter coordinates, or click the map.': 'Busca, escribe coordenadas o haz clic en el mapa.',
   'Click or drag the pin to place the station.': 'Haz clic o arrastra el marcador para ubicar la estación.',
   'No Benchmark organization is available for this account.':
-    'Esta cuenta no tiene una organización de Benchmark disponible.',
+      'Esta cuenta no tiene una organización de Benchmark disponible.',
   'Something went wrong.': 'Ocurrió un error.',
   'You are not signed in.': 'No has iniciado sesión.',
   'Could not load the forecast.': 'No se pudo cargar el pronóstico.',
@@ -68,17 +75,17 @@ const spanish: Record<string, string> = {
   Organization: 'Organización', 'Active organization': 'Organización activa',
   'Invite people': 'Invitar personas',
   'Only organization owners and admins can manage invitations.':
-    'Solo los propietarios y administradores pueden gestionar invitaciones.',
+      'Solo los propietarios y administradores pueden gestionar invitaciones.',
   'Invite someone to join your organization using their email address.':
-    'Invita a alguien a tu organización con su dirección de correo.',
+      'Invita a alguien a tu organización con su dirección de correo.',
   'Seat limit:': 'Límite de usuarios:',
   'Email address': 'Correo electrónico', Role: 'Rol', Member: 'Miembro', Admin: 'Administrador',
   'Send invitation': 'Enviar invitación', Invitations: 'Invitaciones',
   'Loading invitations…': 'Cargando invitaciones…', 'No invitations yet.': 'Todavía no hay invitaciones.',
   'Invitation sent. The recipient can accept it from their email.':
-    'Invitación enviada. El destinatario puede aceptarla desde su correo.',
+      'Invitación enviada. El destinatario puede aceptarla desde su correo.',
   'Invitation created. Email delivery may take a moment.':
-    'Invitación creada. El correo puede tardar unos instantes en llegar.',
+      'Invitación creada. El correo puede tardar unos instantes en llegar.',
   'Invitation resent.': 'Invitación reenviada.', 'Invitation revoked.': 'Invitación revocada.',
   'Local preview link:': 'Enlace de prueba local:', Expires: 'Vence',
   'Email delivery failed. Resend the invitation.': 'No se pudo enviar el correo. Reenvía la invitación.',
@@ -93,9 +100,9 @@ const spanish: Record<string, string> = {
   'Station observations': 'Observaciones de la estación',
   'Observed weather': 'Datos meteorológicos observados',
   "Hourly observations use the selected station's local time zone.":
-    'Las observaciones horarias se muestran en la zona horaria local de la estación seleccionada.',
+      'Las observaciones horarias se muestran en la zona horaria local de la estación seleccionada.',
   "Daily observations use the selected station's local calendar date.":
-    'Los valores diarios usan la fecha local de la estación seleccionada.',
+      'Los valores diarios usan la fecha local de la estación seleccionada.',
   'Daily total': 'Total diario', 'Daily minimum': 'Mínimo diario', 'Daily maximum': 'Máximo diario',
   'Daily range': 'Máximo y mínimo diarios', Maximum: 'Máximo', Minimum: 'Mínimo',
   'View from (UTC day)': 'Ver desde (día UTC)',
@@ -103,27 +110,27 @@ const spanish: Record<string, string> = {
   'View from (local day)': 'Ver desde (día local)',
   'View through (local day)': 'Ver hasta (día local)',
   'Choose local dates within the last 12 months to view.':
-    'Selecciona fechas locales dentro de los últimos 12 meses para visualizar.',
+      'Selecciona fechas locales dentro de los últimos 12 meses para visualizar.',
   'Choose 1 to 31 UTC days to view.': 'Selecciona entre 1 y 31 días UTC para visualizar.',
   'Choose a UTC range within the last 12 months to view.':
-    'Selecciona un período UTC dentro de los últimos 12 meses para visualizar.',
+      'Selecciona un período UTC dentro de los últimos 12 meses para visualizar.',
   'View range': 'Período a visualizar',
   '1 month': '1 mes', '3 months': '3 meses', '6 months': '6 meses', '1 year': '1 año',
   'Loading observations…': 'Cargando observaciones…',
   'No observations were returned for this station and time range.':
-    'No hay observaciones para esta estación y período.',
+      'No hay observaciones para esta estación y período.',
   'Add a station in Settings to see its observations.':
-    'Agrega una estación en Configuración para ver sus observaciones.',
+      'Agrega una estación en Configuración para ver sus observaciones.',
   'Load historical station data': 'Cargar datos históricos de la estación',
   'Request complete UTC days from your linked station provider. Existing hourly values are updated as data arrives.':
-    'Solicita días UTC completos al proveedor conectado. Los valores horarios existentes se actualizan al llegar nuevos datos.',
+      'Solicita días UTC completos al proveedor conectado. Los valores horarios existentes se actualizan al llegar nuevos datos.',
   'Historical imports require PREMIUM and a connected station provider.':
-    'Las importaciones históricas requieren PREMIUM y un proveedor conectado a la estación.',
+      'Las importaciones históricas requieren PREMIUM y un proveedor conectado a la estación.',
   'First UTC day': 'Primer día UTC', 'Last UTC day': 'Último día UTC',
   'Queuing days…': 'Encolando días…', 'Load historical data': 'Cargar datos históricos',
   'Days queued:': 'Días encolados:',
   'Import runs in the background. Refresh the charts to see new data.':
-    'La importación continúa en segundo plano. Actualiza los gráficos para ver los datos nuevos.',
+      'La importación continúa en segundo plano. Actualiza los gráficos para ver los datos nuevos.',
   'observation chart': 'gráfico de observaciones',
   'Historical weather data will appear here.': 'Los datos meteorológicos históricos aparecerán aquí.',
   'Benchmark user': 'Usuario de Benchmark', plan: 'plan',
@@ -135,17 +142,17 @@ const spanish: Record<string, string> = {
   'Station details': 'Detalles de la estación',
   'Station location': 'Ubicación de la estación',
   'Location is fixed on the FREE plan. Upgrade to PRO or PREMIUM to change it.':
-    'La ubicación queda fija en el plan GRATIS. Actualiza a PRO o PREMIUM para cambiarla.',
+      'La ubicación queda fija en el plan GRATIS. Actualiza a PRO o PREMIUM para cambiarla.',
   'Weather station hardware setup is available on the PREMIUM plan.':
-    'La configuración del equipo meteorológico está disponible con el plan PREMIUM.',
+      'La configuración del equipo meteorológico está disponible con el plan PREMIUM.',
   'Time zone is calculated from the station coordinates.': 'La zona horaria se calcula a partir de las coordenadas de la estación.',
   'Additional station metadata (JSON)': 'Metadatos adicionales de la estación (JSON)',
   'For hardware fields such as STATION_TYPE. Never put API keys or passwords here.':
-    'Para datos del equipo como STATION_TYPE. Nunca ingreses claves API ni contraseñas aquí.',
+      'Para datos del equipo como STATION_TYPE. Nunca ingreses claves API ni contraseñas aquí.',
   'Save station details': 'Guardar detalles de la estación',
   'Weather station hardware': 'Equipo de la estación meteorológica',
   'Provider accounts can be reused by multiple stations. Each station has its own hardware ID.':
-    'Varias estaciones pueden usar la misma cuenta del proveedor. Cada estación tiene su propio ID de equipo.',
+      'Varias estaciones pueden usar la misma cuenta del proveedor. Cada estación tiene su propio ID de equipo.',
   'Loading provider accounts…': 'Cargando cuentas de proveedores…',
   'Provider account': 'Cuenta del proveedor',
   'Select a provider account': 'Selecciona una cuenta del proveedor',
@@ -161,27 +168,27 @@ const spanish: Record<string, string> = {
   Username: 'Usuario', Password: 'Contraseña', 'Access token': 'Token de acceso',
   Region: 'Región', None: 'Ninguna',
   'Changing saved credentials affects every station using this provider account.':
-    'Cambiar estas credenciales afecta a todas las estaciones que usan esta cuenta del proveedor.',
+      'Cambiar estas credenciales afecta a todas las estaciones que usan esta cuenta del proveedor.',
   'Save hardware connection': 'Guardar conexión del equipo',
   'Disconnect hardware': 'Desvincular equipo',
   'Currently connected to:': 'Actualmente conectada a:',
   'Observation provider access is unavailable for this account.':
-    'Esta cuenta no tiene acceso a los proveedores de observaciones.',
+      'Esta cuenta no tiene acceso a los proveedores de observaciones.',
   'Enter a station name and valid coordinates.': 'Ingresa un nombre y coordenadas válidas.',
   'Station metadata must be valid JSON.': 'Los metadatos de la estación deben ser JSON válido.',
   'Station metadata must be a JSON object.': 'Los metadatos de la estación deben ser un objeto JSON.',
   'Keep credentials in provider fields, not station metadata.':
-    'Ingresa las credenciales en los campos del proveedor, no en los metadatos de la estación.',
+      'Ingresa las credenciales en los campos del proveedor, no en los metadatos de la estación.',
   'Enter a valid hardware station ID (up to 255 characters).':
-    'Ingresa un ID de estación válido (hasta 255 caracteres).',
+      'Ingresa un ID de estación válido (hasta 255 caracteres).',
   'Enter a name for the provider account.': 'Ingresa un nombre para la cuenta del proveedor.',
   'Choose a provider account or create one.': 'Selecciona una cuenta del proveedor o crea una nueva.',
   'The selected provider account is no longer available.': 'La cuenta del proveedor seleccionada ya no está disponible.',
   'Missing required credential:': 'Falta la credencial obligatoria:',
   'An access token or API key is required for this provider.':
-    'Este proveedor requiere un token de acceso o una clave API.',
+      'Este proveedor requiere un token de acceso o una clave API.',
   'Provider account saved, but linking the station failed. Try saving the connection again.':
-    'La cuenta del proveedor se guardó, pero no se pudo vincular la estación. Vuelve a guardar la conexión.',
+      'La cuenta del proveedor se guardó, pero no se pudo vincular la estación. Vuelve a guardar la conexión.',
   'Station name must be 200 characters or fewer.': 'El nombre de la estación debe tener 200 caracteres o menos.',
   'Latitude is required.': 'La latitud es obligatoria.',
   'Latitude must be between -90 and 90.': 'La latitud debe estar entre -90 y 90.',
@@ -205,7 +212,7 @@ export function errorMessage(error: unknown, language: UserLanguage): string {
   // API error descriptions may only be in English.
   // Keep the HTTP code if available while showing a fully localized message.
   const status = typeof error === 'object' && error !== null && 'status' in error &&
-    typeof error.status === 'number' ? ` (HTTP ${error.status})` : '';
+  typeof error.status === 'number' ? ` (HTTP ${error.status})` : '';
   return `No se pudo completar la solicitud${status}.`;
 }
 
