@@ -22,7 +22,7 @@ const spanish: Record<string, string> = {
   'No values at this time.': 'No hay valores para esta hora.',
   'Arrows point toward where the wind comes from · degrees clockwise from true north':
     'Las flechas apuntan hacia donde viene el viento · grados en sentido horario desde el norte verdadero',
-  '24 hours': '24 horas', '3 days': '3 días', '7 days': '7 días', '16 days': '16 días',
+  '24 hours': '24 horas', '3 days': '3 días', '7 days': '7 días', '15 days': '15 días',
   'Forecast time range': 'Período del pronóstico', 'Visible forecast providers': 'Proveedores visibles',
   'Station name': 'Nombre de la estación', Site: 'Sitio', 'Find location': 'Buscar ubicación',
   'Default Site': 'Sitio predeterminado',

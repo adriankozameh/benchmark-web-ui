@@ -10,7 +10,7 @@ const RANGES = [
   { label: '24 hours', hours: 24 },
   { label: '3 days', hours: 72 },
   { label: '7 days', hours: 168 },
-  { label: '16 days', hours: 384 },
+  { label: '15 days', hours: 375 },
 ] as const;
 
 const HOUR_MS = 60 * 60 * 1000;
