@@ -10,6 +10,7 @@ const files = [
   'src/components/ForecastDashboard.tsx',
   'src/components/OrganizationInvitations.tsx',
   'src/components/StationHardwareEditor.tsx',
+  'src/components/DataProviders.tsx',
   '../../packages/validation/src/index.ts',
 ];
 const translationSource = ts.createSourceFile('language.ts', fs.readFileSync(path.join(root, 'src/language.ts'), 'utf8'), ts.ScriptTarget.Latest, true);

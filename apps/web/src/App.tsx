@@ -25,6 +25,7 @@ import { AddressSearch } from './components/AddressSearch';
 import { BrandLogo } from './components/BrandLogo';
 import { ForecastDashboard } from './components/ForecastDashboard';
 import { ObservationsDashboard } from './components/ObservationsDashboard';
+import { DataProviders } from './components/DataProviders';
 import { OrganizationInvitations } from './components/OrganizationInvitations';
 import { MapPicker } from './components/MapPicker';
 import { StationHardwareEditor } from './components/StationHardwareEditor';
@@ -357,7 +358,7 @@ function AuthenticatedApp({
   onUnauthorized: () => void;
 }) {
   type DashboardPage = 'forecast' | 'observations' | 'historic';
-  type SettingsPage = 'stations' | 'account';
+  type SettingsPage = 'stations' | 'data-providers' | 'account';
   type AppRoute =
     | { section: 'dashboard'; page: DashboardPage }
     | { section: 'settings'; page: SettingsPage };
@@ -376,6 +377,7 @@ function AuthenticatedApp({
     if (normalized === '/settings' || normalized === '/settings/stations') {
       return { section: 'settings', page: 'stations' };
     }
+    if (normalized === '/settings/data-providers') return { section: 'settings', page: 'data-providers' };
     if (normalized === '/settings/account') {
       return { section: 'settings', page: 'account' };
     }
@@ -496,7 +498,7 @@ function AuthenticatedApp({
     ? route.page === 'forecast' ? 'Forecast'
       : route.page === 'observations' ? 'Observations'
       : 'Historic'
-    : route.page === 'account' ? 'Account' : 'Weather stations';
+    : route.page === 'account' ? 'Account' : route.page === 'data-providers' ? 'Data providers' : 'Weather stations';
 
   return (
     <div className="app-shell">
@@ -534,8 +536,10 @@ function AuthenticatedApp({
               onClick={() => navigate({ section: 'settings', page: 'stations' })}>
               <MapPin size={17} /> <span>{t('Stations', language)}</span>
             </button>
-            <button type="button" className="nav-item disabled" disabled>
-              <RadioTower size={17} /> <span>{t('Data providers', language)}</span><small>{t('Soon', language)}</small>
+            <button type="button" className={`nav-item ${route.page === 'data-providers' ? 'secondary-active' : ''}`}
+              aria-current={route.page === 'data-providers' ? 'page' : undefined}
+              onClick={() => navigate({ section: 'settings', page: 'data-providers' })}>
+              <RadioTower size={17} /> <span>{t('Data providers', language)}</span>
             </button>
             <button type="button" className={`nav-item ${route.page === 'account' ? 'secondary-active' : ''}`}
               aria-current={route.page === 'account' ? 'page' : undefined}
@@ -602,12 +606,19 @@ function AuthenticatedApp({
 
           {organization && route.section === 'settings' && route.page === 'stations' && (
             <StationSettings api={api} organizationId={organization.id}
+              organizationRole={organization.role} onManageProviders={() => navigate({ section: 'settings', page: 'data-providers' })}
               stationLimit={organization.stationLimit} sites={sites} stations={stations}
               onCreated={refresh} language={language} onUnauthorized={onUnauthorized} plan={organization.plan}
               onLocationChanged={(stationId) => {
                 setStationToView(stationId);
                 navigate({ section: 'dashboard', page: 'forecast' });
               }} />
+          )}
+
+          {organization && route.section === 'settings' && route.page === 'data-providers' && (
+            <DataProviders key={organization.id} api={api} organizationId={organization.id}
+              organizationRole={organization.role} plan={organization.plan} stations={stations}
+              language={language} onUnauthorized={onUnauthorized} />
           )}
 
           {route.section === 'settings' && route.page === 'account' && userSettings && <>
@@ -645,6 +656,11 @@ function AuthenticatedApp({
           onClick={() => navigate({ section: 'settings', page: 'stations' })}>
           <MapPin size={20} />
           <span>{t('Stations', language)}</span>
+        </button>
+        <button type="button" className={route.section === 'settings' && route.page === 'data-providers' ? 'active' : ''}
+          aria-current={route.section === 'settings' && route.page === 'data-providers' ? 'page' : undefined}
+          onClick={() => navigate({ section: 'settings', page: 'data-providers' })}>
+          <RadioTower size={20} /><span>{t('Providers', language)}</span>
         </button>
         <button type="button" className={route.section === 'settings' && route.page === 'account' ? 'active' : ''}
           aria-current={route.section === 'settings' && route.page === 'account' ? 'page' : undefined}
@@ -743,6 +759,8 @@ function StationSettings({
   api,
   organizationId,
   stationLimit,
+  organizationRole,
+  onManageProviders,
   sites,
   stations,
   onCreated,
@@ -754,6 +772,8 @@ function StationSettings({
   api: BenchmarkApi;
   organizationId: string;
   stationLimit: number;
+  organizationRole: string;
+  onManageProviders: () => void;
   sites: Site[];
   stations: WeatherStation[];
   onCreated: () => Promise<void>;
@@ -797,7 +817,8 @@ function StationSettings({
     setSubmitting(true);
     setFormError(null);
     try {
-      await api.createStation(organizationId, input);
+      const createdStation = await api.createStation(organizationId, input);
+      setSelectedStationId(createdStation.id);
       setDraft({ ...emptyDraft, siteId: sites[0]?.id ?? '' });
       setShowForm(false);
       await onCreated();
@@ -856,6 +877,7 @@ function StationSettings({
       {stations.filter((station) => station.id === selectedStationId).map((station) =>
         <StationHardwareEditor key={station.id} api={api} organizationId={organizationId}
           station={station} sites={sites} language={language} onChanged={onCreated}
+          canManageProviders={['OWNER', 'ADMIN'].includes(organizationRole)} onManageProviders={onManageProviders}
           onUnauthorized={onUnauthorized} plan={plan} onLocationChanged={onLocationChanged} />)}
 
       {showForm && !atLimit && (

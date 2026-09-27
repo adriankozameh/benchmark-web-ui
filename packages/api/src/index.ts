@@ -1,5 +1,6 @@
 import type {
   ApiErrorPayload,
+  ProviderConnectionResult,
   ObservationBackfillResponse,
   DailyStationObservations,
   OrganizationInvitation,
@@ -162,6 +163,11 @@ export class BenchmarkApi {
       `/stations/${encodeURIComponent(stationId)}/observations/backfill`,
       { method: 'POST', body: { from, to } },
     );
+  }
+
+  testDataProvider(organizationId: string, dataProviderId: string): Promise<ProviderConnectionResult> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/data-providers/${encodeURIComponent(dataProviderId)}/test-connection`, { method: 'POST' });
   }
 
   createStation(organizationId: string, input: CreateStationInput): Promise<WeatherStation> {

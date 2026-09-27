@@ -183,3 +183,11 @@ export type ApiErrorPayload = {
   path?: string;
   requestId?: string;
 };
+
+export type ProviderConnectionResult = {
+  status: 'CONNECTED' | 'NO_AUTH_REQUIRED' | 'INVALID_CREDENTIALS' | 'FORBIDDEN'
+    | 'MISSING_CREDENTIALS' | 'RATE_LIMITED' | 'UNAVAILABLE' | 'INVALID_RESPONSE'
+    | 'NOT_SUPPORTED' | 'NOT_CONFIGURED';
+  message: string;
+  checkedAt: string;
+};

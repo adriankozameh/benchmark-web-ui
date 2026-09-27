@@ -460,7 +460,7 @@ button { color: inherit; }
     right: 0;
     bottom: 0;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     min-height: calc(62px + env(safe-area-inset-bottom));
     padding: 5px 8px calc(5px + env(safe-area-inset-bottom));
     background: rgba(255,255,255,.96);
@@ -634,3 +634,13 @@ button { color: inherit; }
   background: var(--benchmark-surface, #f4f7fa);
   color: var(--benchmark-navy, #34455a);
 }
+
+.data-providers { display: grid; gap: 20px; }
+.provider-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.provider-card { min-width: 0; overflow-wrap: anywhere; }
+.provider-card h3 { margin: 8px 0; }
+.provider-card ul { padding-left: 20px; }
+.provider-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.connection-time { display: block; margin-top: 6px; }
+.provider-card .station-details-actions { flex-wrap: wrap; }
+@media (max-width: 900px) { .provider-grid { grid-template-columns: 1fr; } }

@@ -1,3 +1,10 @@
+## Organization data providers
+
+See [DATA_PROVIDER_MANAGEMENT.md](DATA_PROVIDER_MANAGEMENT.md) for the dedicated
+Settings → Data providers page, backend credential validation, Test connection,
+supported providers, and deployment instructions. Credential management now lives
+on that page; station settings select an existing account and its vendor station ID.
+
 # Benchmark UI
 
 ## Personal settings
@@ -18,10 +25,10 @@ In Settings → Stations, select an existing station to edit its name, site, loc
 or station metadata. The same panel links a provider account and its vendor station ID.
 On FREE, the saved location is fixed. PRO and PREMIUM can change coordinates; the
 backend recalculates the time zone. Only PREMIUM can enter station metadata or
-link observation hardware. On PREMIUM, you can choose an existing organization provider account or create one with a vendor
-API key, API secret, username, password, token, and region as needed. Credentials
-are never returned by the API; the panel shows only which fields are configured.
-Changing a shared provider account affects all stations using it. Disconnecting a
+link observation hardware. On PREMIUM, Owners and Admins select an existing organization provider account.
+Create or edit accounts in Settings → Data providers, where credentials are tested
+before saving. Credentials are never returned by the API; only configured fields
+are shown. Changing a shared provider account affects all stations using it. Disconnecting a
 station keeps the reusable provider account. The backend already exposes these
 station and provider endpoints; provider ingestion still depends on the relevant
 provider strategy and observation dispatch being enabled.

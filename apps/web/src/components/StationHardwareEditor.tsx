@@ -1,39 +1,10 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { CheckCircle2, CircleAlert, LoaderCircle, MapPin } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
-import type { DataProvider, Plan, ProviderCredentials, Site, UserLanguage, WeatherStation } from '@benchmark/domain';
+import type { DataProvider, Plan, Site, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { AddressSearch } from './AddressSearch';
 import { MapPicker } from './MapPicker';
 import { errorMessage, t } from '../language';
-
-const HARDWARE_PROVIDERS = [
-  ['WEATHER_LINK', 'WeatherLink'], ['AMBIENT_WEATHER', 'Ambient Weather'],
-  ['TEMPEST', 'Tempest'], ['VAISALA', 'Vaisala'], ['SENSECAP_GLOBAL', 'SenseCAP Global'],
-  ['SENSECAP_CHINA', 'SenseCAP China'], ['METOS', 'METOS'], ['METER', 'METER'],
-  ['FAWN', 'FAWN'], ['CIMIS', 'CIMIS'], ['ACUITY', 'Acuity'],
-  ['LICOR_HOBO', 'LI-COR / HOBO'], ['ZEUS', 'Zeus'], ['RANCH_SYSTEM', 'Ranch System'],
-] as const;
-
-type CredentialField = keyof ProviderCredentials;
-const CREDENTIAL_FIELDS: { key: CredentialField; label: string; flag: keyof DataProvider }[] = [
-  { key: 'apiKey', label: 'API key', flag: 'apiKeyConfigured' },
-  { key: 'apiKeySecret', label: 'API key secret', flag: 'apiKeySecretConfigured' },
-  { key: 'username', label: 'Username', flag: 'usernameConfigured' },
-  { key: 'password', label: 'Password', flag: 'passwordConfigured' },
-  { key: 'token', label: 'Access token', flag: 'tokenConfigured' },
-];
-
-const REQUIRED_CREDENTIALS: Record<string, CredentialField[]> = {
-  WEATHER_LINK: ['apiKey', 'apiKeySecret'], AMBIENT_WEATHER: ['apiKey'],
-  VAISALA: ['apiKey'], SENSECAP_GLOBAL: ['apiKey', 'apiKeySecret'],
-  SENSECAP_CHINA: ['apiKey', 'apiKeySecret'], METOS: ['apiKey', 'apiKeySecret'],
-  METER: ['token'], CIMIS: ['apiKey'], ACUITY: ['token'],
-  ZEUS: ['username', 'password'], RANCH_SYSTEM: ['username', 'password'],
-};
-
-const emptyCredentials = (): Record<CredentialField, string> => ({
-  apiKey: '', apiKeySecret: '', username: '', password: '', token: '',
-});
 
 function includesCredentialKeys(value: unknown): boolean {
   if (Array.isArray(value)) return value.some(includesCredentialKeys);
@@ -42,7 +13,7 @@ function includesCredentialKeys(value: unknown): boolean {
     /api.?key|secret|password|token|credential/i.test(key) || includesCredentialKeys(child));
 }
 
-export function StationHardwareEditor({ api, organizationId, station, sites, language, onChanged, onUnauthorized, plan, onLocationChanged }: {
+export function StationHardwareEditor({ api, organizationId, station, sites, language, onChanged, onUnauthorized, plan, onLocationChanged, canManageProviders, onManageProviders }: {
   api: BenchmarkApi;
   organizationId: string;
   station: WeatherStation;
@@ -51,10 +22,12 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
   onChanged: () => Promise<void>;
   onUnauthorized: () => void;
   plan: Plan;
+  canManageProviders: boolean;
+  onManageProviders: () => void;
   onLocationChanged: (stationId: string) => void;
 }) {
   const canChangeLocation = plan === 'PRO' || plan === 'PREMIUM';
-  const canConfigureHardware = plan === 'PREMIUM';
+  const canConfigureHardware = plan === 'PREMIUM' && canManageProviders;
   const [name, setName] = useState(station.name);
   const [siteId, setSiteId] = useState(station.siteId);
   const [latitude, setLatitude] = useState(String(station.latitude));
@@ -62,11 +35,7 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
   const [metadata, setMetadata] = useState(JSON.stringify(station.metadata ?? {}, null, 2));
   const [providers, setProviders] = useState<DataProvider[]>([]);
   const [providerChoice, setProviderChoice] = useState(station.dataProviderId ?? '');
-  const [providerName, setProviderName] = useState('');
-  const [providerType, setProviderType] = useState<string>(HARDWARE_PROVIDERS[0][0]);
   const [providerStationId, setProviderStationId] = useState(station.providerStationId ?? '');
-  const [region, setRegion] = useState('');
-  const [credentials, setCredentials] = useState(emptyCredentials);
   const [loadingProviders, setLoadingProviders] = useState(true);
   const [providerError, setProviderError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +67,6 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
     void api.listDataProviders(organizationId).then((items) => {
       if (active) {
         setProviders(items);
-        setRegion((current) => current || items.find((item) => item.id === station.dataProviderId)?.region || '');
       }
     }).catch((cause: unknown) => {
       if (!active) return;
@@ -115,8 +83,6 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
 
   function selectProvider(value: string) {
     setProviderChoice(value);
-    setRegion(providers.find((item) => item.id === value)?.region ?? '');
-    setCredentials(emptyCredentials());
     setSaved(false);
     setError(null);
   }
@@ -178,65 +144,17 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
       setError(t('Enter a valid hardware station ID (up to 255 characters).', language));
       return;
     }
-    if (providerChoice === 'NEW' && !providerName.trim()) {
-      setError(t('Enter a name for the provider account.', language));
+    if (!selectedProvider) {
+      setError(t('Select a provider account', language));
       return;
     }
-    if (!providerChoice) {
-      setError(t('Choose a provider account or create one.', language));
-      return;
-    }
-    if (providerChoice !== 'NEW' && !selectedProvider) {
-      setError(t('The selected provider account is no longer available.', language));
-      return;
-    }
-    const type = providerChoice === 'NEW' ? providerType : selectedProvider?.provider ?? '';
-    const hasCredential = (key: CredentialField) => !!credentials[key].trim() ||
-      !!(selectedProvider && selectedProvider[CREDENTIAL_FIELDS.find((field) => field.key === key)!.flag]);
-    const missing = (REQUIRED_CREDENTIALS[type] ?? []).find((key) => !hasCredential(key));
-    if (missing) {
-      setError(`${t('Missing required credential:', language)} ${t(CREDENTIAL_FIELDS.find((field) => field.key === missing)!.label, language)}`);
-      return;
-    }
-    if (['TEMPEST', 'LICOR_HOBO'].includes(type) && !hasCredential('token') && !hasCredential('apiKey')) {
-      setError(t('An access token or API key is required for this provider.', language));
-      return;
-    }
-
     setSaving(true);
-    let created = false;
     try {
-      const suppliedCredentials = Object.fromEntries(
-        Object.entries(credentials).filter(([, value]) => value.trim()).map(([key, value]) => [key, value.trim()]),
-      ) as ProviderCredentials;
-      let dataProviderId = providerChoice;
-      if (providerChoice === 'NEW') {
-        const provider = await api.createDataProvider(organizationId, {
-          name: providerName.trim(), provider: providerType, region: region.trim() || undefined,
-          ...suppliedCredentials,
-        });
-        created = true;
-        dataProviderId = provider.id;
-        setProviders((current) => [...current, provider]);
-        setProviderChoice(provider.id);
-        setCredentials(emptyCredentials());
-      } else if (selectedProvider && (Object.keys(suppliedCredentials).length > 0 ||
-          (region.trim() !== '' && region.trim() !== (selectedProvider.region ?? '')))) {
-        const updated = await api.updateDataProvider(organizationId, selectedProvider.id, {
-          ...suppliedCredentials,
-          ...(region.trim() !== '' && region.trim() !== (selectedProvider.region ?? '') ? { region: region.trim() } : {}),
-        });
-        setProviders((current) => current.map((item) => item.id === updated.id ? updated : item));
-        setCredentials(emptyCredentials());
-      }
-      await api.linkStationDataProvider(organizationId, station.id, dataProviderId, providerStationId.trim());
+      await api.linkStationDataProvider(organizationId, station.id, selectedProvider.id, providerStationId.trim());
       await onChanged();
       setSaved(true);
-    } catch (cause) {
-      if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
-      else if (created) setError(t('Provider account saved, but linking the station failed. Try saving the connection again.', language));
-      else handleError(cause);
-    } finally { setSaving(false); }
+    } catch (cause) { handleError(cause); }
+    finally { setSaving(false); }
   }
 
   async function disconnect() {
@@ -247,7 +165,6 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
       await api.unlinkStationDataProvider(organizationId, station.id);
       setProviderChoice('');
       setProviderStationId('');
-      setCredentials(emptyCredentials());
       await onChanged();
       setSaved(true);
     } catch (cause) { handleError(cause); }
@@ -300,7 +217,7 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
     </form>
 
     {!canConfigureHardware && <p className="station-details-hint station-hardware-upgrade">
-      {t('Weather station hardware setup is available on the PREMIUM plan.', language)}
+      {t(plan !== 'PREMIUM' ? 'Weather station hardware setup is available on the PREMIUM plan.' : 'Only organization Owners and Admins can manage provider accounts.', language)}
     </p>}
     {canConfigureHardware && <form className="station-details-section" onSubmit={(event) => void saveHardware(event)}>
       <h4>{t('Weather station hardware', language)}</h4>
@@ -313,7 +230,6 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
             <select value={providerChoice} onChange={(event) => selectProvider(event.target.value)}>
               <option value="">{t('Select a provider account', language)}</option>
               {providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.name} ({provider.provider})</option>)}
-              <option value="NEW">{t('Create a new provider account', language)}</option>
             </select>
           </label>
           {providerChoice && <label className="field"><span>{t('Hardware station ID', language)}</span>
@@ -321,31 +237,9 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
               placeholder={t('Device ID, station ID, or MAC address', language)} />
           </label>}
         </div>
-        {providerChoice === 'NEW' && <div className="station-details-grid">
-          <label className="field"><span>{t('Provider account name', language)}</span>
-            <input value={providerName} maxLength={200} onChange={(event) => setProviderName(event.target.value)} required
-              placeholder={t('e.g. Farm weather stations', language)} />
-          </label>
-          <label className="field"><span>{t('Hardware provider', language)}</span><select value={providerType} onChange={(event) => setProviderType(event.target.value)}>
-            {HARDWARE_PROVIDERS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-          </select></label>
-        </div>}
+        <button className="text-button" type="button" onClick={onManageProviders}>{t('Manage provider accounts', language)}</button>
+        {providers.length === 0 && <p>{t('Add a provider in Data Providers before linking this station.', language)}</p>}
         {providerChoice && <>
-          {selectedProvider && <p className="station-details-hint">{t('Credentials already saved:', language)}{' '}
-            {CREDENTIAL_FIELDS.filter(({ flag }) => selectedProvider[flag]).map(({ label }) => t(label, language)).join(', ') || t('None', language)}.
-            {' '}{t('Leave credential fields blank to keep saved values.', language)}
-          </p>}
-          <div className="station-details-grid">
-            {CREDENTIAL_FIELDS.map(({ key, label }) => <label key={key} className="field">
-              <span>{t(label, language)}</span>
-              <input type="password" autoComplete="new-password" value={credentials[key]}
-                onChange={(event) => setCredentials((current) => ({ ...current, [key]: event.target.value }))} />
-            </label>)}
-            <label className="field"><span>{t('Region', language)}</span>
-              <input value={region} maxLength={200} onChange={(event) => setRegion(event.target.value)} />
-            </label>
-          </div>
-          {selectedProvider && <p className="station-details-hint">{t('Changing saved credentials affects every station using this provider account.', language)}</p>}
           <div className="station-details-actions">
             <button className="primary-button" type="submit" disabled={saving}>
               {saving ? <LoaderCircle className="spin" size={17} /> : <CheckCircle2 size={17} />}{t('Save hardware connection', language)}
