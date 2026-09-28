@@ -26,6 +26,7 @@ import { BrandLogo } from './components/BrandLogo';
 import { ForecastDashboard } from './components/ForecastDashboard';
 import { ObservationsDashboard } from './components/ObservationsDashboard';
 import { DataProviders } from './components/DataProviders';
+import { OrganizationMembers } from './components/OrganizationMembers';
 import { OrganizationInvitations } from './components/OrganizationInvitations';
 import { MapPicker } from './components/MapPicker';
 import { StationHardwareEditor } from './components/StationHardwareEditor';
@@ -641,6 +642,9 @@ function AuthenticatedApp({
               </label>
             </section>}
             <UserPreferences settings={userSettings} onSave={saveSettings} onUnauthorized={onUnauthorized} />
+            {organization && me && <OrganizationMembers key={organization.id} api={api}
+              organizationId={organization.id} organizationRole={organization.role} currentUserId={me.id}
+              language={language} onUnauthorized={onUnauthorized} />}
             {organization && <OrganizationInvitations api={api} organizationId={organization.id}
               organizationRole={organization.role} seatLimit={organization.seatLimit}
               language={language} onUnauthorized={onUnauthorized} />}

@@ -9,6 +9,7 @@ const files = [
   'src/components/MapPicker.tsx',
   'src/components/ForecastDashboard.tsx',
   'src/components/OrganizationInvitations.tsx',
+  'src/components/OrganizationMembers.tsx',
   'src/components/StationHardwareEditor.tsx',
   'src/components/DataProviders.tsx',
   '../../packages/validation/src/index.ts',

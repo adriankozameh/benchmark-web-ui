@@ -1,6 +1,19 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  'Name': 'Nombre',
+  "You cannot change your own organization role through the management endpoint": "No puedes cambiar tu propio rol en la organización.",
+  "This removes the member’s access to this organization. Their account and memberships in other organizations will be kept.": "Se eliminará el acceso del miembro a esta organización. Se conservarán su cuenta y sus membresías en otras organizaciones.",
+  "Member removed from the organization.": "Miembro eliminado de la organización.",
+  "Member role updated.": "Rol del miembro actualizado.",
+  "Remove member": "Eliminar miembro",
+  "Demote to Member": "Cambiar a miembro",
+  "Promote to Admin": "Ascender a administrador",
+  "Owner": "Propietario",
+  "Actions": "Acciones",
+  "No organization members found.": "No se encontraron miembros en la organización.",
+  "Loading members…": "Cargando miembros…",
+  "Organization members": "Miembros de la organización",
   'Expired invitations': 'Invitaciones vencidas',
   'These invitations have expired. Resend an invitation to make it available again.': 'Estas invitaciones han vencido. Reenvía una invitación para que vuelva a estar disponible.',
   'No active invitations.': 'No hay invitaciones activas.',

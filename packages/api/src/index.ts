@@ -4,6 +4,7 @@ import type {
   ObservationBackfillResponse,
   DailyStationObservations,
   OrganizationInvitation,
+  OrganizationMember,
   CreatedOrganizationInvitation,
   CreateStationInput,
   CurrentUser,
@@ -78,6 +79,20 @@ export class BenchmarkApi {
 
   getMe(): Promise<CurrentUser> {
     return this.request('/api/v1/me');
+  }
+
+  listMembers(organizationId: string): Promise<OrganizationMember[]> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/members`);
+  }
+
+  updateMemberRole(organizationId: string, userId: string, role: 'ADMIN' | 'MEMBER'): Promise<OrganizationMember> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`,
+      { method: 'PUT', body: { role } });
+  }
+
+  removeMember(organizationId: string, userId: string): Promise<void> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`,
+      { method: 'DELETE', expectNoContent: true });
   }
 
   listInvitations(organizationId: string): Promise<OrganizationInvitation[]> {

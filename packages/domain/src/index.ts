@@ -197,3 +197,12 @@ export type ProviderConnectionResult = {
   message: string;
   checkedAt: string;
 };
+
+export type OrganizationMember = {
+  userId: string;
+  username: string | null;
+  email: string;
+  displayName: string | null;
+  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  joinedAt: string;
+};

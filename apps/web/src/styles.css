@@ -680,3 +680,13 @@ button { color: inherit; }
 }
 .invitation-history h3 { margin-top: 0; }
 .invitation-history .invitation-row { background: #fff; }
+
+.organization-members { min-width: 0; }
+.organization-members-scroll { max-width: 100%; overflow-x: auto; }
+.organization-members-table { width: 100%; border-collapse: collapse; text-align: left; }
+.organization-members-table th,
+.organization-members-table td { padding: 12px 14px; border-bottom: 1px solid #dce3ed; vertical-align: middle; }
+.organization-members-table th { font-size: 0.85rem; }
+.organization-members-table td { overflow-wrap: anywhere; }
+.organization-member-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; min-width: 170px; }
+.organization-member-actions button { white-space: nowrap; }
