@@ -690,3 +690,40 @@ button { color: inherit; }
 .organization-members-table td { overflow-wrap: anywhere; }
 .organization-member-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; min-width: 170px; }
 .organization-member-actions button { white-space: nowrap; }
+
+@media (max-width: 600px) {
+  .organization-members .invitation-list-heading { flex-wrap: wrap; gap: 12px; }
+  .organization-members .invitation-list-heading h2 { margin: 0; font-size: 18px; }
+  .organization-members-table,
+  .organization-members-table tbody { display: block; }
+  .organization-members-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .organization-members-table tbody tr {
+    display: block;
+    padding: 16px 0;
+    border-bottom: 1px solid #dce3ed;
+  }
+  .organization-members-table tbody tr:last-child { border-bottom: 0; padding-bottom: 0; }
+  .organization-members-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+  .organization-members-table td:first-child { font-size: 16px; font-weight: 750; }
+  .organization-members-table td:nth-child(2) { margin-top: 4px; color: var(--benchmark-text-muted); }
+  .organization-members-table td:nth-child(3) { margin-top: 8px; font-weight: 650; }
+  .organization-member-actions { min-width: 0; margin-top: 12px; gap: 8px; }
+  .organization-member-actions button { min-height: 44px; max-width: 100%; white-space: normal; }
+}
