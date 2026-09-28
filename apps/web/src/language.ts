@@ -1,6 +1,10 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  "Dispersion index": "Índice de dispersión",
+  "View details": "Ver detalles",
+  "Daily maxima. Arrows show the wind source direction at peak transport wind speed.": "Máximos diarios. Las flechas indican de dónde viene el viento en el momento de máxima velocidad de transporte.",
+  "Fire Weather": "Condiciones para incendios",
   'Historical data is still loading or temporarily unavailable. Refresh shortly; forecasts are available below.': 'Los datos históricos siguen cargando o no están disponibles temporalmente. Actualiza en unos momentos; los pronósticos están disponibles abajo.',
 
   "(UTC)": "(UTC)",

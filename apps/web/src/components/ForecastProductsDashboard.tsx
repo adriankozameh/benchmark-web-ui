@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { DisplayUnits, ForecastProductsResponse, UserLanguage, WeatherStation } from '@benchmark/domain';
+import { BurncastDashboard } from './BurncastDashboard';
 import { MetricChart, type ChartPoint } from './ForecastDashboard';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { errorMessage, locale, t } from '../language';
@@ -155,6 +156,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
           return <div key={metric}><span>{t(title, language)}</span><strong>{format(metric, value)} {metricUnit(metric, units)}</strong></div>;
         })}</div><p className="product-note">{t('Totals cover the selected forecast period, not the historical season. Incomplete periods show a dash.', language)}</p>
       </section>}
+      {kind === 'burncast' ? <BurncastDashboard data={data} units={units} language={language} /> : <>
       <div className="forecast-chart-grid">{METRICS[kind].map(([metric, title, daily]) => {
         const points = toPoints(!!daily);
         return points.some(p => p.values[metric] !== undefined)
@@ -172,6 +174,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
           </td>)}</tr>)}</tbody>
         </table></div><p className="product-note">{t('Hourly metrics show daily minimum / maximum.', language)}</p>
       </section>
+      </>}
       <details className="station-form-card" onToggle={e => setShowSources(e.currentTarget.open)}><summary>{t('Forecast sources', language)}</summary>
         <div className="product-table-scroll" tabIndex={0} role="region" aria-label={t('Forecast sources', language)}><table><thead><tr><th>{t('Local time', language)}</th><th>{t('Metric', language)}</th><th>{t('Provider', language)}</th></tr></thead>
           <tbody>{showSources && data.forecast.points.flatMap(point => Object.keys(point.sources).map(metric =>

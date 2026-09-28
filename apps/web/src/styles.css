@@ -766,3 +766,29 @@ button { color: inherit; }
 .product-totals { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; }
 .product-totals span { display:block; font-size:12px; color:#637185; }
 .product-totals strong { display:block; margin-top:8px; font-size:22px; }
+
+/* Burncast product charts: preserve aligned daily columns on touch screens. */
+.burncast-dashboard, .burncast-index-grid, .burncast-index { min-width: 0; }
+.burncast-dashboard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.burncast-dashboard > *, .burncast-scroll { min-width: 0; }
+.burncast-index-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.burncast-index:last-child { grid-column: 1 / -1; }
+.burncast-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 8px; }
+.burncast-scroll svg { display: block; width: 100%; font-family: inherit; font-size: 12px; }
+.burncast-scroll svg text { pointer-events: none; }
+.burncast-hit { cursor: pointer; }
+.burncast-hit:focus { outline: none; stroke: #2479ab; stroke-width: 2px; }
+.burncast-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 12px 0; font-size: 12px; }
+.burncast-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.burncast-legend i { width: 14px; height: 14px; border: 1px solid #64748b; border-radius: 3px; }
+.burncast-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12px; }
+.burncast-table th, .burncast-table td { padding: 8px 10px; min-width: 90px; border-bottom: 1px solid #e2e8f0; text-align: center; }
+.burncast-table th:first-child { position: sticky; left: 0; z-index: 1; min-width: 180px; max-width: 220px; white-space: normal; text-align: left; background: #fff; color: #334154; border-right: 1px solid #dbe3eb; }
+.burncast-table thead th { background: #eef3f8; }
+.burncast-direction { display: inline-block; margin-right: 8px; }
+.burncast-dashboard details { margin-top: 12px; }
+.burncast-dashboard summary { cursor: pointer; text-decoration: underline; margin-bottom: 12px; }
+@media (max-width: 900px) { .burncast-index-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) { .burncast-table th:first-child { min-width: 135px; max-width: 150px; } }
+
+.burncast-index svg { max-height: 340px; }
