@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { CircleAlert, LoaderCircle, RefreshCw, Trash2 } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { OrganizationMember, UserLanguage } from '@benchmark/domain';
@@ -20,22 +21,24 @@ export function OrganizationMembers({ api, organizationId, organizationRole, cur
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState<{ userId: string; action: 'role' | 'remove' } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [removing, setRemoving] = useState<OrganizationMember | null>(null);
   const [confirmation, setConfirmation] = useState('');
   const [removalError, setRemovalError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const membersVersion = useRef(0);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     if (!canManage) return;
     let active = true;
+    const version = membersVersion.current;
     setLoading(true);
     setError(null);
     void api.listMembers(organizationId).then(rows => {
-      if (active) setMembers(rows);
+      if (active && version === membersVersion.current) setMembers(rows);
     }).catch((cause: unknown) => {
       if (!active) return;
       if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
@@ -64,14 +67,19 @@ export function OrganizationMembers({ api, organizationId, organizationRole, cur
   async function changeRole(member: OrganizationMember) {
     if (!editable(member) || inFlight.current || loading || removing) return;
     inFlight.current = true;
-    setBusy(member.userId);
+    setBusy({ userId: member.userId, action: 'role' });
+    membersVersion.current++;
     setError(null);
     setNotice(null);
     try {
       const updated = await api.updateMemberRole(organizationId, member.userId,
         member.role === 'ADMIN' ? 'MEMBER' : 'ADMIN');
-      setMembers(current => current.map(row => row.userId === updated.userId ? updated : row));
-      setNotice(t('Member role updated.', language));
+      // Commit the visible result before any other components refresh.
+      flushSync(() => {
+        setMembers(current => current.map(row => row.userId === updated.userId ? updated : row));
+        setNotice(t('Member role updated.', language));
+        setBusy(null);
+      });
     } catch (cause) {
       if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
       else setError(errorMessage(cause, language));
@@ -84,17 +92,23 @@ export function OrganizationMembers({ api, organizationId, organizationRole, cur
   async function removeMember() {
     if (!removing || !editable(removing) || confirmation !== 'delete' || inFlight.current) return;
     inFlight.current = true;
-    setBusy(removing.userId);
+    setBusy({ userId: removing.userId, action: 'remove' });
+    membersVersion.current++;
     setRemovalError(null);
     setNotice(null);
     const userId = removing.userId;
     try {
       await removeMemberAndConfirm(api, organizationId, userId);
-      dialogRef.current?.close();
-      setMembers(current => current.filter(row => row.userId !== userId));
-      setRemoving(null);
-      setConfirmation('');
-      setNotice(t('Member removed from the organization.', language));
+      // Remove the native dialog and commit the row/notice/busy state together.
+      // The capacity refresh below must never hold this component's result pending.
+      flushSync(() => {
+        setMembers(current => current.filter(row => row.userId !== userId));
+        setRemoving(null);
+        setConfirmation('');
+        setRemovalError(null);
+        setNotice(t('Member removed from the organization.', language));
+        setBusy(null);
+      });
       onMembershipChanged();
     } catch (cause) {
       if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
@@ -128,11 +142,12 @@ export function OrganizationMembers({ api, organizationId, organizationRole, cur
               <td>{editable(member) && <div className="organization-member-actions">
                 <button type="button" className="secondary-button" disabled={busy !== null || removing !== null}
                   onClick={() => { void changeRole(member); }}>
-                  {busy === member.userId && <LoaderCircle className="spin" size={15} />}
+                  {busy?.action === 'role' && busy.userId === member.userId && <LoaderCircle className="spin" size={15} />}
                   {t(member.role === 'ADMIN' ? 'Demote to Member' : 'Promote to Admin', language)}</button>
                 <button type="button" className="text-button provider-delete-button" disabled={busy !== null || removing !== null}
                   onClick={() => { setConfirmation(''); setRemovalError(null); setError(null); setRemoving(member); }}>
-                  <Trash2 size={15} />{t('Remove member', language)}</button>
+                  {busy?.action === 'remove' && busy.userId === member.userId
+                    ? <LoaderCircle className="spin" size={15} /> : <Trash2 size={15} />}{t('Remove member', language)}</button>
               </div>}</td>
             </tr>)}</tbody>
           </table>
