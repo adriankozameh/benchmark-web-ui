@@ -1,6 +1,13 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  'Seat capacity unavailable': 'Capacidad de usuarios no disponible',
+  "Retry": "Reintentar",
+  "Unable to check seat capacity. Invitations are unavailable until capacity can be checked.": "No se pudo comprobar la capacidad de usuarios. Las invitaciones no están disponibles hasta que se pueda comprobar.",
+  "Remove a member or increase your seat limit to invite more people.": "Elimina un miembro o aumenta el límite de usuarios para invitar a más personas.",
+  "Seat capacity reached": "Capacidad de usuarios alcanzada",
+  "Checking seat capacity…": "Comprobando capacidad de usuarios…",
+  "Seat capacity": "Capacidad de usuarios",
   'Name': 'Nombre',
   "You cannot change your own organization role through the management endpoint": "No puedes cambiar tu propio rol en la organización.",
   "This removes the member’s access to this organization. Their account and memberships in other organizations will be kept.": "Se eliminará el acceso del miembro a esta organización. Se conservarán su cuenta y sus membresías en otras organizaciones.",

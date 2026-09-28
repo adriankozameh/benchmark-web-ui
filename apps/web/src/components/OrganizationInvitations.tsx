@@ -5,14 +5,18 @@ import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { OrganizationInvitation, UserLanguage } from '@benchmark/domain';
 import { errorMessage, locale, t } from '../language';
 
-export function OrganizationInvitations({ api, organizationId, organizationRole, seatLimit, language, onUnauthorized }: {
+export function OrganizationInvitations({ api, organizationId, organizationRole, seatLimit, language, onUnauthorized, membershipRevision }: {
   api: BenchmarkApi;
   organizationId: string;
   organizationRole: string;
   seatLimit: number;
+  membershipRevision: number;
   language: UserLanguage;
   onUnauthorized: () => void;
 }) {
+  const [seatsUsed, setSeatsUsed] = useState<number | null>(null);
+  const [capacityError, setCapacityError] = useState<string | null>(null);
+  const [capacityRevision, setCapacityRevision] = useState(0);
   const [invitations, setInvitations] = useState<OrganizationInvitation[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [email, setEmail] = useState('');
@@ -23,6 +27,37 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
   const [notice, setNotice] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const canInvite = organizationRole === 'OWNER' || organizationRole === 'ADMIN';
+
+  const atSeatLimit = seatsUsed !== null && seatsUsed >= seatLimit;
+  const invitationUnavailable = !canInvite || seatsUsed === null || atSeatLimit;
+
+  useEffect(() => {
+    if (!canInvite) return;
+    let active = true;
+    let requestId = 0;
+    async function refreshCapacity() {
+      const currentRequest = ++requestId;
+      setSeatsUsed(null);
+      setCapacityError(null);
+      try {
+        const members = await api.listMembers(organizationId);
+        if (active && currentRequest === requestId) setSeatsUsed(members.length);
+      } catch (cause) {
+        if (!active || currentRequest !== requestId) return;
+        if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
+        else setCapacityError(errorMessage(cause, language));
+      }
+    }
+    const onVisible = () => { if (document.visibilityState === 'visible') void refreshCapacity(); };
+    void refreshCapacity();
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      active = false;
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [api, organizationId, canInvite, seatLimit, membershipRevision, capacityRevision, onUnauthorized, language]);
 
   const activeInvitations = invitations.filter(invitation =>
     invitation.status === 'PENDING' && Date.parse(invitation.expiresAt) > now);
@@ -59,6 +94,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
   }
 
   async function refreshDelivery() {
+    setCapacityRevision(value => value + 1);
     setLoading(true);
     setError(null);
     try {
@@ -104,19 +140,41 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
       else setError(errorMessage(cause, language));
       return false;
     } finally {
+      setCapacityRevision(value => value + 1);
       setBusy(null);
     }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || invitationUnavailable) return;
     const created = await perform('new', () => api.inviteUser(organizationId, email.trim(), role),
       t('Invitation created. Email delivery may take a moment.', language));
     if (created) setEmail('');
   }
 
-  return <section className="station-form-card organization-invitations">
+  return <>
+    {canInvite && <>
+      <div className="usage-card" aria-live="polite">
+        <div><span className="eyebrow">{t('Seat capacity', language)}</span>
+          <strong>{seatsUsed === null ? t(capacityError ? 'Seat capacity unavailable' : 'Checking seat capacity…', language) : <>{seatsUsed} {t('of', language)} {seatLimit}</>}</strong>
+        </div>
+        <div className="usage-track"><span style={{ width: `${Math.min(100, ((seatsUsed ?? 0) / Math.max(1, seatLimit)) * 100)}%` }} /></div>
+      </div>
+      {atSeatLimit && <div className="alert neutral" role="status">
+        <CircleAlert size={18} />
+        <div><strong>{t('Seat capacity reached', language)}</strong>
+          <span>{language === 'es' ? `Tu plan permite ${seatLimit} ${seatLimit === 1 ? 'asiento' : 'asientos'}.`
+            : `Your current plan allows ${seatLimit} seat${seatLimit === 1 ? '' : 's'}.`}</span>
+          <span>{t('Remove a member or increase your seat limit to invite more people.', language)}</span>
+        </div>
+      </div>}
+      {capacityError && <div className="alert error compact" role="alert">
+        <CircleAlert size={17} /><span>{t('Unable to check seat capacity. Invitations are unavailable until capacity can be checked.', language)} {capacityError}</span>
+        <button type="button" className="text-button" onClick={() => setCapacityRevision(value => value + 1)}>{t('Retry', language)}</button>
+      </div>}
+    </>}
+    <section className="station-form-card organization-invitations">
     <h2>{t('Invite people', language)}</h2>
     {!canInvite ? <p>{t('Only organization owners and admins can manage invitations.', language)}</p> : <>
       <p>{t('Invite someone to join your organization using their email address.', language)}{' '}
@@ -132,7 +190,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
             {organizationRole === 'OWNER' && <option value="ADMIN">{t('Admin', language)}</option>}
           </select>
         </label>
-        <button className="primary-button" type="submit" disabled={busy !== null}>
+        <button className="primary-button" type="submit" disabled={busy !== null || invitationUnavailable}>
           {busy === 'new' ? <LoaderCircle className="spin" size={16} /> : <MailPlus size={16} />}
           {t('Send invitation', language)}
         </button>
@@ -153,7 +211,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
               {invitation.deliveryStatus === 'FAILED' && <span>{t('Email delivery failed. Resend the invitation.', language)}</span>}
             </div>
             <div className="invitation-actions">
-              <button type="button" className="secondary-button" disabled={busy !== null}
+              <button type="button" className="secondary-button" disabled={busy !== null || invitationUnavailable}
                 onClick={() => { void perform(invitation.id, () => api.resendInvitation(organizationId, invitation.id),
                   t('Invitation resent.', language)); }}>{t('Resend', language)}</button>
               <button type="button" className="text-button" disabled={busy !== null}
@@ -173,12 +231,12 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
                 : invitation.deliveryStatus === 'FAILED' ? 'Delivery failed' : 'Sending pending', language)}</span>
             </div>
             <div className="invitation-actions">
-              <button type="button" className="secondary-button" disabled={busy !== null}
+              <button type="button" className="secondary-button" disabled={busy !== null || invitationUnavailable}
                 onClick={() => { void perform(invitation.id, () => api.resendInvitation(organizationId, invitation.id),
                   t('Invitation resent.', language)); }}>{t('Resend', language)}</button>
             </div>
           </div>)}</div>
       </section>}
     </>}
-  </section>;
+  </section></>;
 }

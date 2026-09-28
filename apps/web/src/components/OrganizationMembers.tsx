@@ -11,9 +11,10 @@ type Props = {
   currentUserId: string;
   language: UserLanguage;
   onUnauthorized: () => void;
+  onMembershipChanged: () => void;
 };
 
-export function OrganizationMembers({ api, organizationId, organizationRole, currentUserId, language, onUnauthorized }: Props) {
+export function OrganizationMembers({ api, organizationId, organizationRole, currentUserId, language, onUnauthorized, onMembershipChanged }: Props) {
   const canManage = organizationRole === 'OWNER' || organizationRole === 'ADMIN';
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +92,7 @@ export function OrganizationMembers({ api, organizationId, organizationRole, cur
       setRemoving(null);
       setConfirmation('');
       setNotice(t('Member removed from the organization.', language));
+      onMembershipChanged();
     } catch (cause) {
       if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
       else setRemovalError(errorMessage(cause, language));

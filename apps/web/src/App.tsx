@@ -389,6 +389,7 @@ function AuthenticatedApp({
     `/${route.section}/${route.page}`, []);
 
   const [me, setMe] = useState<CurrentUser | null>(null);
+  const [membershipRevision, setMembershipRevision] = useState(0);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState(() => sessionStorage.getItem(ACTIVE_ORGANIZATION_KEY));
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
@@ -644,8 +645,9 @@ function AuthenticatedApp({
             <UserPreferences settings={userSettings} onSave={saveSettings} onUnauthorized={onUnauthorized} />
             {organization && me && <OrganizationMembers key={organization.id} api={api}
               organizationId={organization.id} organizationRole={organization.role} currentUserId={me.id}
+              onMembershipChanged={() => setMembershipRevision(value => value + 1)}
               language={language} onUnauthorized={onUnauthorized} />}
-            {organization && <OrganizationInvitations api={api} organizationId={organization.id}
+            {organization && <OrganizationInvitations key={organization.id} membershipRevision={membershipRevision} api={api} organizationId={organization.id}
               organizationRole={organization.role} seatLimit={organization.seatLimit}
               language={language} onUnauthorized={onUnauthorized} />}
           </>}
