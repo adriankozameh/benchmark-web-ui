@@ -644,3 +644,17 @@ button { color: inherit; }
 .connection-time { display: block; margin-top: 6px; }
 .provider-card .station-details-actions { flex-wrap: wrap; }
 @media (max-width: 900px) { .provider-grid { grid-template-columns: 1fr; } }
+
+.provider-delete-button { color: #b42318; }
+.provider-delete-dialog {
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 48px);
+  margin: auto; padding: 24px; border: 1px solid #cbd5e1; border-radius: 16px;
+  background: #fff; color: #172b4d; overflow-y: auto;
+  box-shadow: 0 20px 60px #10233f40;
+}
+.provider-delete-dialog::backdrop { background: #10233f80; }
+.provider-delete-dialog h2 { overflow-wrap: anywhere; }
+.provider-delete-warning { background: #fff4e5; padding: 12px 16px; border-radius: 10px; }
+.provider-delete-warning ul { max-height: 220px; overflow-y: auto; overflow-wrap: anywhere; }
+.provider-delete-dialog .provider-delete-confirm { background: #b42318; color: white; }
+.provider-delete-dialog .station-details-actions { flex-wrap: wrap; margin-top: 20px; }

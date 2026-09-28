@@ -9,6 +9,7 @@ import type {
   CurrentUser,
   CreateDataProviderInput,
   DataProvider,
+  ProviderDeletionPreview,
   UpdateDataProviderInput,
   UpdateStationInput,
   UserSettings,
@@ -196,6 +197,16 @@ export class BenchmarkApi {
   updateDataProvider(organizationId: string, providerId: string, input: UpdateDataProviderInput): Promise<DataProvider> {
     return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/data-providers/${encodeURIComponent(providerId)}`, {
       method: 'PATCH', body: input,
+    });
+  }
+
+  previewDataProviderDeletion(organizationId: string, providerId: string): Promise<ProviderDeletionPreview> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/data-providers/${encodeURIComponent(providerId)}/deletion-preview`);
+  }
+
+  deleteDataProvider(organizationId: string, providerId: string, confirmedStationIds: string[]): Promise<void> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/data-providers/${encodeURIComponent(providerId)}`, {
+      method: 'DELETE', body: { confirmedStationIds }, expectNoContent: true,
     });
   }
 

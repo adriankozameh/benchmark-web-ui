@@ -618,6 +618,10 @@ function AuthenticatedApp({
           {organization && route.section === 'settings' && route.page === 'data-providers' && (
             <DataProviders key={organization.id} api={api} organizationId={organization.id}
               organizationRole={organization.role} plan={organization.plan} stations={stations}
+              onProviderDeleted={providerId => setStations(current => current.map(station =>
+                station.dataProviderId === providerId
+                  ? { ...station, dataProviderId: null, provider: null, providerStationId: null }
+                  : station))}
               language={language} onUnauthorized={onUnauthorized} />
           )}
 

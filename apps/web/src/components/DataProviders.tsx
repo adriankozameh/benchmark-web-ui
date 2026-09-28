@@ -1,7 +1,7 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { CheckCircle2, CircleAlert, LoaderCircle, Plus, RadioTower } from 'lucide-react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
+import { CheckCircle2, CircleAlert, LoaderCircle, Plus, RadioTower, Trash2 } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
-import type { DataProvider, Plan, ProviderConnectionResult, ProviderCredentials, UserLanguage, WeatherStation } from '@benchmark/domain';
+import type { DataProvider, Plan, ProviderDeletionPreview, ProviderConnectionResult, ProviderCredentials, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { errorMessage, t } from '../language';
 
 type CredentialField = keyof ProviderCredentials;
@@ -34,15 +34,17 @@ type Props = {
   language: UserLanguage;
   stations: WeatherStation[];
   onUnauthorized: () => void;
+  onProviderDeleted: (providerId: string) => void;
 };
 
-export function DataProviders({ api, organizationId, organizationRole, plan, language, stations, onUnauthorized }: Props) {
+export function DataProviders({ api, organizationId, organizationRole, plan, language, stations, onUnauthorized, onProviderDeleted }: Props) {
   const canManage = plan === 'PREMIUM' && ['OWNER', 'ADMIN'].includes(organizationRole);
   const [providers, setProviders] = useState<DataProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [editor, setEditor] = useState<DataProvider | 'new' | null>(null);
+  const [deleting, setDeleting] = useState<DataProvider | null>(null);
   const [testing, setTesting] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, ProviderConnectionResult>>({});
   const [reload, setReload] = useState(0);
@@ -83,7 +85,7 @@ export function DataProviders({ api, organizationId, organizationRole, plan, lan
     <div className="form-card-heading">
       <div><h2>{t('Provider accounts', language)}</h2>
         <p className="muted">{t('Create one account for your organization and reuse it across stations.', language)}</p></div>
-      {canManage && <button className="primary-button" disabled={editor !== null || testing !== null} type="button"
+      {canManage && <button className="primary-button" disabled={editor !== null || testing !== null || deleting !== null} type="button"
         onClick={() => { setEditor('new'); setNotice(null); }}><Plus size={17} />{t('Add provider', language)}</button>}
     </div>
     {!canManage && <p>{t('Only organization Owners and Admins can manage provider accounts.', language)}</p>}
@@ -106,6 +108,15 @@ export function DataProviders({ api, organizationId, organizationRole, plan, lan
         <RadioTower size={28} /><h3>{t('No provider accounts yet', language)}</h3>
         <p>{t('Add a provider here, then select it under Stations and enter each hardware station ID.', language)}</p>
       </div>}
+    {deleting && <ProviderDeleteDialog api={api} organizationId={organizationId} provider={deleting}
+      language={language} onUnauthorized={onUnauthorized} onCancel={() => setDeleting(null)}
+      onDeleted={() => {
+        setProviders(current => current.filter(item => item.id !== deleting.id));
+        setResults(current => { const next = { ...current }; delete next[deleting.id]; return next; });
+        onProviderDeleted(deleting.id);
+        setDeleting(null);
+        setNotice('Provider deleted. Linked stations were unlinked; stations and stored data were kept.');
+      }} />}
     <div className="provider-grid">{providers.map(provider => {
       const linked = stations.filter(station => station.dataProviderId === provider.id);
       const result = results[provider.id];
@@ -120,12 +131,16 @@ export function DataProviders({ api, organizationId, organizationRole, plan, lan
           <span>{t(result.message, language)}<small className="connection-time">{t('Checked', language)}: {new Date(result.checkedAt).toLocaleString(language)}</small></span>
         </div>}
         {canManage && <div className="station-details-actions">
-          <button className="secondary-button" type="button" disabled={testing !== null || editor !== null}
+          <button className="secondary-button" type="button" disabled={testing !== null || editor !== null || deleting !== null}
             onClick={() => void testConnection(provider)}>
             {testing === provider.id && <LoaderCircle className="spin" size={16} />}
             {t(testing === provider.id ? 'Testing connection…' : 'Test connection', language)}</button>
-          <button className="text-button" type="button" disabled={testing !== null || editor !== null}
+          <button className="text-button" type="button" disabled={testing !== null || editor !== null || deleting !== null}
             onClick={() => { setEditor(provider); setNotice(null); }}>{t('Edit', language)}</button>
+          <button className="text-button provider-delete-button" type="button"
+            disabled={testing !== null || editor !== null || deleting !== null}
+            onClick={() => { setDeleting(provider); setNotice(null); setError(null); }}>
+            <Trash2 size={16} />{t('Delete provider', language)}</button>
         </div>}
       </article>;
     })}</div>
@@ -193,4 +208,83 @@ function ProviderEditor({ api, organizationId, provider, language, onSaved, onCa
       </div>
     </fieldset>
   </form>;
+}
+
+function ProviderDeleteDialog({ api, organizationId, provider, language, onUnauthorized, onCancel, onDeleted }: {
+  api: BenchmarkApi; organizationId: string; provider: DataProvider; language: UserLanguage;
+  onUnauthorized: () => void; onCancel: () => void; onDeleted: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [preview, setPreview] = useState<ProviderDeletionPreview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+
+  useEffect(() => {
+    const element = dialog.current;
+    element?.showModal();
+    return () => element?.close();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setPreview(null);
+    void api.previewDataProviderDeletion(organizationId, provider.id).then(result => {
+      if (active) setPreview(result);
+    }).catch((cause: unknown) => {
+      if (!active) return;
+      if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
+      else setError(errorMessage(cause, language));
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [api, organizationId, provider.id, language, onUnauthorized, reload]);
+
+  async function confirmDeletion() {
+    if (!preview || loading || submitting.current) return;
+    submitting.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.deleteDataProvider(organizationId, provider.id, preview.stations.map(station => station.id));
+      onDeleted();
+    } catch (cause) {
+      if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
+      else {
+        setError(errorMessage(cause, language));
+        // Never reuse a confirmation after a failure; fetch current links again.
+        setPreview(null);
+        setReload(value => value + 1);
+      }
+    } finally { submitting.current = false; setBusy(false); }
+  }
+
+  return <dialog ref={dialog} className="provider-delete-dialog" aria-labelledby="provider-delete-title"
+    aria-describedby="provider-delete-description" onCancel={event => {
+      event.preventDefault();
+      if (!submitting.current) onCancel();
+    }}>
+    <h2 id="provider-delete-title">{t('Delete provider', language)}: {preview?.providerName ?? provider.name}</h2>
+    <p id="provider-delete-description">{t('This deletes the provider account and its saved credentials. This cannot be undone.', language)}</p>
+    {error && <div className="alert error compact" role="alert">{error}</div>}
+    {loading && <p role="status">{t('Checking linked stations…', language)}</p>}
+    {preview && <>
+      {preview.stations.length > 0 ? <div className="provider-delete-warning">
+        <p>{t('These stations will be unlinked from this provider:', language)}</p>
+        <ul>{preview.stations.map(station => <li key={station.id}>{station.name}</li>)}</ul>
+        <p>{t('New observations from this provider will stop. Link another provider to resume collection.', language)}</p>
+      </div> : <p>{t('No stations are linked to this provider.', language)}</p>}
+      <p>{t('Stations and their stored data will be kept.', language)}</p>
+    </>}
+    <div className="station-details-actions">
+      <button autoFocus className="secondary-button" type="button" disabled={busy} onClick={onCancel}>{t('Cancel', language)}</button>
+      {!loading && !preview && <button className="secondary-button" type="button"
+        onClick={() => { setError(null); setReload(value => value + 1); }}>{t('Refresh', language)}</button>}
+      <button className="primary-button provider-delete-confirm" type="button" disabled={busy || loading || !preview}
+        onClick={() => void confirmDeletion()}>{busy && <LoaderCircle className="spin" size={16} />}
+        {t(busy ? 'Deleting…' : preview?.stations.length ? 'Unlink stations and delete provider' : 'Delete provider', language)}</button>
+    </div>
+  </dialog>;
 }

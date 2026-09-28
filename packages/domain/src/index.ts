@@ -75,6 +75,12 @@ export type WeatherStation = {
   locationRevision?: string | null;
 };
 
+export interface ProviderDeletionPreview {
+  providerId: string;
+  providerName: string;
+  stations: { id: string; name: string }[];
+}
+
 export type DataProvider = {
   id: string;
   organizationId: string;

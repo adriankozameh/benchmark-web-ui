@@ -1,6 +1,18 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  "Delete provider": "Eliminar proveedor",
+  "Provider deleted. Linked stations were unlinked; stations and stored data were kept.": "Proveedor eliminado. Se desvincularon las estaciones; se conservaron las estaciones y los datos guardados.",
+  "This deletes the provider account and its saved credentials. This cannot be undone.": "Se eliminará la cuenta del proveedor y sus credenciales guardadas. Esta acción no se puede deshacer.",
+  "Checking linked stations…": "Comprobando estaciones vinculadas…",
+  "These stations will be unlinked from this provider:": "Estas estaciones se desvincularán de este proveedor:",
+  "New observations from this provider will stop. Link another provider to resume collection.": "Se dejarán de recibir nuevas observaciones de este proveedor. Vincula otro proveedor para reanudar la recopilación.",
+  "No stations are linked to this provider.": "No hay estaciones vinculadas a este proveedor.",
+  "Stations and their stored data will be kept.": "Se conservarán las estaciones y sus datos guardados.",
+  "Deleting…": "Eliminando…",
+  "Unlink stations and delete provider": "Desvincular estaciones y eliminar proveedor",
+  "Linked stations changed. Review the affected stations and confirm again.": "Las estaciones vinculadas han cambiado. Revisa las estaciones afectadas y confirma de nuevo.",
+
   'Account verification is not yet available for Vaisala, METER, CIMIS, Acuity, or LI-COR / HOBO.': 'La verificación de cuenta aún no está disponible para Vaisala, METER, CIMIS, Acuity ni LI-COR / HOBO.',
   'Provider saved. FAWN uses public data; no credentials were tested.': 'Proveedor guardado. FAWN usa datos públicos; no se probaron credenciales.',
   "FAWN": "FAWN",
