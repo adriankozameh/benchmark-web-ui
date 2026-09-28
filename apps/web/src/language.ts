@@ -214,6 +214,7 @@ const spanish: Record<string, string> = {
   'Additional station metadata (JSON)': 'Metadatos adicionales de la estación (JSON)',
   'For hardware fields such as STATION_TYPE. Never put API keys or passwords here.':
       'Para datos del equipo como STATION_TYPE. Nunca ingreses claves API ni contraseñas aquí.',
+  'Type delete to confirm': 'Escribe delete para confirmar',
   'Delete station': 'Eliminar estación',
   'Station deleted.': 'Estación eliminada.',
   'This permanently removes the station from your organization. Its provider account will be kept. This cannot be undone.': 'Se eliminará permanentemente la estación de tu organización. Se conservará la cuenta del proveedor. Esta acción no se puede deshacer.',

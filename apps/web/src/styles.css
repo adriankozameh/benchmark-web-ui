@@ -179,6 +179,18 @@ button { color: inherit; }
 .user-preferences p { margin: 0 0 16px; color: #657386; font-size: 12px; }
 .user-preferences-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; max-width: 560px; }
 .user-preferences-actions { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+.station-delete-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  margin: auto; padding: 24px; overflow-y: auto;
+  background: #fff; color: var(--benchmark-navy);
+  border: 1px solid var(--benchmark-line); border-radius: 12px;
+  box-shadow: 0 20px 60px #10233f40;
+}
+.station-delete-dialog::backdrop { background: #10233f80; }
+.station-delete-dialog h2 { overflow-wrap: anywhere; }
+.station-delete-dialog .station-details-actions { margin-top: 20px; flex-wrap: wrap; }
+.station-delete-dialog .station-delete-confirm { background: #b42318; }
 .station-details { margin-bottom: 18px; }
 .station-details-section { display: grid; gap: 15px; padding: 6px 0 22px; }
 .station-details-section + .station-details-section { padding-top: 22px; border-top: 1px solid #edf0f3; }

@@ -22,6 +22,9 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
   const canChangeLocation = plan === 'PRO' || plan === 'PREMIUM';
   const canDeleteStation = canChangeLocation && canManageProviders;
   const deleting = useRef(false);
+  const deleteDialog = useRef<HTMLDialogElement>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [deleted, setDeleted] = useState(false);
   const canConfigureHardware = plan === 'PREMIUM' && canManageProviders;
   const [name, setName] = useState(station.name);
@@ -135,16 +138,29 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
     finally { setSaving(false); }
   }
 
+  useEffect(() => {
+    const dialog = deleteDialog.current;
+    if (confirmingDelete) dialog?.showModal();
+    return () => dialog?.close();
+  }, [confirmingDelete]);
+
+  function cancelDeletion() {
+    if (deleting.current) return;
+    setConfirmingDelete(false);
+    setDeleteConfirmation('');
+    setError(null);
+  }
+
   async function deleteStation() {
-    if (!canDeleteStation || saving || deleting.current || deleted) return;
-    const confirmed = window.confirm(`${t('Delete station', language)}: ${station.name}?\n\n${t('This permanently removes the station from your organization. Its provider account will be kept. This cannot be undone.', language)}`);
-    if (!confirmed) return;
+    if (!canDeleteStation || saving || deleting.current || deleted ||
+        !confirmingDelete || deleteConfirmation !== 'delete') return;
     deleting.current = true;
     setSaving(true);
     setError(null);
     setSaved(false);
     try {
       await api.deleteStation(organizationId, station.id);
+      setConfirmingDelete(false);
       setDeleted(true);
       await onChanged();
     } catch (cause) { handleError(cause); }
@@ -251,9 +267,31 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
     </form>}
     {canDeleteStation && <div className="station-details-section">
       <button type="button" className="secondary-button" disabled={saving}
-        onClick={() => void deleteStation()}>
+        onClick={() => { setDeleteConfirmation(''); setError(null); setConfirmingDelete(true); }}>
         <Trash2 size={17} aria-hidden="true" />{t('Delete station', language)}
       </button>
     </div>}
+    {canDeleteStation && <dialog ref={deleteDialog} className="station-delete-dialog"
+      aria-labelledby="station-delete-title" aria-describedby="station-delete-warning"
+      onCancel={event => { event.preventDefault(); cancelDeletion(); }}>
+      <form onSubmit={event => { event.preventDefault(); void deleteStation(); }}>
+        <h2 id="station-delete-title">{t('Delete station', language)}: {station.name}</h2>
+        <p id="station-delete-warning">{t('This permanently removes the station from your organization. Its provider account will be kept. This cannot be undone.', language)}</p>
+        <label className="field"><span>{t('Type delete to confirm', language)}</span>
+          <input autoFocus autoComplete="off" autoCapitalize="none" spellCheck={false}
+            value={deleteConfirmation} disabled={saving}
+            onChange={event => setDeleteConfirmation(event.target.value)} />
+        </label>
+        {error && <div className="alert error compact" role="alert">{error}</div>}
+        <div className="station-details-actions">
+          <button className="secondary-button" type="button" disabled={saving}
+            onClick={cancelDeletion}>{t('Cancel', language)}</button>
+          <button className="primary-button station-delete-confirm" type="submit"
+            disabled={saving || deleteConfirmation !== 'delete'}>
+            {saving && <LoaderCircle className="spin" size={17} />}{t('Delete station', language)}
+          </button>
+        </div>
+      </form>
+    </dialog>}
   </section>;
 }
