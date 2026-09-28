@@ -727,3 +727,21 @@ button { color: inherit; }
   .organization-member-actions { min-width: 0; margin-top: 12px; gap: 8px; }
   .organization-member-actions button { min-height: 44px; max-width: 100%; white-space: normal; }
 }
+
+@media (min-width: 601px) and (max-width: 1100px) {
+  .organization-members-table { table-layout: fixed; }
+  .organization-members-table th,
+  .organization-members-table td { padding: 12px 8px; font-size: 13px; line-height: 1.5; }
+  .organization-members-table th:first-child { width: 26%; }
+  .organization-members-table th:nth-child(3) { width: 110px; }
+  .organization-members-table th:last-child { width: 132px; }
+  .organization-members-table td:nth-child(3) { white-space: nowrap; }
+  .organization-member-actions { min-width: 0; flex-direction: column; align-items: stretch; gap: 6px; }
+  .organization-member-actions button {
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 6px;
+    font-size: 11px;
+    white-space: normal;
+  }
+}
