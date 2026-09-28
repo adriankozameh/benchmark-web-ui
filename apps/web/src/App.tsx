@@ -643,11 +643,11 @@ function AuthenticatedApp({
               </label>
             </section>}
             <UserPreferences settings={userSettings} onSave={saveSettings} onUnauthorized={onUnauthorized} />
-            {organization && me && <OrganizationMembers key={organization.id} api={api}
+            {organization && me && <OrganizationMembers key={`members:${organization.id}`} api={api}
               organizationId={organization.id} organizationRole={organization.role} currentUserId={me.id}
               onMembershipChanged={() => setMembershipRevision(value => value + 1)}
               language={language} onUnauthorized={onUnauthorized} />}
-            {organization && <OrganizationInvitations key={organization.id} membershipRevision={membershipRevision} api={api} organizationId={organization.id}
+            {organization && <OrganizationInvitations key={`invitations:${organization.id}`} membershipRevision={membershipRevision} api={api} organizationId={organization.id}
               organizationRole={organization.role} seatLimit={organization.seatLimit}
               language={language} onUnauthorized={onUnauthorized} />}
           </>}
