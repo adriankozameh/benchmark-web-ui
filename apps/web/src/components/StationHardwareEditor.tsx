@@ -6,13 +6,6 @@ import { AddressSearch } from './AddressSearch';
 import { MapPicker } from './MapPicker';
 import { errorMessage, t } from '../language';
 
-function includesCredentialKeys(value: unknown): boolean {
-  if (Array.isArray(value)) return value.some(includesCredentialKeys);
-  if (value === null || typeof value !== 'object') return false;
-  return Object.entries(value).some(([key, child]) =>
-    /api.?key|secret|password|token|credential/i.test(key) || includesCredentialKeys(child));
-}
-
 export function StationHardwareEditor({ api, organizationId, station, sites, language, onChanged, onUnauthorized, plan, onLocationChanged, canManageProviders, onManageProviders }: {
   api: BenchmarkApi;
   organizationId: string;
@@ -32,7 +25,6 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
   const [siteId, setSiteId] = useState(station.siteId);
   const [latitude, setLatitude] = useState(String(station.latitude));
   const [longitude, setLongitude] = useState(String(station.longitude));
-  const [metadata, setMetadata] = useState(JSON.stringify(station.metadata ?? {}, null, 2));
   const [providers, setProviders] = useState<DataProvider[]>([]);
   const [providerChoice, setProviderChoice] = useState(station.dataProviderId ?? '');
   const [providerStationId, setProviderStationId] = useState(station.providerStationId ?? '');
@@ -51,7 +43,6 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
     setSiteId(station.siteId);
     setLatitude(String(station.latitude));
     setLongitude(String(station.longitude));
-    setMetadata(JSON.stringify(station.metadata ?? {}, null, 2));
     setProviderChoice(station.dataProviderId ?? '');
     setProviderStationId(station.providerStationId ?? '');
   }, [station.id, station.updatedAt]);
@@ -104,27 +95,11 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
       setError(t('Enter a station name and valid coordinates.', language));
       return;
     }
-    let parsed: Record<string, unknown> | undefined;
-    if (canConfigureHardware) {
-      try { parsed = JSON.parse(metadata) as Record<string, unknown>; } catch {
-        setError(t('Station metadata must be valid JSON.', language));
-        return;
-      }
-      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        setError(t('Station metadata must be a JSON object.', language));
-        return;
-      }
-      if (includesCredentialKeys(parsed)) {
-        setError(t('Keep credentials in provider fields, not station metadata.', language));
-        return;
-      }
-    }
     setSaving(true);
     try {
       await api.updateStation(organizationId, station.id, {
         name: name.trim(), siteId,
         ...(canChangeLocation ? { latitude: lat, longitude: lon } : {}),
-        ...(canConfigureHardware ? { metadata: parsed } : {}),
       });
       await onChanged();
       if (canChangeLocation && (lat !== station.latitude || lon !== station.longitude)) {
@@ -207,10 +182,6 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
       <p className="station-details-hint">{canChangeLocation
         ? t('Time zone is calculated from the station coordinates.', language)
         : t('Location is fixed on the FREE plan. Upgrade to PRO or PREMIUM to change it.', language)} {station.timeZone}</p>
-      {canConfigureHardware && <label className="field"><span>{t('Additional station metadata (JSON)', language)}</span>
-        <textarea spellCheck={false} rows={4} value={metadata} onChange={(event) => setMetadata(event.target.value)} />
-        <small>{t('For hardware fields such as STATION_TYPE. Never put API keys or passwords here.', language)}</small>
-      </label>}
       <button className="primary-button" type="submit" disabled={saving}>
         {saving ? <LoaderCircle className="spin" size={17} /> : <CheckCircle2 size={17} />}{t('Save station details', language)}
       </button>
