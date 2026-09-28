@@ -1,6 +1,8 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  'Member removal timed out. Please refresh the member list before trying again.': 'La eliminación del miembro agotó el tiempo de espera. Actualiza la lista de miembros antes de volver a intentarlo.',
+  'Could not confirm member removal. Please refresh the member list before trying again.': 'No se pudo confirmar la eliminación del miembro. Actualiza la lista de miembros antes de volver a intentarlo.',
   'Seat capacity unavailable': 'Capacidad de usuarios no disponible',
   "Retry": "Reintentar",
   "Unable to check seat capacity. Invitations are unavailable until capacity can be checked.": "No se pudo comprobar la capacidad de usuarios. Las invitaciones no están disponibles hasta que se pueda comprobar.",

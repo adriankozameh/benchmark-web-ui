@@ -3,6 +3,7 @@ import { CircleAlert, LoaderCircle, RefreshCw, Trash2 } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { OrganizationMember, UserLanguage } from '@benchmark/domain';
 import { errorMessage, t } from '../language';
+import { removeMemberAndConfirm } from '../memberRemoval';
 
 type Props = {
   api: BenchmarkApi;
@@ -86,9 +87,11 @@ export function OrganizationMembers({ api, organizationId, organizationRole, cur
     setBusy(removing.userId);
     setRemovalError(null);
     setNotice(null);
+    const userId = removing.userId;
     try {
-      await api.removeMember(organizationId, removing.userId);
-      setMembers(current => current.filter(row => row.userId !== removing.userId));
+      await removeMemberAndConfirm(api, organizationId, userId);
+      dialogRef.current?.close();
+      setMembers(current => current.filter(row => row.userId !== userId));
       setRemoving(null);
       setConfirmation('');
       setNotice(t('Member removed from the organization.', language));
@@ -134,7 +137,7 @@ export function OrganizationMembers({ api, organizationId, organizationRole, cur
             </tr>)}</tbody>
           </table>
         </div>}
-    <dialog ref={dialogRef} className="station-delete-dialog" aria-labelledby="member-remove-title"
+    {removing && <dialog ref={dialogRef} className="station-delete-dialog" aria-labelledby="member-remove-title"
       aria-describedby="member-remove-warning" onCancel={event => { event.preventDefault(); cancelRemoval(); }}>
       <form onSubmit={event => { event.preventDefault(); void removeMember(); }}>
         <h2 id="member-remove-title">{t('Remove member', language)}: {removing?.email}</h2>
@@ -150,6 +153,6 @@ export function OrganizationMembers({ api, organizationId, organizationRole, cur
             {busy !== null && <LoaderCircle className="spin" size={17} />}{t('Remove member', language)}</button>
         </div>
       </form>
-    </dialog>
+    </dialog>}
   </section>;
 }

@@ -34,6 +34,7 @@ export class BenchmarkApiError extends Error {
 type AccessTokenProvider = () => Promise<string | null>;
 
 type RequestOptions = {
+  signal?: AbortSignal;
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   expectNoContent?: boolean;
@@ -57,6 +58,7 @@ export class BenchmarkApi {
     if (options.body !== undefined) headers.set('Content-Type', 'application/json');
 
     const response = await fetch(`${this.baseUrl}${path}`, {
+      signal: options.signal,
       method: options.method ?? 'GET',
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -81,8 +83,8 @@ export class BenchmarkApi {
     return this.request('/api/v1/me');
   }
 
-  listMembers(organizationId: string): Promise<OrganizationMember[]> {
-    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/members`);
+  listMembers(organizationId: string, signal?: AbortSignal): Promise<OrganizationMember[]> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/members`, { signal });
   }
 
   updateMemberRole(organizationId: string, userId: string, role: 'ADMIN' | 'MEMBER'): Promise<OrganizationMember> {
@@ -90,9 +92,9 @@ export class BenchmarkApi {
       { method: 'PUT', body: { role } });
   }
 
-  removeMember(organizationId: string, userId: string): Promise<void> {
+  removeMember(organizationId: string, userId: string, signal?: AbortSignal): Promise<void> {
     return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`,
-      { method: 'DELETE', expectNoContent: true });
+      { method: 'DELETE', expectNoContent: true, signal });
   }
 
   listInvitations(organizationId: string): Promise<OrganizationInvitation[]> {
