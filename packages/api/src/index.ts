@@ -178,6 +178,12 @@ export class BenchmarkApi {
     });
   }
 
+  deleteStation(organizationId: string, stationId: string): Promise<void> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/stations/${encodeURIComponent(stationId)}`, {
+      method: 'DELETE', expectNoContent: true,
+    });
+  }
+
   updateStation(organizationId: string, stationId: string, input: UpdateStationInput): Promise<WeatherStation> {
     return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/stations/${encodeURIComponent(stationId)}`, {
       method: 'PATCH', body: input,

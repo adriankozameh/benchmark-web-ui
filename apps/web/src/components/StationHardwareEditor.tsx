@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react';
-import { CheckCircle2, CircleAlert, LoaderCircle, MapPin } from 'lucide-react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
+import { CheckCircle2, CircleAlert, LoaderCircle, MapPin, Trash2 } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { DataProvider, Plan, Site, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { AddressSearch } from './AddressSearch';
@@ -20,6 +20,9 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
   onLocationChanged: (stationId: string) => void;
 }) {
   const canChangeLocation = plan === 'PRO' || plan === 'PREMIUM';
+  const canDeleteStation = canChangeLocation && canManageProviders;
+  const deleting = useRef(false);
+  const [deleted, setDeleted] = useState(false);
   const canConfigureHardware = plan === 'PREMIUM' && canManageProviders;
   const [name, setName] = useState(station.name);
   const [siteId, setSiteId] = useState(station.siteId);
@@ -132,6 +135,22 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
     finally { setSaving(false); }
   }
 
+  async function deleteStation() {
+    if (!canDeleteStation || saving || deleting.current || deleted) return;
+    const confirmed = window.confirm(`${t('Delete station', language)}: ${station.name}?\n\n${t('This permanently removes the station from your organization. Its provider account will be kept. This cannot be undone.', language)}`);
+    if (!confirmed) return;
+    deleting.current = true;
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      await api.deleteStation(organizationId, station.id);
+      setDeleted(true);
+      await onChanged();
+    } catch (cause) { handleError(cause); }
+    finally { deleting.current = false; setSaving(false); }
+  }
+
   async function disconnect() {
     setSaving(true);
     setError(null);
@@ -145,6 +164,13 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
     } catch (cause) { handleError(cause); }
     finally { setSaving(false); }
   }
+
+  if (deleted) return <section className="station-form-card" role="status">
+    <p>{t('Station deleted.', language)}</p>
+    {error && <p role="alert">{error}</p>}
+    <button className="secondary-button" type="button" disabled={saving}
+      onClick={() => void onChanged().catch(handleError)}>{t('Refresh', language)}</button>
+  </section>;
 
   return <section className="station-form-card station-details" aria-label={t('Station details', language)}>
     <div className="form-card-heading">
@@ -223,5 +249,11 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
         {!providerChoice && configuredProvider && <p className="station-details-hint">{t('Currently connected to:', language)} {configuredProvider.name}</p>}
       </>}
     </form>}
+    {canDeleteStation && <div className="station-details-section">
+      <button type="button" className="secondary-button" disabled={saving}
+        onClick={() => void deleteStation()}>
+        <Trash2 size={17} aria-hidden="true" />{t('Delete station', language)}
+      </button>
+    </div>}
   </section>;
 }
