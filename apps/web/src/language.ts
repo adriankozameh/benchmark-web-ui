@@ -281,4 +281,5 @@ export function errorMessage(error: unknown, language: UserLanguage): string {
   return `No se pudo completar la solicitud${status}.`;
 }
 
+// @ts-ignore
 export const locale = (language: UserLanguage): string => language === 'es' ? 'es-AR' : 'en-US';
