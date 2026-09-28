@@ -140,7 +140,7 @@ export class BenchmarkApi {
 
   saveForecastSettings(organizationId: string, stationId: string, settings: FarmcastSettings): Promise<FarmcastSettings> {
     return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/stations/${encodeURIComponent(stationId)}/forecast-settings`, {
-      method: 'PUT', body: JSON.stringify(settings),
+      method: 'PUT', body: settings,
     });
   }
 
