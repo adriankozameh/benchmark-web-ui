@@ -14,6 +14,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
   onUnauthorized: () => void;
 }) {
   const [invitations, setInvitations] = useState<OrganizationInvitation[]>([]);
+  const [now, setNow] = useState(() => Date.now());
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
   const [busy, setBusy] = useState<string | null>(null);
@@ -23,11 +24,46 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const canInvite = organizationRole === 'OWNER' || organizationRole === 'ADMIN';
 
+  const activeInvitations = invitations.filter(invitation =>
+    invitation.status === 'PENDING' && Date.parse(invitation.expiresAt) > now);
+
+  const expiredInvitations = invitations.filter(invitation =>
+    invitation.status === 'EXPIRED' ||
+    (invitation.status === 'PENDING' && Date.parse(invitation.expiresAt) <= now))
+    .sort((a, b) => Date.parse(b.expiresAt) - Date.parse(a.expiresAt));
+
+  // Move invitations into history when they expire, even while the page stays open.
+  useEffect(() => {
+    const expirations = invitations.filter(invitation => invitation.status === 'PENDING')
+      .map(invitation => Date.parse(invitation.expiresAt)).filter(expiration => expiration > now);
+    if (expirations.length === 0) return;
+    const timer = window.setTimeout(() => setNow(Date.now()),
+      Math.min(Math.max(0, Math.min(...expirations) - Date.now()), 2_147_483_647));
+    return () => window.clearTimeout(timer);
+  }, [invitations, now]);
+
+  useEffect(() => {
+    const updateClock = () => setNow(Date.now());
+    window.addEventListener('focus', updateClock);
+    document.addEventListener('visibilitychange', updateClock);
+    return () => {
+      window.removeEventListener('focus', updateClock);
+      document.removeEventListener('visibilitychange', updateClock);
+    };
+  }, []);
+
+  async function revoke(invitationId: string) {
+    await api.revokeInvitation(organizationId, invitationId);
+    // Keep the successful removal visible even if the subsequent refresh fails.
+    setInvitations(current => current.filter(invitation => invitation.id !== invitationId));
+  }
+
   async function refreshDelivery() {
     setLoading(true);
     setError(null);
     try {
       setInvitations(await api.listInvitations(organizationId));
+      setNow(Date.now());
     } catch (cause) {
       if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
       else setError(errorMessage(cause, language));
@@ -42,7 +78,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
     setLoading(true);
     setError(null);
     void api.listInvitations(organizationId).then((rows) => {
-      if (active) setInvitations(rows);
+      if (active) { setInvitations(rows); setNow(Date.now()); }
     }).catch((cause: unknown) => {
       if (!active) return;
       if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
@@ -59,6 +95,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
     try {
       const result = await action();
       setInvitations(await api.listInvitations(organizationId));
+      setNow(Date.now());
       if (result?.localPreviewUrl) setPreviewUrl(result.localPreviewUrl);
       setNotice(message);
       return true;
@@ -108,22 +145,40 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
           onClick={() => { void refreshDelivery(); }}><RefreshCw size={15} />{t('Refresh delivery status', language)}</button>
       </div>
       {loading ? <p><LoaderCircle className="spin" size={16} /> {t('Loading invitations…', language)}</p>
-        : invitations.length === 0 ? <p>{t('No invitations yet.', language)}</p>
-          : <div className="invitation-list">{invitations.map((invitation) => <div key={invitation.id} className="invitation-row">
+        : activeInvitations.length === 0 ? <p>{t('No active invitations.', language)}</p>
+          : <div className="invitation-list">{activeInvitations.map((invitation) => <div key={invitation.id} className="invitation-row">
             <div><strong>{invitation.email}</strong><span>{t(invitation.role === 'ADMIN' ? 'Admin' : 'Member', language)} · {t(invitation.status, language)} · {t('Expires', language)} {new Intl.DateTimeFormat(locale(language), { dateStyle: 'medium' }).format(new Date(invitation.expiresAt))}</span>
               <span>{t('Email:', language)} {t(invitation.deliveryStatus === 'SENT' ? 'Accepted by email provider'
                 : invitation.deliveryStatus === 'FAILED' ? 'Delivery failed' : 'Sending pending', language)}</span>
               {invitation.deliveryStatus === 'FAILED' && <span>{t('Email delivery failed. Resend the invitation.', language)}</span>}
             </div>
-            {(invitation.status === 'PENDING' || invitation.status === 'EXPIRED') && <div className="invitation-actions">
+            <div className="invitation-actions">
               <button type="button" className="secondary-button" disabled={busy !== null}
                 onClick={() => { void perform(invitation.id, () => api.resendInvitation(organizationId, invitation.id),
                   t('Invitation resent.', language)); }}>{t('Resend', language)}</button>
-              {invitation.status === 'PENDING' && <button type="button" className="text-button" disabled={busy !== null}
-                onClick={() => { void perform(invitation.id, () => api.revokeInvitation(organizationId, invitation.id),
-                  t('Invitation revoked.', language)); }}>{t('Revoke', language)}</button>}
-            </div>}
+              <button type="button" className="text-button" disabled={busy !== null}
+                onClick={() => { void perform(invitation.id, () => revoke(invitation.id),
+                  t('Invitation revoked.', language)); }}>{t('Revoke', language)}</button>
+            </div>
           </div>)}</div>}
+      {!loading && expiredInvitations.length > 0 && <section className="invitation-history"
+        aria-label={t('Expired invitations', language)}>
+        <h3>{t('Expired invitations', language)}</h3>
+        <p className="muted">{t('These invitations have expired. Resend an invitation to make it available again.', language)}</p>
+        <div className="invitation-list">{expiredInvitations.map(invitation =>
+          <div key={invitation.id} className="invitation-row">
+            <div><strong>{invitation.email}</strong>
+              <span>{t(invitation.role === 'ADMIN' ? 'Admin' : 'Member', language)} · {t('EXPIRED', language)} · {new Intl.DateTimeFormat(locale(language), { dateStyle: 'medium' }).format(new Date(invitation.expiresAt))}</span>
+              <span>{t('Email:', language)} {t(invitation.deliveryStatus === 'SENT' ? 'Accepted by email provider'
+                : invitation.deliveryStatus === 'FAILED' ? 'Delivery failed' : 'Sending pending', language)}</span>
+            </div>
+            <div className="invitation-actions">
+              <button type="button" className="secondary-button" disabled={busy !== null}
+                onClick={() => { void perform(invitation.id, () => api.resendInvitation(organizationId, invitation.id),
+                  t('Invitation resent.', language)); }}>{t('Resend', language)}</button>
+            </div>
+          </div>)}</div>
+      </section>}
     </>}
   </section>;
 }

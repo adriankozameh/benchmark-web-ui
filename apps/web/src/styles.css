@@ -658,3 +658,13 @@ button { color: inherit; }
 .provider-delete-warning ul { max-height: 220px; overflow-y: auto; overflow-wrap: anywhere; }
 .provider-delete-dialog .provider-delete-confirm { background: #b42318; color: white; }
 .provider-delete-dialog .station-details-actions { flex-wrap: wrap; margin-top: 20px; }
+
+.invitation-history {
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid var(--benchmark-line);
+  border-radius: 12px;
+  background: #f1f4f8;
+}
+.invitation-history h3 { margin-top: 0; }
+.invitation-history .invitation-row { background: #fff; }

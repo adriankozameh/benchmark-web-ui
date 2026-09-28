@@ -1,6 +1,9 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  'Expired invitations': 'Invitaciones vencidas',
+  'These invitations have expired. Resend an invitation to make it available again.': 'Estas invitaciones han vencido. Reenvía una invitación para que vuelva a estar disponible.',
+  'No active invitations.': 'No hay invitaciones activas.',
   "Delete provider": "Eliminar proveedor",
   "Provider deleted. Linked stations were unlinked; stations and stored data were kept.": "Proveedor eliminado. Se desvincularon las estaciones; se conservaron las estaciones y los datos guardados.",
   "This deletes the provider account and its saved credentials. This cannot be undone.": "Se eliminará la cuenta del proveedor y sus credenciales guardadas. Esta acción no se puede deshacer.",
