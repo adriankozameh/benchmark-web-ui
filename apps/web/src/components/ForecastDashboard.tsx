@@ -275,7 +275,7 @@ const RIGHT = 14;
 const TOP = 16;
 const BOTTOM = 31;
 
-export function MetricChart({ metric, points, secondaryPoints, providers, colors, timeZone, windowStart, windowEnd, units, language, chartKind = 'forecast', title }: {
+export function MetricChart({ metric, points, secondaryPoints, providers, colors, timeZone, windowStart, windowEnd, units, language, chartKind = 'forecast', title, maxGapMs }: {
   metric: string;
   points: ChartPoint[];
   secondaryPoints?: ChartPoint[];
@@ -283,6 +283,7 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
   language: UserLanguage;
   chartKind?: 'forecast' | 'observation';
   title?: string;
+  maxGapMs?: number;
   providers: string[];
   colors: Record<string, string>;
   timeZone: string;
@@ -363,7 +364,7 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
                 .filter((interval) => interval > 0).sort((a, b) => a - b);
               const cadence = intervals[Math.floor(intervals.length / 2)] ?? 60 * 60 * 1000;
               for (const point of providerPoints) {
-                if (!chunks.length || point.time - chunks[chunks.length - 1].at(-1)!.time > Math.max(2 * 60 * 60 * 1000, cadence * 1.5)) chunks.push([]);
+                if (!chunks.length || point.time - chunks[chunks.length - 1].at(-1)!.time > (maxGapMs ?? Math.max(2 * 60 * 60 * 1000, cadence * 1.5))) chunks.push([]);
                 chunks.at(-1)!.push(point);
               }
               return <g key={`${provider}-${bound}`} fill="none" stroke={colors[provider]}

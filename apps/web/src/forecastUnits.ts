@@ -1,7 +1,7 @@
 import type { DisplayUnits } from '@benchmark/domain';
 
 const METRIC_UNITS: Record<string, string> = {
-  TEMPERATURE: '°C',
+  TEMPERATURE: '°C', HEAT_INDEX: '°C', WIND_CHILL: '°C', GROWING_DEGREE_DAYS: '°C·day', WATER_BALANCE: 'mm', CHILLING_HOURS: 'h',
   WIND_SPEED: 'm/s',
   WIND_GUST: 'm/s',
   TRANSPORT_WIND_SPEED: 'm/s',
@@ -14,7 +14,7 @@ const METRIC_UNITS: Record<string, string> = {
 };
 
 const IMPERIAL_UNITS: Record<string, string> = {
-  TEMPERATURE: '°F',
+  TEMPERATURE: '°F', HEAT_INDEX: '°F', WIND_CHILL: '°F', GROWING_DEGREE_DAYS: '°F·day', WATER_BALANCE: 'in', CHILLING_HOURS: 'h',
   WIND_SPEED: 'mph',
   WIND_GUST: 'mph',
   TRANSPORT_WIND_SPEED: 'mph',
@@ -41,10 +41,14 @@ export function metricUnit(metric: string, units: DisplayUnits): string {
 export function displayMetricValue(metric: string, value: number, units: DisplayUnits): number {
   if (units === 'METRIC') return value;
   switch (metric) {
+    case 'HEAT_INDEX':
+    case 'WIND_CHILL':
     case 'TEMPERATURE': return value * 9 / 5 + 32;
     case 'WIND_SPEED':
     case 'WIND_GUST':
     case 'TRANSPORT_WIND_SPEED': return value / 0.44704;
+    case 'GROWING_DEGREE_DAYS': return value * 9 / 5;
+    case 'WATER_BALANCE':
     case 'PRECIPITATION_QUANTITY':
     case 'EVAPOTRANSPIRATION': return value / 25.4;
     case 'MIXING_HEIGHT': return value * 3.280839895;

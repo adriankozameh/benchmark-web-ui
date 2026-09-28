@@ -1,5 +1,7 @@
 import type {
   ApiErrorPayload,
+  ForecastProductsResponse,
+  FarmcastSettings,
   ProviderConnectionResult,
   ObservationBackfillResponse,
   DailyStationObservations,
@@ -134,6 +136,18 @@ export class BenchmarkApi {
 
   listStations(organizationId: string): Promise<WeatherStation[]> {
     return this.request(`/api/v1/organizations/${organizationId}/stations`);
+  }
+
+  saveForecastSettings(organizationId: string, stationId: string, settings: FarmcastSettings): Promise<FarmcastSettings> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/stations/${encodeURIComponent(stationId)}/forecast-settings`, {
+      method: 'PUT', body: JSON.stringify(settings),
+    });
+  }
+
+  getForecastProducts(organizationId: string, stationId: string, days: number): Promise<ForecastProductsResponse> {
+    const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/stations/${encodeURIComponent(stationId)}/timeseries/forecast/products`;
+    return this.request(`${path}?${new URLSearchParams({ days: String(days) })}`);
   }
 
   getStationForecast(

@@ -745,3 +745,24 @@ button { color: inherit; }
     white-space: normal;
   }
 }
+
+.forecast-product-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+.forecast-product-tabs button { border:1px solid #d8e0e8; border-radius:8px; padding:10px 14px; min-height:44px; background:white; cursor:pointer; font-size:12px; }
+.forecast-product-tabs button.active { background:#334155; color:white; }
+.product-controls { display:flex; flex-wrap:wrap; gap:16px; margin-bottom:16px; }
+.product-controls .field { flex:1; min-width:180px; }
+.product-note { color:#637185; font-size:12px; line-height:1.6; }
+.product-table-scroll { max-width:100%; overflow:auto; }
+.product-table-scroll table { border-collapse:collapse; width:100%; font-size:12px; }
+.product-table-scroll th, .product-table-scroll td { padding:12px; border-bottom:1px solid #dce3ed; text-align:left; min-width:105px; }
+.product-risk-strip { display:flex; overflow-x:auto; gap:2px; padding:6px 0; }
+.product-risk-strip button { border:0; cursor:pointer; flex:0 0 65px; padding:10px 4px; color:white; font-size:11px; text-align:center; border-radius:4px; }
+.product-risk-strip button:focus { outline:3px solid #253142; outline-offset:-3px; }
+.forecast-products, .product-daily { min-width:0; }
+.forecast-products > .forecast-chart-card { margin-bottom:16px; }
+.product-daily { margin-top:20px; }
+@media (max-width:767px) { .forecast-product-tabs { gap:6px; } .forecast-product-tabs button { flex:1 0 28%; padding:8px; } }
+
+.product-totals { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; }
+.product-totals span { display:block; font-size:12px; color:#637185; }
+.product-totals strong { display:block; margin-top:8px; font-size:22px; }

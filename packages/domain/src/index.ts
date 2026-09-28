@@ -206,3 +206,23 @@ export type OrganizationMember = {
   role: 'OWNER' | 'ADMIN' | 'MEMBER';
   joinedAt: string;
 };
+
+export type FarmcastSettings = { gddStartDate: string | null; chillingStartDate: string | null };
+export type FarmcastSeasonTotal = { startDate: string; throughDate: string; value: number | null;
+  availableSamples: number; expectedSamples: number; complete: boolean };
+export type ForecastProductsResponse = {
+  settings: FarmcastSettings;
+  season: { growingDegreeDays: FarmcastSeasonTotal | null; chillingHours: FarmcastSeasonTotal | null; timeStandard: string };
+  forecast: Omit<StationTimeSeries, 'points'> & {
+    providerPriority: string[];
+    points: Array<Omit<StationTimeSeriesPoint, 'provider' | 'hoursFrom0Time'> & {
+      sources: Record<string, { provider: string; hoursFrom0Time: number | null }>;
+    }>;
+  };
+  products: {
+    hourly: Array<{ utcDateTime: string; values: Record<string, number> }>;
+    daily: Array<{ localDate: string; utcDateTime: string; expectedHours: number;
+      availableHours: Record<string, number>; values: Record<string, number> }>;
+  };
+  notices: string[];
+};

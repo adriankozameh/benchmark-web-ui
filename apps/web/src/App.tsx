@@ -23,6 +23,7 @@ import { hasValidationErrors, validateStation } from '@benchmark/validation';
 import type { StationValidationErrors } from '@benchmark/validation';
 import { AddressSearch } from './components/AddressSearch';
 import { BrandLogo } from './components/BrandLogo';
+import { ForecastProductsDashboard } from './components/ForecastProductsDashboard';
 import { ForecastDashboard } from './components/ForecastDashboard';
 import { ObservationsDashboard } from './components/ObservationsDashboard';
 import { DataProviders } from './components/DataProviders';
@@ -358,7 +359,7 @@ function AuthenticatedApp({
   onLogout: () => void;
   onUnauthorized: () => void;
 }) {
-  type DashboardPage = 'forecast' | 'observations' | 'historic';
+  type DashboardPage = 'forecast' | 'burncast' | 'farmcast' | 'safecast' | 'observations' | 'historic';
   type SettingsPage = 'stations' | 'data-providers' | 'account';
   type AppRoute =
     | { section: 'dashboard'; page: DashboardPage }
@@ -368,6 +369,9 @@ function AuthenticatedApp({
     const normalized = pathname.replace(/\/+$/, '') || '/';
     if (normalized === '/dashboard' || normalized === '/dashboard/forecast') {
       return { section: 'dashboard', page: 'forecast' };
+    }
+    for (const page of ['burncast', 'farmcast', 'safecast'] as const) {
+      if (normalized === `/dashboard/${page}`) return { section: 'dashboard', page };
     }
     if (normalized === '/dashboard/observations') {
       return { section: 'dashboard', page: 'observations' };
@@ -492,6 +496,9 @@ function AuthenticatedApp({
 
   const dashboardNav = [
     { page: 'forecast' as const, label: 'Forecast', icon: ChartNoAxesCombined },
+    { page: 'burncast' as const, label: 'Burncast', icon: ChartNoAxesCombined },
+    { page: 'farmcast' as const, label: 'Farmcast', icon: ChartNoAxesCombined },
+    { page: 'safecast' as const, label: 'Safecast', icon: ChartNoAxesCombined },
     { page: 'observations' as const, label: 'Observations', icon: RadioTower },
     { page: 'historic' as const, label: 'Historic', icon: History },
   ];
@@ -499,7 +506,7 @@ function AuthenticatedApp({
   const headerTitle = route.section === 'dashboard'
     ? route.page === 'forecast' ? 'Forecast'
       : route.page === 'observations' ? 'Observations'
-      : 'Historic'
+      : route.page === 'historic' ? 'Historic' : route.page === 'burncast' ? 'Burncast' : route.page === 'farmcast' ? 'Farmcast' : 'Safecast'
     : route.page === 'account' ? 'Account' : route.page === 'data-providers' ? 'Data providers' : 'Weather stations';
 
   return (
@@ -583,11 +590,23 @@ function AuthenticatedApp({
         </header>
 
         <div className="content-wrap">
+          {route.section === 'dashboard' && <nav className="forecast-product-tabs" aria-label={t('Dashboard views', language)}>
+            {dashboardNav.map(({ page, label }) => <button type="button" key={page}
+              aria-current={route.page === page ? 'page' : undefined} className={route.page === page ? 'active' : ''}
+              onClick={() => navigate({ section: 'dashboard', page })}>{t(label, language)}</button>)}
+          </nav>}
           {error && (
             <div className="alert error">
               <CircleAlert size={18} />
               <div><strong>{t('Unable to load settings', language)}</strong><span>{error}</span></div>
             </div>
+          )}
+
+          {organization && route.section === 'dashboard' && ['burncast', 'farmcast', 'safecast'].includes(route.page) && (
+            <ForecastProductsDashboard api={api} organizationId={organization.id} stations={stations}
+              canManage={organization.role === 'OWNER' || organization.role === 'ADMIN'}
+              kind={route.page as 'burncast' | 'farmcast' | 'safecast'} units={units} language={language}
+              onUnauthorized={onUnauthorized} focusStationId={stationToView} />
           )}
 
           {organization && route.section === 'dashboard' && route.page === 'forecast' && (
