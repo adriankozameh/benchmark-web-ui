@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { DisplayUnits, ForecastProductsResponse, UserLanguage } from '@benchmark/domain';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { locale, t } from '../language';
+import { heatCondition, frostbiteCondition } from './safecastConditions';
 import { ink, tableColor } from './burncastColors';
 
 type Hour = ForecastProductsResponse['products']['hourly'][number];
@@ -26,7 +27,6 @@ export function SafecastDashboard({ data, units, language }: {
 }) {
   const timeZone = data.forecast.timeZone || 'UTC';
   const hours = useMemo(() => [...data.products.hourly].sort((a, b) => Date.parse(a.utcDateTime) - Date.parse(b.utcDateTime)), [data]);
-  const [detail, setDetail] = useState('');
   const format = (metric: string, value?: number) => !finite(value) ? '—' : new Intl.NumberFormat(locale(language), { maximumFractionDigits: 1 }).format(displayMetricValue(metric, value, units));
   const local = (time: string) => new Intl.DateTimeFormat(locale(language), { timeZone, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'shortOffset' }).format(new Date(time));
   const riskLabel = (metric: string, value?: number) => t(finite(value) ? (metric === 'HEAT_RISK' ? HEAT : FROST)[value] ?? 'Unavailable' : 'Unavailable', language);
@@ -37,9 +37,8 @@ export function SafecastDashboard({ data, units, language }: {
   };
   return <div className="safecast-dashboard">
     <p className="product-note">{t('Heat index is shown at temperatures of at least 26.7°C. Frostbite exposure times are estimates.', language)}</p>
-    <SafetyChart hours={hours} kind="heat" units={units} language={language} timeZone={timeZone} describe={describe} onDetail={setDetail} />
-    <SafetyChart hours={hours} kind="cold" units={units} language={language} timeZone={timeZone} describe={describe} onDetail={setDetail} />
-    {detail && <p className="product-note" role="status">{detail}</p>}
+    <SafetyChart hours={hours} kind="heat" units={units} language={language} timeZone={timeZone} describe={describe} />
+    <SafetyChart hours={hours} kind="cold" units={units} language={language} timeZone={timeZone} describe={describe} />
     <section className="station-form-card"><h3>{t('Daily forecast summary', language)}</h3>
       <p className="product-note">{t('Daily values require every hour of the local day. Missing or partial days show a dash.', language)}</p>
       <div className="burncast-scroll" tabIndex={0} role="region" aria-label={t('Daily forecast summary', language)}><table className="burncast-table">
@@ -61,15 +60,26 @@ export function SafecastDashboard({ data, units, language }: {
   </div>;
 }
 
-function SafetyChart({ hours, kind, units, language, timeZone, describe, onDetail }: {
+function SafetyChart({ hours, kind, units, language, timeZone, describe }: {
   hours: Hour[]; kind: 'heat' | 'cold'; units: DisplayUnits; language: UserLanguage; timeZone: string;
-  describe: (point: Hour) => string; onDetail: (text: string) => void;
+  describe: (point: Hour) => string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const gradientId = useId().replaceAll(':', '');
   const [width, setWidth] = useState(600);
   const [offset, setOffset] = useState(0);
   const [active, setActive] = useState<number | null>(null);
+  const [pinned, setPinned] = useState(false);
+  const popupId = `safecast-popup-${gradientId}`;
+  const dismiss = () => { setActive(null); setPinned(false); };
+  useEffect(() => {
+    if (active === null) return;
+    const outside = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node)) { setActive(null); setPinned(false); } };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setActive(null); setPinned(false); } };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
+  }, [active]);
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
@@ -77,7 +87,7 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe, onDetai
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
-  useEffect(() => { setOffset(0); setActive(null); }, [hours]);
+  useEffect(() => { setOffset(0); setActive(null); setPinned(false); }, [hours]);
 
   const heat = kind === 'heat', compact = width < 650;
   const title = t(heat ? 'Heat Stress' : 'Frostbite', language);
@@ -120,9 +130,17 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe, onDetai
     });
     return result;
   };
-  const select = (index: number) => { setActive(index); if (visible[index]) onDetail(describe(visible[index])); };
+  const select = (index: number) => { setActive(index); setPinned(true); };
+  const hover = (index: number) => { if (!pinned) setActive(index); };
+  const selected = active === null ? undefined : visible[active];
+  const condition = heatCondition(selected?.values.HEAT_INDEX);
+  const frost = frostbiteCondition(selected?.values.FROSTBITE_RISK);
+  const popupWidth = Math.min(360, Math.max(1, width - 16));
+  const popupLeft = Math.max(8, Math.min(width - popupWidth - 8, x(active ?? 0) - popupWidth / 2));
+  const timeLabel = selected ? new Intl.DateTimeFormat(locale(language), { timeZone, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'shortOffset' }).format(new Date(selected.utcDateTime)) : '';
+  const popupMetrics = heat ? [['TEMPERATURE', 'Temperature'], ['RELATIVE_HUMIDITY', 'Relative humidity'], ['UV_INDEX', 'UV index'], ['HEAT_INDEX', 'Heat index']] : [['WIND_CHILL', 'Wind chill']];
   return <section className="forecast-chart-card safecast-legacy-card"><h3>{title}</h3>
-    <div ref={ref} className="safecast-chart" role="group" aria-label={title}>
+    <div ref={ref} className="safecast-chart safecast-interactive" role="group" aria-label={title} onPointerLeave={() => { if (!pinned) setActive(null); }}>
       <svg viewBox={`0 0 ${width} ${height}`} style={{ height }} role="group" aria-label={title}>
         <defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity=".75" /><stop offset="50%" stopColor={color} stopOpacity=".45" /><stop offset="100%" stopColor={color} stopOpacity="0" /></linearGradient></defs>
         <text x={left} y={20} fill={color}>{t(heat ? 'Temperature' : 'Wind chill', language)} ({metricUnit(metric, units)})</text>
@@ -148,18 +166,31 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe, onDetai
             const value = hour.values[key];
             const fill = key === 'UV_INDEX' ? uvColor(value) : key === 'HEAT_INDEX' ? heatColor(value) : riskColor(key, value);
             const text = key === 'FROSTBITE_RISK' ? finite(value) ? ['>30', '30', '10', '5'][value] ?? '—' : '—' : number(key, value);
-            return <g key={hour.utcDateTime} onClick={() => select(index)}><rect x={left + index * cellWidth} y={rowTop(row)} width={cellWidth} height={30} fill={fill} stroke="#263238" strokeWidth={.7} /><text x={x(index)} y={rowTop(row) + 19} textAnchor="middle" fill={ink(fill)} fontSize={10}>{text}</text><title>{describe(hour)}</title></g>;
+            return <g key={hour.utcDateTime} onClick={() => select(index)} onPointerEnter={event => { if (event.pointerType === 'mouse') hover(index); }}><rect x={left + index * cellWidth} y={rowTop(row)} width={cellWidth} height={30} fill={fill} stroke="#263238" strokeWidth={.7} /><text x={x(index)} y={rowTop(row) + 19} textAnchor="middle" fill={ink(fill)} fontSize={10}>{text}</text><title>{describe(hour)}</title></g>;
           })}
         </g>)}
         {visible.map((hour, index) => index % labelEvery === 0 && <text key={hour.utcDateTime} x={x(index)} y={axisY} textAnchor={index === 0 ? 'start' : 'middle'} fill="#64748b" fontSize={10}>
           <tspan x={x(index)}>{dateFormat.format(new Date(hour.utcDateTime))}</tspan><tspan x={x(index)} dy={13}>{hourFormat.format(new Date(hour.utcDateTime))}</tspan>
         </text>)}
         {active !== null && visible[active] && <line x1={x(active)} x2={x(active)} y1={top} y2={bottom} stroke="#64748b" strokeDasharray="3 3" />}
-        {visible.map((hour, index) => <rect key={hour.utcDateTime} className="safecast-hour-hit" x={left + index * cellWidth} y={top} width={cellWidth} height={bottom - top} fill="transparent" tabIndex={0} role="button" aria-label={describe(hour)} onFocus={() => select(index)} onClick={() => select(index)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(index); } }}><title>{describe(hour)}</title></rect>)}
+        {visible.map((hour, index) => <rect key={hour.utcDateTime} className="safecast-hour-hit" x={left + index * cellWidth} y={top} width={cellWidth} height={bottom - top} fill="transparent" tabIndex={0} role="button" aria-label={describe(hour)} aria-controls={popupId} onPointerEnter={event => { if (event.pointerType === 'mouse') hover(index); }} onFocus={() => select(index)} onClick={() => select(index)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(index); } }}><title>{describe(hour)}</title></rect>)}
       </svg>
+      {selected && <div id={popupId} className="safecast-popup" role="dialog" aria-label={`${title} · ${timeLabel}`} style={{ left: popupLeft, width: popupWidth, top: top + 8 }}>
+        <div className="safecast-popup-heading"><strong>{timeLabel}</strong><button type="button" aria-label={t('Close', language)} onClick={dismiss}>×</button></div>
+        <dl>{popupMetrics.map(([key, name]) => <div key={key}><dt>{t(name, language)}</dt><dd>{number(key, selected.values[key])} {metricUnit(key, units)}</dd></div>)}
+          {heat && condition && <>
+            <div><dt>{t('Heat Risk Level', language)}</dt><dd>{t(condition.level, language)}</dd></div>
+            <div><dt>{t('Work : Rest (Minutes)', language)}</dt><dd>{t(condition.workRest, language)}</dd></div>
+            <div><dt>{t('Min. Water Needed', language)}</dt><dd>{t(condition.water, language)}</dd></div>
+          </>}
+          {!heat && <div><dt>{t('Frostbite', language)}</dt><dd>{frost ? t(frost.exposure, language) : t('Unavailable', language)}</dd></div>}
+        </dl>
+        {heat ? condition ? <p><strong>{t('Recommendation', language)}: </strong>{t(condition.recommendation, language)}</p> : <p>{t('Required forecast data is unavailable or incomplete.', language)}</p>
+          : <p>{t(frost?.description ?? 'Required forecast data is unavailable or incomplete.', language)}</p>}
+      </div>}
     </div>
     {!values.length && <p className="product-note">{t('Required forecast data is unavailable or incomplete.', language)}</p>}
-    {maxOffset > 0 && <input className="safecast-pan" type="range" min={0} max={maxOffset} value={first} onChange={event => { setOffset(Number(event.target.value)); setActive(null); }} aria-label={t('Move forecast window', language)} aria-valuetext={`${dateFormat.format(new Date(visible[0].utcDateTime))} ${hourFormat.format(new Date(visible[0].utcDateTime))} – ${dateFormat.format(new Date(visible[visible.length - 1].utcDateTime))} ${hourFormat.format(new Date(visible[visible.length - 1].utcDateTime))}`} />}
+    {maxOffset > 0 && <input className="safecast-pan" type="range" min={0} max={maxOffset} value={first} onChange={event => { setOffset(Number(event.target.value)); dismiss(); }} aria-label={t('Move forecast window', language)} aria-valuetext={`${dateFormat.format(new Date(visible[0].utcDateTime))} ${hourFormat.format(new Date(visible[0].utcDateTime))} – ${dateFormat.format(new Date(visible[visible.length - 1].utcDateTime))} ${hourFormat.format(new Date(visible[visible.length - 1].utcDateTime))}`} />}
     <details className="safecast-key"><summary>{t('View details', language)}</summary><p className="product-note">{t('Move the slider to view later hours. Select a point for details.', language)}</p>
       <div className="burncast-legend">{(heat ? HEAT : FROST).map((name, i) => <span key={name}><i style={{ background: (heat ? HEAT_COLORS : FROST_COLORS)[i] }} />{t(name, language)}</span>)}</div>
       {heat && <div className="burncast-legend"><span>{t('UV index', language)}</span>{['0–2', '3–5', '6–7', '8–10', '≥11'].map((label, i) => <span key={label}><i style={{ background: uvColor([0, 3, 6, 8, 11][i]) }} />{label}</span>)}</div>}
