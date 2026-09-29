@@ -746,7 +746,7 @@ button { color: inherit; }
   }
 }
 
-.forecast-product-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+.forecast-product-tabs { display:none; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
 .forecast-product-tabs button { border:1px solid #d8e0e8; border-radius:8px; padding:10px 14px; min-height:44px; background:white; cursor:pointer; font-size:12px; }
 .forecast-product-tabs button.active { background:#334155; color:white; }
 .product-controls { display:flex; flex-wrap:wrap; gap:16px; margin-bottom:16px; }
@@ -761,7 +761,7 @@ button { color: inherit; }
 .forecast-products, .product-daily { min-width:0; }
 .forecast-products > .forecast-chart-card { margin-bottom:16px; }
 .product-daily { margin-top:20px; }
-@media (max-width:767px) { .forecast-product-tabs { gap:6px; } .forecast-product-tabs button { flex:1 0 28%; padding:8px; } }
+@media (max-width:767px) { .forecast-product-tabs { display:flex; gap:6px; } .forecast-product-tabs button { flex:1 0 28%; padding:8px; } }
 
 .product-totals { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; }
 .product-totals span { display:block; font-size:12px; color:#637185; }
