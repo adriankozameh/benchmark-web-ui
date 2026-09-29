@@ -1,3 +1,5 @@
+import type { ExplorerManifest, ExplorerStation, ExplorerDetails } from './station-explorer';
+export type { ExplorerManifest, ExplorerStation, ExplorerDetails } from './station-explorer';
 import type {
   ApiErrorPayload,
   CurrentConditions,
@@ -43,6 +45,7 @@ type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   expectNoContent?: boolean;
+  responseType?: 'blob';
 };
 
 export class BenchmarkApi {
@@ -82,7 +85,7 @@ export class BenchmarkApi {
     if (!accessToken) throw new BenchmarkApiError(401, 'You are not signed in.', null);
 
     const headers = new Headers({
-      Accept: 'application/json',
+      Accept: options.responseType === 'blob' ? 'text/csv' : 'application/json',
       Authorization: `Bearer ${accessToken}`,
     });
 
@@ -107,7 +110,22 @@ export class BenchmarkApi {
     }
 
     if (options.expectNoContent || response.status === 204) return undefined as T;
+    if (options.responseType === 'blob') return (await response.blob()) as T;
     return (await response.json()) as T;
+  }
+
+  getExplorerManifest(org: string): Promise<ExplorerManifest> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(org)}/station-explorer/catalog`);
+  }
+  getExplorerCatalog(org: string, filename: string): Promise<ExplorerStation[]> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(org)}/station-explorer/catalog/${encodeURIComponent(filename)}`);
+  }
+  getExplorerDetails(org: string, id: string, version: string): Promise<ExplorerDetails> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(org)}/station-explorer/stations/${encodeURIComponent(id)}?version=${encodeURIComponent(version)}`);
+  }
+  downloadExplorerCsv(org: string, id: string, params: { version: string; startDate: string; endDate: string; vars: string; unitSystem: string }, signal?: AbortSignal): Promise<Blob> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(org)}/station-explorer/stations/${encodeURIComponent(id)}/daily.csv?${new URLSearchParams(params)}`,
+      { responseType: 'blob', signal });
   }
 
   getMe(): Promise<CurrentUser> {

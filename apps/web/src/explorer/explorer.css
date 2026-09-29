@@ -1,0 +1,33 @@
+.station-explorer { min-width: 0; }
+.station-explorer h2 { margin: 0; }
+.station-explorer p { color: #5c6979; line-height: 1.5; }
+.explorer-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px; background: white; border: 1px solid #dce3eb; border-radius: 12px; margin: 16px 0; }
+.explorer-controls .address-search { flex: 1 1 360px; z-index: 1100; }
+.explorer-controls form { display: flex; flex: 1 1 300px; gap: 8px; }
+.explorer-controls form input { min-width: 0; flex: 1; }
+.station-explorer button, .station-explorer input, .station-explorer select { font: inherit; }
+.station-explorer button { cursor: pointer; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #23394b; }
+.station-explorer button:disabled { cursor: default; opacity: .5; }
+.station-explorer input:not([type=checkbox]), .station-explorer select { border: 1px solid #cbd5e1; border-radius: 7px; padding: 9px; max-width: 100%; box-sizing: border-box; }
+.explorer-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+.explorer-main { min-width: 0; }
+.explorer-map { height: 480px; border-radius: 12px; border: 1px solid #dce3eb; z-index: 0; }
+.explorer-marker { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #225e70; color: #fff; font-size: 12px; font-weight: 700; border: 2px solid #fff; box-shadow: 0 1px 5px #0005; }
+.explorer-marker.single { background: #398867; }
+.explorer-marker.selected { background: #cb781c; }
+.explorer-details, .explorer-results { padding: 18px; background: #fff; border: 1px solid #dce3eb; border-radius: 12px; }
+.explorer-results { margin-top: 14px; }
+.explorer-details { min-width: 0; overflow-wrap: anywhere; }
+.explorer-details h3 { margin-top: 0; }
+.explorer-details > label { display: flex; flex-direction: column; gap: 5px; margin: 12px 0; }
+.explorer-details .primary-button { width: 100%; background: #225e70; color: white; margin-top: 12px; }
+.explorer-variables { max-height: 310px; overflow-y: auto; margin: 12px 0; }
+.explorer-variables label { display: flex; align-items: start; gap: 8px; padding: 8px 0; font-size: 13px; border-bottom: 1px solid #edf0f4; }
+.explorer-variables small { display: block; color: #5c6979; margin-top: 3px; }
+.explorer-actions, .explorer-pagination { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.explorer-stations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.explorer-stations button { text-align: left; overflow-wrap: anywhere; }
+.explorer-stations span { display: block; font-size: 12px; color: #5c6979; margin-top: 4px; }
+.explorer-stations button.selected { border-color: #225e70; background: #eef7f8; }
+@media (max-width: 1100px) { .explorer-layout { grid-template-columns: minmax(0, 1fr); } .explorer-map { height: 400px; } }
+@media (max-width: 520px) { .explorer-stations { grid-template-columns: minmax(0, 1fr); } .explorer-map { height: 330px; } .explorer-controls { padding: 12px; } .explorer-controls form { flex-basis: 100%; flex-wrap: wrap; } }

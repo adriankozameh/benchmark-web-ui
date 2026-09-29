@@ -1,3 +1,5 @@
+import { StationExplorer } from './explorer/StationExplorer';
+import { loadCatalog } from './explorer/catalog';
 import { ForecastIcon, BurncastIcon, FarmcastIcon, SafecastIcon } from './components/ProductIcons';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -424,6 +426,13 @@ function AuthenticatedApp({
     [me, selectedOrganizationId],
   );
 
+  useEffect(() => {
+    if (!organization || organization.organizationStatus !== 'ACTIVE') return;
+    // Start after the authenticated shell is ready; never block account/forecast loading.
+    const timer = window.setTimeout(() => { void loadCatalog(api, organization.id).catch(() => {}); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [api, organization?.id, organization?.organizationStatus]);
+
   const stationToView = organization ? stationByOrganization[organization.id] ?? null : null;
   const selectStation = (stationId: string) => {
     if (!organization || !stations.some(station => station.id === stationId)) return;
@@ -626,8 +635,8 @@ function AuthenticatedApp({
           )}
 
           {organization && route.section === 'dashboard' && route.page === 'observations' && (
-            <FutureDashboardPage icon={<RadioTower size={28} />} title={t('Observations', language)}
-              description={t('Station observations will appear here.', language)} language={language} />
+            <StationExplorer key={organization.id} api={api} organizationId={organization.id}
+              language={language} units={units} onUnauthorized={onUnauthorized} />
           )}
 
           {organization && route.section === 'dashboard' && route.page === 'historic' && (
