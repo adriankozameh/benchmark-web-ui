@@ -1,5 +1,6 @@
 import type {
   ApiErrorPayload,
+  CurrentConditions,
   ForecastProductsResponse,
   FarmcastSettings,
   ProviderConnectionResult,
@@ -142,6 +143,10 @@ export class BenchmarkApi {
     return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/stations/${encodeURIComponent(stationId)}/forecast-settings`, {
       method: 'PUT', body: settings,
     });
+  }
+
+  getCurrentConditions(organizationId: string, stationId: string, signal?: AbortSignal): Promise<CurrentConditions> {
+    return this.request(`/api/v1/organizations/${organizationId}/stations/${stationId}/current-conditions`, { signal });
   }
 
   getForecastProducts(organizationId: string, stationId: string, days: number): Promise<ForecastProductsResponse> {

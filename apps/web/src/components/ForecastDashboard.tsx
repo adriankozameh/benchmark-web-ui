@@ -1,3 +1,4 @@
+import { CurrentConditionsBar } from './CurrentConditionsBar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import { CircleAlert, LoaderCircle, RefreshCw } from 'lucide-react';
@@ -205,6 +206,7 @@ export function ForecastDashboard({
 
   return (
     <div className="forecast-dashboard">
+      {selectedStation && <CurrentConditionsBar key={`${organizationId}/${selectedStation.id}`} api={api} organizationId={organizationId} station={selectedStation} units={units} language={language} onUnauthorized={onUnauthorized} />}
       <div className="page-heading-row">
         <div>
           <span className="eyebrow">{t('Latest forecast', language)}</span>

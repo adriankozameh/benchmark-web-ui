@@ -1,6 +1,26 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  'Today — station local time': 'Hoy — hora local de la estación',
+  'Station readings are stale.': 'Las lecturas de la estación están desactualizadas.',
+  'Station readings unavailable.': 'Lecturas de la estación no disponibles.',
+  'IBM forecast': 'Pronóstico de IBM',
+  "Current conditions": "Condiciones actuales",
+  "Minimum temperature": "Temperatura mínima",
+  "Maximum temperature": "Temperatura máxima",
+  "Station reading": "Lectura de la estación",
+  "Past hour samples": "Muestras de la última hora",
+  "Rolling hour": "Hora móvil",
+  "Reported in past hour": "Reportado en la última hora",
+  "Forecast hour": "Hora del pronóstico",
+  "Today’s forecast": "Pronóstico de hoy",
+  "Current conditions could not be loaded.": "No se pudieron cargar las condiciones actuales.",
+  "Loading current conditions…": "Cargando condiciones actuales…",
+  "Forecast estimates — station readings unavailable.": "Estimaciones del pronóstico — lecturas de la estación no disponibles.",
+  "Current conditions unavailable.": "Condiciones actuales no disponibles.",
+  "Refresh conditions": "Actualizar condiciones",
+  "Observed": "Observado",
+
   'Missing UV and heat-index readings display as green zero values (32°F for heat index). These defaults do not confirm safe conditions. Frostbite exposure times are estimates.': 'Los valores faltantes de UV e índice de calor se muestran como cero en verde (32 °F para el índice de calor). Estos valores predeterminados no confirman condiciones seguras. Los tiempos de congelación son estimados.',
   "Close": "Cerrar",
   "Recommendation": "Recomendación",

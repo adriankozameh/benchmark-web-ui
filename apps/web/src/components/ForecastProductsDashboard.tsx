@@ -1,3 +1,4 @@
+import { CurrentConditionsBar } from './CurrentConditionsBar';
 import { useEffect, useRef, useState } from 'react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { DisplayUnits, ForecastProductsResponse, UserLanguage, WeatherStation } from '@benchmark/domain';
@@ -87,6 +88,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
     values: Object.fromEntries(Object.entries(point.values).map(([key, value]) => [key, displayMetricValue(key, value, units)])),
   }));
   return <section className="forecast-products">
+      {selected && <CurrentConditionsBar key={`${organizationId}/${selected.id}`} api={api} organizationId={organizationId} station={selected} units={units} language={language} onUnauthorized={onUnauthorized} />}
     <div className="page-heading-row"><div><h2>{TITLES[kind]}</h2></div>
       <button className="secondary-button" type="button" disabled={loading || !selected} onClick={() => setRevision(v => v + 1)}>{t('Refresh', language)}</button>
     </div>

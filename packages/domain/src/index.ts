@@ -226,3 +226,21 @@ export type ForecastProductsResponse = {
   };
   notices: string[];
 };
+
+/** Values use SI units; each value identifies whether it is measured or forecast. */
+export type CurrentConditionReading = {
+  value: number;
+  source: 'OBSERVED' | 'FORECAST';
+  provider: string;
+  validAt: string;
+  period: 'INSTANT' | 'PAST_HOUR' | 'ROLLING_HOUR' | 'REPORTED_PAST_HOUR' | 'FORECAST_HOUR' | 'LOCAL_DAY';
+  periodStart: string | null;
+  periodEnd: string | null;
+};
+export type CurrentConditions = {
+  stationId: string;
+  timeZone: string;
+  fetchedAt: string;
+  observationStatus: 'LIVE' | 'STALE' | 'UNAVAILABLE' | 'NOT_CONFIGURED' | 'UNSUPPORTED' | 'INACTIVE' | 'PLAN_REQUIRED';
+  metrics: Record<string, CurrentConditionReading>;
+};

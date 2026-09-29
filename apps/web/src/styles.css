@@ -829,3 +829,24 @@ button { color: inherit; }
 .safecast-popup dl > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 4px 0; border-bottom: 1px solid #edf0f4; }
 .safecast-popup dd { margin: 0; text-align: right; font-weight: 600; }
 .safecast-popup p { margin: 10px 0 0; }
+
+/* Current station conditions: eight cells on wide screens, wrapping without page overflow. */
+.current-conditions { min-width: 0; margin-bottom: 1.25rem; border: 1px solid #dce5e0; border-radius: 16px; background: #fff; overflow: hidden; }
+.current-conditions-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; padding: 1rem 1.15rem; background: #f3f8f5; }
+.current-conditions-heading h2 { margin: 0; font-size: 1rem; }
+.current-conditions-heading h2 span { display: inline-block; margin-left: .5rem; font-weight: 400; overflow-wrap: anywhere; }
+.current-conditions-heading p { margin: .35rem 0 0; font-size: .75rem; color: #4c6256; }
+.current-conditions-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); margin: 0; }
+.current-condition { min-width: 0; padding: .9rem .7rem; border-top: 1px solid #e5ece7; overflow-wrap: anywhere; }
+.current-condition + .current-condition { border-left: 1px solid #e5ece7; }
+.current-condition dt { display: flex; align-items: flex-start; gap: .4rem; min-height: 2.5em; font-size: .75rem; color: #506359; }
+.current-condition dd { margin: .35rem 0; display: flex; gap: .25rem; align-items: baseline; flex-wrap: wrap; }
+.current-condition dd strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; color: #183c2a; }
+.current-condition dd span, .current-condition small { font-size: .68rem; }
+.current-condition small { display: block; margin-top: .2rem; color: #4c6256; }
+.current-condition .condition-forecast { color: #79520d; font-weight: 600; }
+.current-condition .condition-time { font-size: .62rem; }
+@media (max-width: 1200px) { .current-conditions-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .current-conditions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .current-conditions-heading { padding: .8rem; } }
+
+.current-condition-icon { display: inline-block; flex: 0 0 20px; width: 20px; height: 20px; background-color: currentColor; mask-size: contain; mask-repeat: no-repeat; mask-position: center; -webkit-mask-size: contain; -webkit-mask-repeat: no-repeat; -webkit-mask-position: center; }
