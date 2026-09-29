@@ -783,13 +783,13 @@ button { color: inherit; }
 .burncast-legend i { width: 14px; height: 14px; border: 1px solid #64748b; border-radius: 3px; }
 .burncast-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12px; }
 .burncast-table th, .burncast-table td { padding: 8px 10px; min-width: 90px; border-bottom: 1px solid #e2e8f0; text-align: center; }
-.burncast-table th:first-child { position: sticky; left: 0; z-index: 1; min-width: 180px; max-width: 220px; white-space: normal; text-align: left; background: #fff; color: #334154; border-right: 1px solid #dbe3eb; }
+.burncast-table th:first-child { position: sticky; left: 0; z-index: 1; min-width: 180px; font-size: 11px; white-space: nowrap; text-align: left; background: #fff; color: #334154; border-right: 1px solid #dbe3eb; }
 .burncast-table thead th { background: #eef3f8; }
 .burncast-direction { display: inline-block; margin-right: 8px; }
 .burncast-dashboard details { margin-top: 12px; }
 .burncast-dashboard summary { cursor: pointer; text-decoration: underline; margin-bottom: 12px; }
 @media (max-width: 1200px) { .burncast-index-grid { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 480px) { .burncast-table th:first-child { min-width: 135px; max-width: 150px; } }
+@media (max-width: 480px) { .burncast-table th:first-child { min-width: 135px; } }
 
 .burncast-index svg { max-height: 260px; }
 
