@@ -16,6 +16,10 @@ const METRICS = [
   ['SOLAR_RADIATION', 'Solar radiation'], ['WIND_SPEED', 'Wind speed'], ['WIND_CHILL', 'Wind chill'],
 ] as const;
 const finite = (value: number | undefined): value is number => value !== undefined && Number.isFinite(value);
+// Requested display defaults only; preserve missing API values for condition guidance.
+function displayValue(metric: string, value?: number): number | undefined {
+  return !finite(value) && (metric === 'UV_INDEX' || metric === 'HEAT_INDEX') ? 0 : value;
+}
 function riskColor(metric: string, value?: number) {
   if (!finite(value)) return '#e5e7eb';
   const colors = metric === 'HEAT_RISK' ? HEAT_COLORS : FROST_COLORS;
@@ -27,16 +31,16 @@ export function SafecastDashboard({ data, units, language }: {
 }) {
   const timeZone = data.forecast.timeZone || 'UTC';
   const hours = useMemo(() => [...data.products.hourly].sort((a, b) => Date.parse(a.utcDateTime) - Date.parse(b.utcDateTime)), [data]);
-  const format = (metric: string, value?: number) => !finite(value) ? '—' : new Intl.NumberFormat(locale(language), { maximumFractionDigits: 1 }).format(displayMetricValue(metric, value, units));
+  const format = (metric: string, raw?: number) => { const value = displayValue(metric, raw); return !finite(value) ? '—' : new Intl.NumberFormat(locale(language), { maximumFractionDigits: 1 }).format(displayMetricValue(metric, value, units)); };
   const local = (time: string) => new Intl.DateTimeFormat(locale(language), { timeZone, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'shortOffset' }).format(new Date(time));
   const riskLabel = (metric: string, value?: number) => t(finite(value) ? (metric === 'HEAT_RISK' ? HEAT : FROST)[value] ?? 'Unavailable' : 'Unavailable', language);
   const describe = (point: Hour) => `${local(point.utcDateTime)} · ` + METRICS.filter(([key]) => ['TEMPERATURE', 'HEAT_INDEX', 'RELATIVE_HUMIDITY', 'UV_INDEX', 'WIND_SPEED', 'WIND_CHILL'].includes(key)).map(([key, title]) => `${t(title, language)}: ${format(key, point.values[key])} ${metricUnit(key, units)}`).join(' · ') + ` · ${t('Heat risk', language)}: ${riskLabel('HEAT_RISK', point.values.HEAT_RISK)} · ${t('Estimated frostbite exposure', language)}: ${riskLabel('FROSTBITE_RISK', point.values.FROSTBITE_RISK)}`;
   const cell = (metric: string, value?: number, risk?: number) => {
-    const color = metric === 'HEAT_INDEX' ? riskColor('HEAT_RISK', risk) : tableColor(metric, value);
+    const color = !finite(value) && (metric === 'UV_INDEX' || metric === 'HEAT_INDEX') ? '#008000' : metric === 'HEAT_INDEX' ? riskColor('HEAT_RISK', risk) : tableColor(metric, value);
     return { backgroundColor: color, color: ink(color) };
   };
   return <div className="safecast-dashboard">
-    <p className="product-note">{t('Heat index is shown at temperatures of at least 26.7°C. Frostbite exposure times are estimates.', language)}</p>
+    <p className="product-note">{t('Missing UV and heat-index readings display as green zero values (32°F for heat index). These defaults do not confirm safe conditions. Frostbite exposure times are estimates.', language)}</p>
     <SafetyChart hours={hours} kind="heat" units={units} language={language} timeZone={timeZone} describe={describe} />
     <SafetyChart hours={hours} kind="cold" units={units} language={language} timeZone={timeZone} describe={describe} />
     <section className="station-form-card"><h3>{t('Daily forecast summary', language)}</h3>
@@ -116,7 +120,7 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe }: {
   const dateFormat = new Intl.DateTimeFormat(locale(language), { timeZone, weekday: 'short', day: 'numeric' });
   const hourFormat = new Intl.DateTimeFormat(locale(language), { timeZone, hour: 'numeric' });
   const labelEvery = Math.max(1, Math.ceil(76 / cellWidth));
-  const number = (key: string, value?: number) => finite(value) ? new Intl.NumberFormat(locale(language), { maximumFractionDigits: 0 }).format(displayMetricValue(key, value, units)) : '—';
+  const number = (key: string, raw?: number) => { const value = displayValue(key, raw); return finite(value) ? new Intl.NumberFormat(locale(language), { maximumFractionDigits: 0 }).format(displayMetricValue(key, value, units)) : '—'; };
   const uvColor = (value?: number) => !finite(value) ? '#e5e7eb' : value <= 2 ? '#008000' : value <= 5 ? '#ffff00' : value <= 7 ? '#ffa500' : value <= 10 ? '#ff0000' : '#800080';
   const heatColor = (value?: number) => !finite(value) ? '#e5e7eb' : HEAT_COLORS[value >= 54 ? 4 : value >= 46 ? 3 : value >= 39 ? 2 : value >= 33 ? 1 : 0];
   const groups = (key: string) => {
@@ -163,7 +167,7 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe }: {
         {rows.map(([key, name], row) => <g key={key}>
           <text x={compact ? left : left - 6} y={rowTop(row) + (compact ? -9 : 19)} textAnchor={compact ? 'start' : 'end'} fill="#64748b">{t(name, language)}{key === 'HEAT_INDEX' ? ` (${metricUnit(key, units)})` : ''}</text>
           {visible.map((hour, index) => {
-            const value = hour.values[key];
+            const value = displayValue(key, hour.values[key]);
             const fill = key === 'UV_INDEX' ? uvColor(value) : key === 'HEAT_INDEX' ? heatColor(value) : riskColor(key, value);
             const text = key === 'FROSTBITE_RISK' ? finite(value) ? ['>30', '30', '10', '5'][value] ?? '—' : '—' : number(key, value);
             return <g key={hour.utcDateTime} onClick={() => select(index)} onPointerEnter={event => { if (event.pointerType === 'mouse') hover(index); }}><rect x={left + index * cellWidth} y={rowTop(row)} width={cellWidth} height={30} fill={fill} stroke="#263238" strokeWidth={.7} /><text x={x(index)} y={rowTop(row) + 19} textAnchor="middle" fill={ink(fill)} fontSize={10}>{text}</text><title>{describe(hour)}</title></g>;

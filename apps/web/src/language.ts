@@ -1,6 +1,7 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  'Missing UV and heat-index readings display as green zero values (32°F for heat index). These defaults do not confirm safe conditions. Frostbite exposure times are estimates.': 'Los valores faltantes de UV e índice de calor se muestran como cero en verde (32 °F para el índice de calor). Estos valores predeterminados no confirman condiciones seguras. Los tiempos de congelación son estimados.',
   "Close": "Cerrar",
   "Recommendation": "Recomendación",
   "15 : 45": "15 : 45",

@@ -30,7 +30,8 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
   const [saved, setSaved] = useState(false);
   const selection = useRef('');
   const [days, setDays] = useState(7);
-  const forecastDays = kind === 'burncast' ? 15 : days;
+  const fixedForecastPeriod = kind === 'burncast' || kind === 'safecast';
+  const forecastDays = fixedForecastPeriod ? 15 : days;
   const [revision, setRevision] = useState(0);
   const [showSources, setShowSources] = useState(false);
   const [data, setData] = useState<ForecastProductsResponse | null>(null);
@@ -92,7 +93,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
     <div className="product-controls">
       <label className="field"><span>{t('Station', language)}</span><select value={selected?.id ?? ''} onChange={e => setStationId(e.target.value)}>
         {stations.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-      {kind === 'burncast' ? <div className="field"><span>{t('Forecast period', language)}</span><strong>15 {t('days', language)}</strong></div> :
+      {fixedForecastPeriod ? <div className="field"><span>{t('Forecast period', language)}</span><strong>15 {t('days', language)}</strong></div> :
         <label className="field"><span>{t('Forecast period', language)}</span><select value={days} onChange={e => setDays(Number(e.target.value))}>
           {[3, 7, 15].map(value => <option key={value} value={value}>{value} {t('days', language)}</option>)}</select></label>}
     </div>
