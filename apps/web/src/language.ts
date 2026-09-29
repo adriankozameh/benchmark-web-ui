@@ -1,6 +1,10 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  'Heat and UV forecast': 'Pronóstico de calor y radiación UV',
+  'Wind chill and frostbite forecast': 'Pronóstico de sensación térmica y congelación',
+  'Hourly forecast summary': 'Resumen del pronóstico por hora',
+  'Inspect forecast hour': 'Consultar hora del pronóstico',
   "Dispersion index": "Índice de dispersión",
   "View details": "Ver detalles",
   "Daily max. Arrows show the wind source direction at peak transport wind speed.": "Máximos diarios. Las flechas indican de dónde viene el viento en el momento de máxima velocidad de transporte.",

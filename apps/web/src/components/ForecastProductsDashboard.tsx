@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { DisplayUnits, ForecastProductsResponse, UserLanguage, WeatherStation } from '@benchmark/domain';
+import { SafecastDashboard } from './SafecastDashboard';
 import { BurncastDashboard } from './BurncastDashboard';
 import { MetricChart, type ChartPoint } from './ForecastDashboard';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
@@ -17,10 +18,6 @@ const METRICS: Record<ProductKind, Array<[string, string, boolean?]>> = {
     ['UV_INDEX', 'UV index'], ['HEAT_INDEX', 'Heat index'], ['WIND_CHILL', 'Wind chill']],
 };
 const TITLES = { burncast: 'Burncast', farmcast: 'Farmcast', safecast: 'Safecast' };
-const COLORS = ['#287c50', '#b88900', '#e67d25', '#c74430', '#862626'];
-const HEAT = ['Low', 'Caution', 'Extreme caution', 'Danger', 'Extreme danger'];
-const FROST = ['Over 30 min', '30 min', '10 min', '5 min'];
-
 export function ForecastProductsDashboard({ api, organizationId, stations, kind, units, language, onUnauthorized, focusStationId, canManage = false }: {
   api: BenchmarkApi; organizationId: string; stations: WeatherStation[]; kind: ProductKind;
   units: DisplayUnits; language: UserLanguage; onUnauthorized: () => void; focusStationId?: string | null; canManage?: boolean;
@@ -36,7 +33,6 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
   const forecastDays = kind === 'burncast' ? 15 : days;
   const [revision, setRevision] = useState(0);
   const [showSources, setShowSources] = useState(false);
-  const [riskDetail, setRiskDetail] = useState<Record<string, string>>({});
   const [data, setData] = useState<ForecastProductsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +44,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
   }, [organizationId, selected?.id]);
   useEffect(() => {
     let active = true;
-    setData(null); setError(null); setRiskDetail({});
+    setData(null); setError(null);
     if (!selected) { setLoading(false); return; }
     setLoading(true);
     void api.getForecastProducts(organizationId, selected.id, forecastDays).then(result => {
@@ -108,20 +104,6 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
       {data.forecast.count === 0 && <p role="status">{t('No forecast data available for this period.', language)}</p>}
       {kind === 'farmcast' && <p className="product-note">{t('GDD uses a 10°C base. Chilling hours decrease during warm weather. Water balance is precipitation minus evapotranspiration.', language)}</p>}
       {kind === 'burncast' && data.notices.includes('KBDI_UNAVAILABLE') && <p className="product-note">{t('KBDI needs a valid index dated yesterday and complete daily temperature and precipitation forecasts.', language)}</p>}
-      {kind === 'safecast' && <>
-        <p className="product-note">{t('Heat index is shown at temperatures of at least 26.7°C. Frostbite exposure times are estimates.', language)}</p>
-        {(['HEAT_RISK', 'FROSTBITE_RISK'] as const).map(metric => <section className="forecast-chart-card" key={metric}>
-          <h3>{t(metric === 'HEAT_RISK' ? 'Heat risk' : 'Estimated frostbite exposure', language)}</h3>
-          <div className="product-risk-strip" tabIndex={0} role="region" aria-label={t(metric === 'HEAT_RISK' ? 'Heat risk' : 'Estimated frostbite exposure', language)}>
-            {data.products.hourly.map(point => { const value = point.values[metric]; const label = value === undefined ? t('Unavailable', language) : t((metric === 'HEAT_RISK' ? HEAT : FROST)[value], language);
-              return <button type="button" key={point.utcDateTime} onFocus={() => setRiskDetail(old => ({ ...old, [metric]: `${local(point.utcDateTime)} · ${label}` }))} onClick={() => setRiskDetail(old => ({ ...old, [metric]: `${local(point.utcDateTime)} · ${label}` }))} title={`${local(point.utcDateTime)} · ${label}`} aria-label={`${local(point.utcDateTime)} · ${label}`}
-                style={{ background: value === undefined ? '#7c8795' : COLORS[value] }}>{label}</button>;
-            })}
-          </div>
-          {riskDetail[metric] && <p role="status" className="product-note">{riskDetail[metric]}</p>}
-          <p className="product-note">{t('Each block represents one hour. Focus or hover for the local time.', language)}</p>
-        </section>)}
-      </>}
       {kind === 'farmcast' && <section className="station-form-card">
         <h3>{t('Season accumulation', language)}</h3>
         <form onSubmit={e => { e.preventDefault(); void saveSettings(); }}>
@@ -155,7 +137,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
           return <div key={metric}><span>{t(title, language)}</span><strong>{format(metric, value)} {metricUnit(metric, units)}</strong></div>;
         })}</div><p className="product-note">{t('Totals cover the selected forecast period, not the historical season. Incomplete periods show a dash.', language)}</p>
       </section>}
-      {kind === 'burncast' ? <BurncastDashboard data={data} units={units} language={language} /> : <>
+      {kind === 'burncast' ? <BurncastDashboard data={data} units={units} language={language} /> : kind === 'safecast' ? <SafecastDashboard data={data} units={units} language={language} /> : <>
       <div className="forecast-chart-grid">{METRICS[kind].map(([metric, title, daily]) => {
         const points = toPoints(!!daily);
         return points.some(p => p.values[metric] !== undefined)

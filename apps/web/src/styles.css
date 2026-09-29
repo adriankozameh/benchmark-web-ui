@@ -795,3 +795,10 @@ button { color: inherit; }
 
 .burncast-chart { width: 100%; min-width: 0; }
 .burncast-chart svg { display: block; width: 100%; font-family: inherit; font-size: 11px; }
+
+/* Safecast charts use their actual card width; only tables scroll horizontally. */
+.safecast-dashboard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0; }
+.safecast-dashboard > *, .safecast-chart { min-width: 0; max-width: 100%; }
+.safecast-chart svg { display: block; width: 100%; font-family: inherit; font-size: 11px; }
+.safecast-chart svg text { pointer-events: none; }
+.safecast-dashboard input[type="range"] { width: 100%; min-width: 0; padding: 0; }
