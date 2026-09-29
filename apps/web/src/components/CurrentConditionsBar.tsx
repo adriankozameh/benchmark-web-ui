@@ -11,6 +11,8 @@ import rainIcon from '../assets/current-conditions/raindrops.svg';
 import windIcon from '../assets/current-conditions/wind.svg';
 import directionIcon from '../assets/current-conditions/wi-wind-deg.svg';
 
+const COMPASS_DIRECTIONS = ['North', 'North East', 'East', 'South East', 'South', 'South West', 'West', 'North West'] as const;
+
 const METRICS = [
   ['TEMPERATURE', 'Temperature'], ['TEMPERATURE_MIN', 'Minimum temperature'],
   ['TEMPERATURE_MAX', 'Maximum temperature'], ['RELATIVE_HUMIDITY', 'Relative humidity'],
@@ -85,7 +87,9 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
         : candidate.source === 'OBSERVED') ? candidate : undefined;
       const baseMetric = metric.startsWith('TEMPERATURE_') ? 'TEMPERATURE' : metric;
       const value = reading && Number.isFinite(reading.value)
-        ? new Intl.NumberFormat(locale(language), { maximumFractionDigits: metric === 'PRECIPITATION_QUANTITY' ? 2 : 1 })
+        ? metric === 'WIND_DIRECTION'
+          ? t(COMPASS_DIRECTIONS[Math.round(((reading.value % 360 + 360) % 360) / 45) % 8], language)
+          : new Intl.NumberFormat(locale(language), { maximumFractionDigits: metric === 'PRECIPITATION_QUANTITY' ? 2 : 1 })
           .format(displayMetricValue(baseMetric, reading.value, units)) : '—';
       const details = reading ? `${reading.provider.replaceAll('_', ' ')} · ${localTime(reading.validAt)}${reading.periodStart && reading.periodEnd
         ? ` · ${localTime(reading.periodStart)} – ${localTime(reading.periodEnd)}` : ''}` : t('Unavailable', language);
@@ -94,7 +98,7 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
           maskImage: `url("${METRIC_ICONS[metric]}")`, WebkitMaskImage: `url("${METRIC_ICONS[metric]}")`,
           transform: metric === 'WIND_DIRECTION' && reading && Number.isFinite(reading.value)
             ? `rotate(${reading.value}deg)` : undefined,
-        }} /><span>{t(label, language)}</span></dt><dd><strong>{value}</strong>{reading && <span>{metricUnit(baseMetric, units)}</span>}</dd>
+        }} /><span>{t(label, language)}</span></dt><dd><strong className={metric === 'WIND_DIRECTION' ? 'current-condition-direction' : undefined}>{value}</strong>{reading && metric !== 'WIND_DIRECTION' && <span>{metricUnit(baseMetric, units)}</span>}</dd>
         <small className={reading?.source === 'FORECAST' ? 'condition-forecast' : ''}>
           {reading ? t(reading.source === 'OBSERVED' ? 'Observed' : 'IBM forecast', language) : t('Unavailable', language)}
         </small>

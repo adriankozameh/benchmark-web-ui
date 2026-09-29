@@ -1,6 +1,8 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  'North': 'Norte', 'North East': 'Noreste', 'East': 'Este', 'South East': 'Sureste',
+  'South': 'Sur', 'South West': 'Suroeste', 'West': 'Oeste', 'North West': 'Noroeste',
   'Today — station local time': 'Hoy — hora local de la estación',
   'Station readings are stale.': 'Las lecturas de la estación están desactualizadas.',
   'Station readings unavailable.': 'Lecturas de la estación no disponibles.',

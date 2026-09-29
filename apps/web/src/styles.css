@@ -850,3 +850,5 @@ button { color: inherit; }
 @media (max-width: 600px) { .current-conditions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .current-conditions-heading { padding: .8rem; } }
 
 .current-condition-icon { display: inline-block; flex: 0 0 20px; width: 20px; height: 20px; background-color: currentColor; mask-size: contain; mask-repeat: no-repeat; mask-position: center; -webkit-mask-size: contain; -webkit-mask-repeat: no-repeat; -webkit-mask-position: center; }
+
+.current-condition dd strong.current-condition-direction { font-size: 1rem; line-height: 1.4; }
