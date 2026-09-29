@@ -243,7 +243,7 @@ const spanish: Record<string, string> = {
   'Atmospheric dispersion index': 'Índice de dispersión atmosférica', 'Cloud cover': 'Nubosidad',
   Evapotranspiration: 'Evapotranspiración', 'Haines index': 'Índice de Haines',
   'Mixing height': 'Altura de mezcla', 'Precipitation chance': 'Probabilidad de precipitación',
-  Precipitation: 'Precipitación', 'Precipitation probability above': 'Probabilidad de precipitación superior',
+  'Precipitation today': 'Precipitación de hoy', Precipitation: 'Precipitación', 'Precipitation probability above': 'Probabilidad de precipitación superior',
   'Precipitation probability below': 'Probabilidad de precipitación inferior',
   Pressure: 'Presión', 'Relative humidity': 'Humedad relativa',
   'Solar radiation': 'Radiación solar', Temperature: 'Temperatura',

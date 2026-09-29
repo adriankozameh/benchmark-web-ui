@@ -17,7 +17,7 @@ const METRICS = [
   ['TEMPERATURE', 'Temperature'], ['TEMPERATURE_MIN', 'Minimum temperature'],
   ['TEMPERATURE_MAX', 'Maximum temperature'], ['RELATIVE_HUMIDITY', 'Relative humidity'],
   ['WIND_SPEED', 'Wind speed'], ['WIND_DIRECTION', 'Wind direction'],
-  ['PRECIPITATION_QUANTITY', 'Precipitation'], ['PRECIPITATION_CHANCE', 'Precipitation chance'],
+  ['PRECIPITATION_QUANTITY', 'Precipitation today'], ['PRECIPITATION_CHANCE', 'Precipitation chance'],
 ] as const;
 const METRIC_ICONS: Record<(typeof METRICS)[number][0], string> = {
   TEMPERATURE: thermostatIcon, TEMPERATURE_MIN: minimumIcon, TEMPERATURE_MAX: maximumIcon,
@@ -84,7 +84,7 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
       // Enforce the display contract even while an older backend is being replaced.
       const reading = candidate && (metric === 'PRECIPITATION_CHANCE'
         ? candidate.source === 'FORECAST' && candidate.provider === 'IBM_GRAF'
-        : candidate.source === 'OBSERVED') ? candidate : undefined;
+        : candidate.source === 'OBSERVED' && (metric !== 'PRECIPITATION_QUANTITY' || candidate.period === 'LOCAL_DAY')) ? candidate : undefined;
       const baseMetric = metric.startsWith('TEMPERATURE_') ? 'TEMPERATURE' : metric;
       const value = reading && Number.isFinite(reading.value)
         ? metric === 'WIND_DIRECTION'
