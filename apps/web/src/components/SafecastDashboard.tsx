@@ -5,7 +5,7 @@ import { locale, t } from '../language';
 import { heatCondition, frostbiteCondition } from './safecastConditions';
 import { ink, tableColor } from './burncastColors';
 
-type Hour = ForecastProductsResponse['products']['hourly'][number];
+type Hour = NonNullable<ForecastProductsResponse['products']['hourly']>[number];
 const HEAT = ['Low', 'Caution', 'Extreme caution', 'Danger', 'Extreme danger'];
 const FROST = ['Over 30 min', '30 min', '10 min', '5 min'];
 const HEAT_COLORS = ['#008000', '#ffff00', '#ffb347', '#ff8c00', '#ff0000'];
@@ -30,7 +30,7 @@ export function SafecastDashboard({ data, units, language }: {
   data: ForecastProductsResponse; units: DisplayUnits; language: UserLanguage;
 }) {
   const timeZone = data.forecast.timeZone || 'UTC';
-  const hours = useMemo(() => [...data.products.hourly].sort((a, b) => Date.parse(a.utcDateTime) - Date.parse(b.utcDateTime)), [data]);
+  const hours = useMemo(() => [...(data.products.hourly ?? [])].sort((a, b) => Date.parse(a.utcDateTime) - Date.parse(b.utcDateTime)), [data]);
   const numberFormatter = useMemo(() => new Intl.NumberFormat(locale(language), { maximumFractionDigits: 1 }), [language]);
   const dateFormatter = useMemo(() => new Intl.DateTimeFormat(locale(language), { timeZone, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'shortOffset' }), [language, timeZone]);
   const format = (metric: string, raw?: number) => { const value = displayValue(metric, raw); return !finite(value) ? '—' : numberFormatter.format(displayMetricValue(metric, value, units)); };

@@ -1,7 +1,7 @@
 import { CurrentConditionsBar } from './CurrentConditionsBar';
 import { useEffect, useRef, useState } from 'react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
-import type { DisplayUnits, ForecastProductsResponse, UserLanguage, WeatherStation } from '@benchmark/domain';
+import type { DisplayUnits, ForecastProductsResponse, ForecastProductSources, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { SafecastDashboard } from './SafecastDashboard';
 import { BurncastDashboard } from './BurncastDashboard';
 import { MetricChart, type ChartPoint } from './ForecastDashboard';
@@ -36,6 +36,8 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
   const forecastDays = fixedForecastPeriod ? 15 : days;
   const [revision, setRevision] = useState(0);
   const [showSources, setShowSources] = useState(false);
+  const [sources, setSources] = useState<ForecastProductSources | null>(null);
+  const [sourcesError, setSourcesError] = useState<string | null>(null);
   const [data, setData] = useState<ForecastProductsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +81,19 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
     load(revision > 0);
     return () => { active = false; if (timer) clearTimeout(timer); };
   }, [api, organizationId, selected?.id, selected?.updatedAt, forecastDays, kind, revision, onUnauthorized]);
+  useEffect(() => {
+    setSources(null); setSourcesError(null);
+    if (!showSources || !selected || !data) return;
+    const abort = new AbortController();
+    void api.getForecastProductSources(organizationId, selected.id, forecastDays, kind, abort.signal)
+      .then(result => { if (!abort.signal.aborted) setSources(result); })
+      .catch((cause: unknown) => {
+        if (abort.signal.aborted) return;
+        if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
+        else setSourcesError(errorMessage(cause, lang.current));
+      });
+    return () => abort.abort();
+  }, [api, organizationId, selected?.id, selected?.updatedAt, forecastDays, kind, showSources, data?.cacheVersion, onUnauthorized]);
   const saveSettings = async () => {
     if (!selected || !canManage || saving) return;
     const target = selection.current;
@@ -177,9 +192,12 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
       </section>
       </>}
       <details className="station-form-card" onToggle={e => setShowSources(e.currentTarget.open)}><summary>{t('Forecast sources', language)}</summary>
+        {showSources && !sources && !sourcesError && <p role="status">{t('Loading forecasts…', language)}</p>}
+        {sourcesError && <p className="alert error" role="alert">{sourcesError}</p>}
+
         <div className="product-table-scroll" tabIndex={0} role="region" aria-label={t('Forecast sources', language)}><table><thead><tr><th>{t('Local time', language)}</th><th>{t('Metric', language)}</th><th>{t('Provider', language)}</th></tr></thead>
-          <tbody>{showSources && data.forecast.points.flatMap(point => Object.keys(point.sources).map(metric =>
-            <tr key={`${point.utcDateTime}-${metric}`}><td>{local(point.utcDateTime)}</td><td>{t(METRICS[kind].find(([key]) => key === metric)?.[1] ?? metric.replaceAll('_', ' '), language)}</td><td>{point.sources[metric].provider}</td></tr>))}</tbody>
+          <tbody>{showSources && sources?.points.flatMap(point => Object.keys(point.sources).map(metric =>
+            <tr key={`${point.utcDateTime}-${metric}`}><td>{local(point.utcDateTime)}</td><td>{t(METRICS[kind].find(([key]) => key === metric)?.[1] ?? metric.replaceAll('_', ' '), language)}</td><td>{point.sources[metric]}</td></tr>))}</tbody>
         </table></div><p className="product-note">{t('Derived metrics use the unified inputs for the same time or local day.', language)}</p>
       </details>
     </>}

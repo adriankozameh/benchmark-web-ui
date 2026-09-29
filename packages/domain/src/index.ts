@@ -210,21 +210,19 @@ export type OrganizationMember = {
 export type FarmcastSettings = { gddStartDate: string | null; chillingStartDate: string | null };
 export type FarmcastSeasonTotal = { startDate: string; throughDate: string; value: number | null;
   availableSamples: number; expectedSamples: number; complete: boolean };
+export type ForecastProduct = 'burncast' | 'safecast' | 'farmcast';
+export type ForecastProductSources = {
+  points: Array<{ utcDateTime: string; sources: Record<string, string> }>;
+};
 export type ForecastProductsResponse = {
   expiresAt?: string;
   cacheVersion?: string;
-  settings: FarmcastSettings;
-  season: { growingDegreeDays: FarmcastSeasonTotal | null; chillingHours: FarmcastSeasonTotal | null; timeStandard: string };
-  forecast: Omit<StationTimeSeries, 'points'> & {
-    providerPriority: string[];
-    points: Array<Omit<StationTimeSeriesPoint, 'provider' | 'hoursFrom0Time'> & {
-      sources: Record<string, { provider: string; hoursFrom0Time: number | null }>;
-    }>;
-  };
+  settings?: FarmcastSettings;
+  season?: { growingDegreeDays: FarmcastSeasonTotal | null; chillingHours: FarmcastSeasonTotal | null; timeStandard: string };
+  forecast: { from: string; to: string; timeZone: string; count: number };
   products: {
-    hourly: Array<{ utcDateTime: string; values: Record<string, number> }>;
-    daily: Array<{ localDate: string; utcDateTime: string; expectedHours: number;
-      availableHours: Record<string, number>; values: Record<string, number> }>;
+    hourly?: Array<{ utcDateTime: string; values: Record<string, number> }>;
+    daily: Array<{ localDate: string; utcDateTime: string; values: Record<string, number> }>;
   };
   notices: string[];
 };

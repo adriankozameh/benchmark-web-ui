@@ -2,6 +2,8 @@ import type {
   ApiErrorPayload,
   CurrentConditions,
   ForecastProductsResponse,
+  ForecastProduct,
+  ForecastProductSources,
   FarmcastSettings,
   ProviderConnectionResult,
   ObservationBackfillResponse,
@@ -59,7 +61,7 @@ export class BenchmarkApi {
   }
 
   getCachedForecastProducts(organizationId: string, stationId: string, days: number,
-    product = 'all', stationVersion = ''): ForecastProductsResponse | null {
+    product: ForecastProduct, stationVersion = ''): ForecastProductsResponse | null {
     const key = this.forecastKey(organizationId, stationId, days, product, stationVersion);
     const entry = this.forecastResponses.get(key);
     if (!entry) return null;
@@ -178,7 +180,7 @@ export class BenchmarkApi {
   }
 
   getForecastProducts(organizationId: string, stationId: string, days: number,
-    product = 'all', stationVersion = '', refresh = false): Promise<ForecastProductsResponse> {
+    product: ForecastProduct, stationVersion = '', refresh = false): Promise<ForecastProductsResponse> {
     const key = this.forecastKey(organizationId, stationId, days, product, stationVersion);
     const cached = this.getCachedForecastProducts(organizationId, stationId, days, product, stationVersion);
     const entry = this.forecastResponses.get(key);
@@ -207,6 +209,13 @@ export class BenchmarkApi {
       }).finally(() => { if (this.forecastRequests.get(key) === request) this.forecastRequests.delete(key); });
     this.forecastRequests.set(key, request);
     return request;
+  }
+
+  getForecastProductSources(organizationId: string, stationId: string, days: number,
+    product: ForecastProduct, signal?: AbortSignal): Promise<ForecastProductSources> {
+    const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/stations/${encodeURIComponent(stationId)}/timeseries/forecast/products/sources`;
+    return this.request(`${path}?${new URLSearchParams({ days: String(days), product })}`, { signal });
   }
 
   getStationForecast(
