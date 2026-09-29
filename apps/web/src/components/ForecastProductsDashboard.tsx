@@ -30,6 +30,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const selection = useRef('');
+  const appliedSettings = useRef<string | null>(null);
   const [days, setDays] = useState(7);
   const fixedForecastPeriod = kind === 'burncast' || kind === 'safecast';
   const forecastDays = fixedForecastPeriod ? 15 : days;
@@ -42,26 +43,42 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
   const selected = stations.find(s => s.id === stationId) ?? stations[0];
   selection.current = `${organizationId}/${selected?.id ?? ''}`;
   useEffect(() => {
+    appliedSettings.current = null;
     setGddStart(''); setChillStart(''); setSaveError(null); setSaved(false); setSaving(false);
   }, [organizationId, selected?.id]);
   useEffect(() => {
     let active = true;
-    setData(null); setError(null);
-    if (!selected) { setLoading(false); return; }
-    setLoading(true);
-    void api.getForecastProducts(organizationId, selected.id, forecastDays).then(result => {
-      if (active) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let enrichmentChecks = 0;
+    setError(null);
+    if (!selected) { setData(null); setLoading(false); return; }
+    const cached = api.getCachedForecastProducts(organizationId, selected.id, forecastDays, kind, selected.updatedAt);
+    setData(cached);
+    setLoading(!cached);
+    const load = (refresh: boolean) => {
+      void api.getForecastProducts(organizationId, selected.id, forecastDays, kind, selected.updatedAt, refresh).then(result => {
+        if (!active) return;
         setData(result);
-        setGddStart(result.settings?.gddStartDate ?? '');
-        setChillStart(result.settings?.chillingStartDate ?? '');
-      }
-    }).catch((cause: unknown) => {
-      if (!active) return;
-      if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
-      else setError(errorMessage(cause, lang.current));
-    }).finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [api, organizationId, selected?.id, selected?.updatedAt, forecastDays, revision, onUnauthorized]);
+        const settingsKey = JSON.stringify(result.settings);
+        if (appliedSettings.current !== settingsKey) {
+          appliedSettings.current = settingsKey;
+          setGddStart(result.settings?.gddStartDate ?? '');
+          setChillStart(result.settings?.chillingStartDate ?? '');
+        }
+        const pending = result.notices.includes('ENRICHMENT_PENDING') && enrichmentChecks++ < 12;
+        const expiry = Date.parse(result.expiresAt ?? '');
+        const delay = pending ? 5_000 : Number.isFinite(expiry) ? Math.min(60_000, Math.max(1_000, expiry - Date.now() + 100)) : 60_000;
+        timer = setTimeout(() => { if (active) load(true); }, delay);
+      }).catch((cause: unknown) => {
+        if (!active) return;
+        if (cause instanceof BenchmarkApiError && (cause.status === 401 || cause.status === 403)) setData(null);
+        if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
+        else setError(errorMessage(cause, lang.current));
+      }).finally(() => { if (active) setLoading(false); });
+    };
+    load(revision > 0);
+    return () => { active = false; if (timer) clearTimeout(timer); };
+  }, [api, organizationId, selected?.id, selected?.updatedAt, forecastDays, kind, revision, onUnauthorized]);
   const saveSettings = async () => {
     if (!selected || !canManage || saving) return;
     const target = selection.current;

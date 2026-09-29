@@ -852,3 +852,9 @@ button { color: inherit; }
 .current-condition-icon { display: inline-block; flex: 0 0 20px; width: 20px; height: 20px; background-color: currentColor; mask-size: contain; mask-repeat: no-repeat; mask-position: center; -webkit-mask-size: contain; -webkit-mask-repeat: no-repeat; -webkit-mask-position: center; }
 
 .current-condition dd strong.current-condition-direction { font-size: 1rem; line-height: 1.4; }
+
+/* Only visible hourly columns are mounted; spacer columns retain the 15-day scroll range. */
+.safecast-hourly-table { table-layout: fixed; }
+.safecast-hourly-table th:first-child { width: 210px; min-width: 210px; }
+.safecast-hourly-table .hour-spacer { padding: 0; min-width: 0; border: 0; }
+.safecast-hourly-table thead th { height: 72px; }

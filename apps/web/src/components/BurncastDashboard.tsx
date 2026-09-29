@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { DisplayUnits, ForecastProductsResponse, UserLanguage } from '@benchmark/domain';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { locale, t } from '../language';
@@ -34,9 +34,11 @@ export function BurncastDashboard({ data, units, language }: { data: ForecastPro
   const height = compact ? 345 : 300, left = compact ? 42 : 150, right = compact ? 35 : 65, top = compact ? 65 : 45, bottom = compact ? 190 : 175;
   const width = fireSize.width, plot = Math.max(1, width - left - right);
   const x = (index: number) => left + plot * (index + .5) / Math.max(1, days.length);
-  const label = (day: Day) => new Intl.DateTimeFormat(locale(language), { weekday: 'short', day: '2-digit', timeZone: 'UTC' }).format(new Date(day.localDate + 'T12:00:00Z'));
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(locale(language), { weekday: 'short', day: '2-digit', timeZone: 'UTC' }), [language]);
+  const numberFormatter = useMemo(() => new Intl.NumberFormat(locale(language), { maximumFractionDigits: 1 }), [language]);
+  const label = (day: Day) => dateFormatter.format(new Date(day.localDate + 'T12:00:00Z'));
   const value = (day: Day, metric: string, suffix = '_MAX') => day.values[metric + suffix];
-  const format = (metric: string, raw?: number) => raw === undefined ? '—' : new Intl.NumberFormat(locale(language), { maximumFractionDigits: 1 }).format(displayMetricValue(metric, raw, units));
+  const format = (metric: string, raw?: number) => raw === undefined ? '—' : numberFormatter.format(displayMetricValue(metric, raw, units));
   const display = (metric: string, raw: number) => displayMetricValue(metric, raw, units);
   const maximum = (metric: string) => Math.max(1, ...days.map(d => display(metric, value(d, metric) ?? 0))) * 1.1;
   const mhMax = maximum('MIXING_HEIGHT'), windMax = maximum('TRANSPORT_WIND_SPEED');
@@ -46,13 +48,7 @@ export function BurncastDashboard({ data, units, language }: { data: ForecastPro
     days.forEach((day, i) => { const v = value(day, metric); if (v === undefined) { if (group.length) groups.push(group); group = []; } else group.push({ i, v: display(metric, v) }); });
     if (group.length) groups.push(group); return groups;
   };
-  const direction = (day: Day) => {
-    const start = Date.parse(day.utcDateTime), index = days.indexOf(day);
-    const end = index + 1 < days.length ? Date.parse(days[index + 1].utcDateTime) : Date.parse(data.forecast.to);
-    const peak = data.products.hourly.filter(h => Date.parse(h.utcDateTime) >= start && Date.parse(h.utcDateTime) < end && h.values.TRANSPORT_WIND_SPEED !== undefined)
-      .reduce<(typeof data.products.hourly)[number] | undefined>((best, h) => !best || h.values.TRANSPORT_WIND_SPEED > best.values.TRANSPORT_WIND_SPEED ? h : best, undefined);
-    return peak?.values.TRANSPORT_WIND_DIRECTION;
-  };
+  const direction = (day: Day) => day.values.TRANSPORT_WIND_DIRECTION_AT_MAX;
   const info = (day: Day) => `${day.localDate} · ${t('Mixing height', language)}: ${format('MIXING_HEIGHT', value(day, 'MIXING_HEIGHT'))} ${metricUnit('MIXING_HEIGHT', units)} · ${t('Transport wind speed', language)}: ${format('TRANSPORT_WIND_SPEED', value(day, 'TRANSPORT_WIND_SPEED'))} ${metricUnit('TRANSPORT_WIND_SPEED', units)} · ${t('Transport wind direction', language)}: ${format('TRANSPORT_WIND_DIRECTION', direction(day))}° · ${t('Ventilation rate', language)}: ${format('VENTILATION_RATE', value(day, 'VENTILATION_RATE'))} ${metricUnit('VENTILATION_RATE', units)} · ${t('Haines index', language)}: ${format('HAINES_INDEX', value(day, 'HAINES_INDEX'))}`;
   function dailyTable(metrics: Array<[string, string]>, extrema: boolean) {
     return <div className="burncast-scroll" tabIndex={0} role="region" aria-label={t('Daily forecast summary', language)}><table className="burncast-table">

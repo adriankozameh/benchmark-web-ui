@@ -44,6 +44,32 @@ type RequestOptions = {
 };
 
 export class BenchmarkApi {
+  private readonly forecastResponses = new Map<string, { data: ForecastProductsResponse; checkedAt: number }>();
+  private readonly forecastRequests = new Map<string, Promise<ForecastProductsResponse>>();
+  private forecastCacheRevision = 0;
+
+  clearForecastCache(): void {
+    this.forecastCacheRevision++;
+    this.forecastResponses.clear();
+    this.forecastRequests.clear();
+  }
+
+  private forecastKey(organizationId: string, stationId: string, days: number, product: string, stationVersion: string): string {
+    return JSON.stringify([organizationId, stationId, days, product, stationVersion]);
+  }
+
+  getCachedForecastProducts(organizationId: string, stationId: string, days: number,
+    product = 'all', stationVersion = ''): ForecastProductsResponse | null {
+    const key = this.forecastKey(organizationId, stationId, days, product, stationVersion);
+    const entry = this.forecastResponses.get(key);
+    if (!entry) return null;
+    if (Date.parse(entry.data.expiresAt ?? '') <= Date.now() || !entry.data.expiresAt) {
+      this.forecastResponses.delete(key);
+      return null;
+    }
+    return entry.data;
+  }
+
   constructor(
     private readonly baseUrl: string,
     private readonly getAccessToken: AccessTokenProvider,
@@ -139,20 +165,48 @@ export class BenchmarkApi {
     return this.request(`/api/v1/organizations/${organizationId}/stations`);
   }
 
-  saveForecastSettings(organizationId: string, stationId: string, settings: FarmcastSettings): Promise<FarmcastSettings> {
-    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/stations/${encodeURIComponent(stationId)}/forecast-settings`, {
+  async saveForecastSettings(organizationId: string, stationId: string, settings: FarmcastSettings): Promise<FarmcastSettings> {
+    const result = await this.request<FarmcastSettings>(`/api/v1/organizations/${encodeURIComponent(organizationId)}/stations/${encodeURIComponent(stationId)}/forecast-settings`, {
       method: 'PUT', body: settings,
     });
+    this.clearForecastCache();
+    return result;
   }
 
   getCurrentConditions(organizationId: string, stationId: string, signal?: AbortSignal): Promise<CurrentConditions> {
     return this.request(`/api/v1/organizations/${organizationId}/stations/${stationId}/current-conditions`, { signal });
   }
 
-  getForecastProducts(organizationId: string, stationId: string, days: number): Promise<ForecastProductsResponse> {
+  getForecastProducts(organizationId: string, stationId: string, days: number,
+    product = 'all', stationVersion = '', refresh = false): Promise<ForecastProductsResponse> {
+    const key = this.forecastKey(organizationId, stationId, days, product, stationVersion);
+    const cached = this.getCachedForecastProducts(organizationId, stationId, days, product, stationVersion);
+    const entry = this.forecastResponses.get(key);
+    // Brief reuse avoids repeat navigation requests; revalidate against the shared server cache
+    // after a minute so an ingestion completing mid-hour becomes visible.
+    const maxAge = cached?.notices.includes('ENRICHMENT_PENDING') ? 5_000 : 60_000;
+    if (!refresh && cached && entry && Date.now() - entry.checkedAt < maxAge) return Promise.resolve(cached);
+    const pending = this.forecastRequests.get(key);
+    if (pending) return pending;
+    const revision = this.forecastCacheRevision;
     const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
       `/stations/${encodeURIComponent(stationId)}/timeseries/forecast/products`;
-    return this.request(`${path}?${new URLSearchParams({ days: String(days) })}`);
+    const request = this.request<ForecastProductsResponse>(`${path}?${new URLSearchParams({ days: String(days), product })}`)
+      .then(data => {
+        const previous = this.forecastResponses.get(key)?.data;
+        const response = previous?.cacheVersion && previous.cacheVersion === data.cacheVersion ? previous : data;
+        if (revision === this.forecastCacheRevision) {
+          this.forecastResponses.delete(key);
+          this.forecastResponses.set(key, { data: response, checkedAt: Date.now() });
+          while (this.forecastResponses.size > 24) this.forecastResponses.delete(this.forecastResponses.keys().next().value!);
+        }
+        return response;
+      }).catch(error => {
+        if (error instanceof BenchmarkApiError && (error.status === 401 || error.status === 403)) this.clearForecastCache();
+        throw error;
+      }).finally(() => { if (this.forecastRequests.get(key) === request) this.forecastRequests.delete(key); });
+    this.forecastRequests.set(key, request);
+    return request;
   }
 
   getStationForecast(

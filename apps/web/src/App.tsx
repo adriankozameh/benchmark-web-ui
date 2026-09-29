@@ -102,8 +102,9 @@ function ConfiguredApp({ config }: { config: AppConfig }) {
   const [callbackError, setCallbackError] = useState<string | null>(null);
   const onUnauthorized = useCallback(() => {
     auth.clear();
+    api.clearForecastCache();
     setAuthenticated(false);
-  }, [auth]);
+  }, [auth, api]);
 
   useEffect(() => {
     if (window.location.pathname !== '/auth/callback') return;
@@ -161,7 +162,7 @@ function ConfiguredApp({ config }: { config: AppConfig }) {
   return (
     <AuthenticatedApp
       api={api}
-      onLogout={() => auth.logout()}
+      onLogout={() => { api.clearForecastCache(); auth.logout(); }}
       onUnauthorized={onUnauthorized}
     />
   );

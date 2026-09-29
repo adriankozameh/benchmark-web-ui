@@ -211,6 +211,8 @@ export type FarmcastSettings = { gddStartDate: string | null; chillingStartDate:
 export type FarmcastSeasonTotal = { startDate: string; throughDate: string; value: number | null;
   availableSamples: number; expectedSamples: number; complete: boolean };
 export type ForecastProductsResponse = {
+  expiresAt?: string;
+  cacheVersion?: string;
   settings: FarmcastSettings;
   season: { growingDegreeDays: FarmcastSeasonTotal | null; chillingHours: FarmcastSeasonTotal | null; timeStandard: string };
   forecast: Omit<StationTimeSeries, 'points'> & {

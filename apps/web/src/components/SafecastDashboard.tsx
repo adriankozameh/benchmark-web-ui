@@ -31,8 +31,10 @@ export function SafecastDashboard({ data, units, language }: {
 }) {
   const timeZone = data.forecast.timeZone || 'UTC';
   const hours = useMemo(() => [...data.products.hourly].sort((a, b) => Date.parse(a.utcDateTime) - Date.parse(b.utcDateTime)), [data]);
-  const format = (metric: string, raw?: number) => { const value = displayValue(metric, raw); return !finite(value) ? '—' : new Intl.NumberFormat(locale(language), { maximumFractionDigits: 1 }).format(displayMetricValue(metric, value, units)); };
-  const local = (time: string) => new Intl.DateTimeFormat(locale(language), { timeZone, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'shortOffset' }).format(new Date(time));
+  const numberFormatter = useMemo(() => new Intl.NumberFormat(locale(language), { maximumFractionDigits: 1 }), [language]);
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(locale(language), { timeZone, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'shortOffset' }), [language, timeZone]);
+  const format = (metric: string, raw?: number) => { const value = displayValue(metric, raw); return !finite(value) ? '—' : numberFormatter.format(displayMetricValue(metric, value, units)); };
+  const local = (time: string) => dateFormatter.format(new Date(time));
   const riskLabel = (metric: string, value?: number) => t(finite(value) ? (metric === 'HEAT_RISK' ? HEAT : FROST)[value] ?? 'Unavailable' : 'Unavailable', language);
   const describe = (point: Hour) => `${local(point.utcDateTime)} · ` + METRICS.filter(([key]) => ['TEMPERATURE', 'HEAT_INDEX', 'RELATIVE_HUMIDITY', 'UV_INDEX', 'WIND_SPEED', 'WIND_CHILL'].includes(key)).map(([key, title]) => `${t(title, language)}: ${format(key, point.values[key])} ${metricUnit(key, units)}`).join(' · ') + ` · ${t('Heat risk', language)}: ${riskLabel('HEAT_RISK', point.values.HEAT_RISK)} · ${t('Estimated frostbite exposure', language)}: ${riskLabel('FROSTBITE_RISK', point.values.FROSTBITE_RISK)}`;
   const cell = (metric: string, value?: number, risk?: number) => {
@@ -54,13 +56,49 @@ export function SafecastDashboard({ data, units, language }: {
       </table></div>
     </section>
     <section className="station-form-card"><h3>{t('Hourly forecast summary', language)}</h3>
-      <div className="burncast-scroll" tabIndex={0} role="region" aria-label={t('Hourly forecast summary', language)}><table className="burncast-table">
-        <thead><tr><th>{t('Metric', language)}</th>{hours.map(hour => <th key={hour.utcDateTime}>{local(hour.utcDateTime)}</th>)}</tr></thead>
-        <tbody>{METRICS.map(([metric, title]) => <tr key={metric}><th>{t(title, language)} {metricUnit(metric, units)}</th>{hours.map(hour => <td key={hour.utcDateTime} style={cell(metric, hour.values[metric], hour.values.HEAT_RISK)}>{format(metric, hour.values[metric])}</td>)}</tr>)}
-          {(['HEAT_RISK', 'FROSTBITE_RISK'] as const).map(metric => <tr key={metric}><th>{t(metric === 'HEAT_RISK' ? 'Heat risk' : 'Estimated frostbite exposure', language)}</th>{hours.map(hour => { const color = riskColor(metric, hour.values[metric]); return <td key={hour.utcDateTime} style={{ backgroundColor: color, color: ink(color) }}>{riskLabel(metric, hour.values[metric])}</td>; })}</tr>)}
-        </tbody>
-      </table></div>
+      <HourlySummary hours={hours} language={language} units={units} local={local} format={format} cell={cell} riskLabel={riskLabel} />
     </section>
+  </div>;
+}
+
+/** Fixed-width columns preserve the full scroll range while mounting only the visible hours. */
+function HourlySummary({ hours, language, units, local, format, cell, riskLabel }: {
+  hours: Hour[]; language: UserLanguage; units: DisplayUnits;
+  local: (time: string) => string; format: (metric: string, value?: number) => string;
+  cell: (metric: string, value?: number, risk?: number) => { backgroundColor: string | undefined; color: string };
+  riskLabel: (metric: string, value?: number) => string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [viewport, setViewport] = useState({ left: 0, width: 900 });
+  const labelWidth = 210, columnWidth = 150;
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    element.scrollLeft = 0;
+    const update = () => setViewport({ left: element.scrollLeft, width: element.clientWidth });
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    update();
+    return () => observer.disconnect();
+  }, [hours]);
+  const start = Math.max(0, Math.floor(viewport.left / columnWidth) - 2);
+  const end = Math.min(hours.length, start + Math.ceil(viewport.width / columnWidth) + 5);
+  const visible = hours.slice(start, end);
+  const before = start * columnWidth, after = (hours.length - end) * columnWidth;
+  const spacer = (width: number) => width > 0 ? <td className="hour-spacer" aria-hidden="true" style={{ width }} /> : null;
+  return <div ref={ref} className="burncast-scroll" tabIndex={0} role="region" aria-label={t('Hourly forecast summary', language)}
+    onScroll={event => { const node = event.currentTarget; setViewport({ left: node.scrollLeft, width: node.clientWidth }); }}>
+    <table className="burncast-table safecast-hourly-table" aria-colcount={hours.length + 1} style={{ width: labelWidth + hours.length * columnWidth }}>
+      <colgroup><col style={{ width: labelWidth }} />{before > 0 && <col style={{ width: before }} />}
+        {visible.map(hour => <col key={hour.utcDateTime} style={{ width: columnWidth }} />)}{after > 0 && <col style={{ width: after }} />}</colgroup>
+      <thead><tr><th scope="col" aria-colindex={1}>{t('Metric', language)}</th>{spacer(before)}
+        {visible.map((hour, index) => <th scope="col" aria-colindex={start + index + 2} key={hour.utcDateTime}>{local(hour.utcDateTime)}</th>)}{spacer(after)}</tr></thead>
+      <tbody>{METRICS.map(([metric, title]) => <tr key={metric}><th scope="row" aria-colindex={1}>{t(title, language)} {metricUnit(metric, units)}</th>{spacer(before)}
+        {visible.map((hour, index) => <td aria-colindex={start + index + 2} key={hour.utcDateTime} style={cell(metric, hour.values[metric], hour.values.HEAT_RISK)}>{format(metric, hour.values[metric])}</td>)}{spacer(after)}</tr>)}
+        {(['HEAT_RISK', 'FROSTBITE_RISK'] as const).map(metric => <tr key={metric}><th scope="row" aria-colindex={1}>{t(metric === 'HEAT_RISK' ? 'Heat risk' : 'Estimated frostbite exposure', language)}</th>{spacer(before)}
+          {visible.map((hour, index) => { const color = riskColor(metric, hour.values[metric]); return <td aria-colindex={start + index + 2} key={hour.utcDateTime} style={{ backgroundColor: color, color: ink(color) }}>{riskLabel(metric, hour.values[metric])}</td>; })}{spacer(after)}</tr>)}
+      </tbody>
+    </table>
   </div>;
 }
 
@@ -117,10 +155,11 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe }: {
   const rowTop = (row: number) => bottom + (compact ? 35 : heat ? 12 : 46) + row * (compact ? 57 : 30);
   const axisY = rowTop(rows.length - 1) + 46;
   const height = axisY + 26;
-  const dateFormat = new Intl.DateTimeFormat(locale(language), { timeZone, weekday: 'short', day: 'numeric' });
-  const hourFormat = new Intl.DateTimeFormat(locale(language), { timeZone, hour: 'numeric' });
+  const dateFormat = useMemo(() => new Intl.DateTimeFormat(locale(language), { timeZone, weekday: 'short', day: 'numeric' }), [language, timeZone]);
+  const hourFormat = useMemo(() => new Intl.DateTimeFormat(locale(language), { timeZone, hour: 'numeric' }), [language, timeZone]);
+  const numberFormatter = useMemo(() => new Intl.NumberFormat(locale(language), { maximumFractionDigits: 0 }), [language]);
   const labelEvery = Math.max(1, Math.ceil(76 / cellWidth));
-  const number = (key: string, raw?: number) => { const value = displayValue(key, raw); return finite(value) ? new Intl.NumberFormat(locale(language), { maximumFractionDigits: 0 }).format(displayMetricValue(key, value, units)) : '—'; };
+  const number = (key: string, raw?: number) => { const value = displayValue(key, raw); return finite(value) ? numberFormatter.format(displayMetricValue(key, value, units)) : '—'; };
   const uvColor = (value?: number) => !finite(value) ? '#e5e7eb' : value <= 2 ? '#008000' : value <= 5 ? '#ffff00' : value <= 7 ? '#ffa500' : value <= 10 ? '#ff0000' : '#800080';
   const heatColor = (value?: number) => !finite(value) ? '#e5e7eb' : HEAT_COLORS[value >= 54 ? 4 : value >= 46 ? 3 : value >= 39 ? 2 : value >= 33 ? 1 : 0];
   const groups = (key: string) => {
