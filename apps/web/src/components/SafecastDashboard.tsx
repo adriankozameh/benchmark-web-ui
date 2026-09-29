@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { DisplayUnits, ForecastProductsResponse, UserLanguage } from '@benchmark/domain';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { locale, t } from '../language';
-import { bandColor, ink, tableColor } from './burncastColors';
+import { ink, tableColor } from './burncastColors';
 
 type Hour = ForecastProductsResponse['products']['hourly'][number];
 const HEAT = ['Low', 'Caution', 'Extreme caution', 'Danger', 'Extreme danger'];
@@ -66,8 +66,10 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe, onDetai
   describe: (point: Hour) => string; onDetail: (text: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const gradientId = useId().replaceAll(':', '');
   const [width, setWidth] = useState(600);
-  const [selected, setSelected] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [active, setActive] = useState<number | null>(null);
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
@@ -75,41 +77,92 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe, onDetai
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
-  const heat = kind === 'heat';
-  const title = t(heat ? 'Heat and UV forecast' : 'Wind chill and frostbite forecast', language);
-  const series = heat ? [['TEMPERATURE', 'Temperature', '#f44a00'], ['RELATIVE_HUMIDITY', 'Relative humidity', '#334154']] : [['WIND_CHILL', 'Wind chill', '#2479ab']];
-  const left = 46, right = heat ? 38 : 16, plot = Math.max(1, width - left - right), top = 20, bottom = 175;
-  const start = hours.length ? Date.parse(hours[0].utcDateTime) : 0;
-  const end = hours.length ? Date.parse(hours[hours.length - 1].utcDateTime) + 3600000 : 3600000;
-  const x = (time: number) => left + (time - start) / (end - start) * plot;
-  const values = hours.map(p => p.values[heat ? 'TEMPERATURE' : 'WIND_CHILL']).filter(finite).map(v => displayMetricValue('TEMPERATURE', v, units));
-  const min = values.length ? Math.min(...values) - 2 : 0, max = values.length ? Math.max(...values) + 2 : 1;
-  const y = (metric: string, value: number) => bottom - (metric === 'RELATIVE_HUMIDITY' ? value / 100 : (displayMetricValue(metric, value, units) - min) / (max - min)) * (bottom - top);
-  const strips = heat ? [['UV_INDEX', 'UV index'], ['HEAT_RISK', 'Heat risk']] : [['FROSTBITE_RISK', 'Estimated frostbite exposure']];
-  const height = heat ? 350 : 295;
-  const tickCount = Math.max(2, Math.floor(plot / 95));
-  const tick = (time: number) => new Intl.DateTimeFormat(locale(language), { timeZone, month: 'short', day: 'numeric', hour: '2-digit' }).format(new Date(time));
-  const select = (index: number) => { const i = Math.max(0, Math.min(hours.length - 1, index)); setSelected(i); if (hours[i]) onDetail(describe(hours[i])); };
-  return <section className="forecast-chart-card"><h3>{title}</h3>
-    <div className="burncast-legend">{series.map(([metric, name, color]) => <span key={metric}><i style={{ background: color }} />{t(name, language)} ({metricUnit(metric, units)})</span>)}</div>
+  useEffect(() => { setOffset(0); setActive(null); }, [hours]);
+
+  const heat = kind === 'heat', compact = width < 650;
+  const title = t(heat ? 'Heat Stress' : 'Frostbite', language);
+  const color = heat ? '#f44a00' : '#1976d2';
+  const metric = heat ? 'TEMPERATURE' : 'WIND_CHILL';
+  const left = compact ? 45 : 96, right = heat ? 38 : 20;
+  const plot = Math.max(1, width - left - right), top = compact && heat ? 57 : 38, bottom = 218;
+  // Keep hourly cells readable. The slider pans the same window across every row.
+  const capacity = Math.max(1, Math.min(30, Math.floor(plot / 30)));
+  const maxOffset = Math.max(0, hours.length - capacity);
+  const first = Math.min(offset, maxOffset);
+  const visible = hours.slice(first, first + capacity);
+  const cellWidth = plot / Math.max(1, visible.length);
+  const x = (index: number) => left + (index + .5) * cellWidth;
+  const values = visible.map(p => p.values[metric]).filter(finite).map(v => displayMetricValue(metric, v, units));
+  const low = Math.min(0, ...values), high = Math.max(0, ...values);
+  const roughStep = Math.max(1, (high - low) / 5);
+  const power = 10 ** Math.floor(Math.log10(roughStep));
+  const step = ([1, 2, 5, 10].find(n => n * power >= roughStep) ?? 10) * power;
+  const min = Math.floor(low / step) * step, max = Math.max(min + step, Math.ceil(high / step) * step);
+  const y = (key: string, value: number) => bottom - (key === 'RELATIVE_HUMIDITY' ? value / 100 : (displayMetricValue(key, value, units) - min) / (max - min)) * (bottom - top);
+  const rows = heat ? [['UV_INDEX', 'UV index'], ['HEAT_INDEX', 'Heat index']] : [['FROSTBITE_RISK', 'Frostbite']];
+  const rowTop = (row: number) => bottom + (compact ? 35 : heat ? 12 : 46) + row * (compact ? 57 : 30);
+  const axisY = rowTop(rows.length - 1) + 46;
+  const height = axisY + 26;
+  const dateFormat = new Intl.DateTimeFormat(locale(language), { timeZone, weekday: 'short', day: 'numeric' });
+  const hourFormat = new Intl.DateTimeFormat(locale(language), { timeZone, hour: 'numeric' });
+  const labelEvery = Math.max(1, Math.ceil(76 / cellWidth));
+  const number = (key: string, value?: number) => finite(value) ? new Intl.NumberFormat(locale(language), { maximumFractionDigits: 0 }).format(displayMetricValue(key, value, units)) : '—';
+  const uvColor = (value?: number) => !finite(value) ? '#e5e7eb' : value <= 2 ? '#008000' : value <= 5 ? '#ffff00' : value <= 7 ? '#ffa500' : value <= 10 ? '#ff0000' : '#800080';
+  const heatColor = (value?: number) => !finite(value) ? '#e5e7eb' : HEAT_COLORS[value >= 54 ? 4 : value >= 46 ? 3 : value >= 39 ? 2 : value >= 33 ? 1 : 0];
+  const groups = (key: string) => {
+    const result: Array<Array<{ index: number; value: number }>> = [];
+    visible.forEach((hour, index) => {
+      const value = hour.values[key];
+      if (!finite(value)) return;
+      const group = result[result.length - 1], last = group?.[group.length - 1];
+      const contiguous = last && last.index === index - 1 && Date.parse(hour.utcDateTime) - Date.parse(visible[last.index].utcDateTime) <= 5400000;
+      if (contiguous) group.push({ index, value }); else result.push([{ index, value }]);
+    });
+    return result;
+  };
+  const select = (index: number) => { setActive(index); if (visible[index]) onDetail(describe(visible[index])); };
+  return <section className="forecast-chart-card safecast-legacy-card"><h3>{title}</h3>
     <div ref={ref} className="safecast-chart" role="group" aria-label={title}>
-      <svg viewBox={`0 0 ${width} ${height}`} style={{ height }} role="img" aria-label={title}>
-        {[0, 1, 2, 3, 4].map(i => <g key={i}><line x1={left} x2={width - right} y1={top + (bottom - top) * i / 4} y2={top + (bottom - top) * i / 4} stroke="#dbe3eb" /><text x={left - 7} y={top + (bottom - top) * i / 4 + 4} textAnchor="end">{Math.round(max - (max - min) * i / 4)}</text>{heat && <text x={width - right + 6} y={top + (bottom - top) * i / 4 + 4}>{100 - i * 25}</text>}</g>)}
-        {series.map(([metric, , color]) => { let path = ''; let previous = -Infinity;
-          hours.forEach(hour => { const value = hour.values[metric], time = Date.parse(hour.utcDateTime); if (!finite(value)) { previous = -Infinity; return; } path += `${time - previous > 5400000 ? 'M' : 'L'}${x(time + 1800000)},${y(metric, value)} `; previous = time; });
-          return <path key={metric} d={path} fill="none" stroke={color} strokeWidth={2} />;
+      <svg viewBox={`0 0 ${width} ${height}`} style={{ height }} role="group" aria-label={title}>
+        <defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity=".75" /><stop offset="50%" stopColor={color} stopOpacity=".45" /><stop offset="100%" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+        <text x={left} y={20} fill={color}>{t(heat ? 'Temperature' : 'Wind chill', language)} ({metricUnit(metric, units)})</text>
+        {heat && <text x={compact ? left : width - right} y={compact ? 40 : 20} textAnchor={compact ? 'start' : 'end'} fill="#334154">{t('Relative humidity', language)} (%)</text>}
+        {Array.from({ length: Math.round((max - min) / step) + 1 }, (_, i) => {
+          const v = min + i * step, py = bottom - (v - min) / (max - min) * (bottom - top);
+          return <g key={i}><line x1={left} x2={width - right} y1={py} y2={py} stroke="#e2e5e9" /><text x={left - 7} y={py + 4} textAnchor="end" fill={color}>{v}</text></g>;
         })}
-        {strips.map(([metric, name], row) => <g key={metric}><text x={left} y={205 + row * 55}>{t(name, language)}</text>{hours.map(hour => {
-          const value = hour.values[metric], time = Date.parse(hour.utcDateTime), color = metric === 'UV_INDEX' ? finite(value) ? bandColor(metric, value) : '#e5e7eb' : riskColor(metric, value);
-          return <rect key={hour.utcDateTime} x={x(time)} y={214 + row * 55} width={Math.max(0, x(time + 3600000) - x(time))} height={25} fill={color}><title>{describe(hour)}</title></rect>;
-        })}</g>)}
-        {Array.from({ length: hours.length ? tickCount : 0 }, (_, i) => { const time = start + (end - start) * i / (tickCount - 1); return <text key={i} x={x(time)} y={height - 22} textAnchor={i === 0 ? 'start' : i === tickCount - 1 ? 'end' : 'middle'}>{tick(time)}</text>; })}
-        {hours.map((hour, i) => <rect key={hour.utcDateTime} x={x(Date.parse(hour.utcDateTime))} y={top} width={plot * 3600000 / (end - start)} height={bottom - top} fill="transparent" onClick={() => select(i)}><title>{describe(hour)}</title></rect>)}
+        <line x1={left} x2={left} y1={top} y2={bottom} stroke={color} opacity=".5" />
+        {heat && <><line x1={width - right} x2={width - right} y1={top} y2={bottom} stroke="#334154" opacity=".5" />{[0, 25, 50, 75, 100].map(v => <text key={v} x={width - right + 6} y={y('RELATIVE_HUMIDITY', v) + 4} fill="#334154">{v}</text>)}</>}
+        {(heat ? [metric, 'RELATIVE_HUMIDITY'] : [metric]).map(key => groups(key).map((group, groupIndex) => {
+          const stroke = key === 'RELATIVE_HUMIDITY' ? '#334154' : color;
+          const path = group.map((p, i) => `${i ? 'L' : 'M'}${x(p.index)},${y(key, p.value)}`).join(' ');
+          return <g key={`${key}-${groupIndex}`}>
+            {key === metric && <path d={`${path} L${x(group[group.length - 1].index)},${bottom} L${x(group[0].index)},${bottom} Z`} fill={`url(#${gradientId})`} />}
+            <path d={path} fill="none" stroke={stroke} strokeWidth={1.5} />
+            {group.map(p => <circle key={p.index} cx={x(p.index)} cy={y(key, p.value)} r={1.8} fill="white" stroke={stroke} strokeWidth={1} />)}
+          </g>;
+        }))}
+        {rows.map(([key, name], row) => <g key={key}>
+          <text x={compact ? left : left - 6} y={rowTop(row) + (compact ? -9 : 19)} textAnchor={compact ? 'start' : 'end'} fill="#64748b">{t(name, language)}{key === 'HEAT_INDEX' ? ` (${metricUnit(key, units)})` : ''}</text>
+          {visible.map((hour, index) => {
+            const value = hour.values[key];
+            const fill = key === 'UV_INDEX' ? uvColor(value) : key === 'HEAT_INDEX' ? heatColor(value) : riskColor(key, value);
+            const text = key === 'FROSTBITE_RISK' ? finite(value) ? ['>30', '30', '10', '5'][value] ?? '—' : '—' : number(key, value);
+            return <g key={hour.utcDateTime} onClick={() => select(index)}><rect x={left + index * cellWidth} y={rowTop(row)} width={cellWidth} height={30} fill={fill} stroke="#263238" strokeWidth={.7} /><text x={x(index)} y={rowTop(row) + 19} textAnchor="middle" fill={ink(fill)} fontSize={10}>{text}</text><title>{describe(hour)}</title></g>;
+          })}
+        </g>)}
+        {visible.map((hour, index) => index % labelEvery === 0 && <text key={hour.utcDateTime} x={x(index)} y={axisY} textAnchor={index === 0 ? 'start' : 'middle'} fill="#64748b" fontSize={10}>
+          <tspan x={x(index)}>{dateFormat.format(new Date(hour.utcDateTime))}</tspan><tspan x={x(index)} dy={13}>{hourFormat.format(new Date(hour.utcDateTime))}</tspan>
+        </text>)}
+        {active !== null && visible[active] && <line x1={x(active)} x2={x(active)} y1={top} y2={bottom} stroke="#64748b" strokeDasharray="3 3" />}
+        {visible.map((hour, index) => <rect key={hour.utcDateTime} className="safecast-hour-hit" x={left + index * cellWidth} y={top} width={cellWidth} height={bottom - top} fill="transparent" tabIndex={0} role="button" aria-label={describe(hour)} onFocus={() => select(index)} onClick={() => select(index)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(index); } }}><title>{describe(hour)}</title></rect>)}
       </svg>
     </div>
     {!values.length && <p className="product-note">{t('Required forecast data is unavailable or incomplete.', language)}</p>}
-    <div className="burncast-legend">{(heat ? HEAT : FROST).map((name, i) => <span key={name}><i style={{ background: (heat ? HEAT_COLORS : FROST_COLORS)[i] }} />{t(name, language)}</span>)}</div>
-    {heat && <div className="burncast-legend"><span>{t('UV index', language)}</span>{['0–2', '2–5', '5–7', '7–10', '>10'].map((label, i) => <span key={label}><i style={{ background: bandColor('UV_INDEX', [0, 3, 6, 8, 11][i]) }} />{label}</span>)}</div>}
-    {!!hours.length && <label className="field"><span>{t('Inspect forecast hour', language)} · {tick(Date.parse(hours[Math.min(selected, hours.length - 1)].utcDateTime))}</span><input type="range" min={0} max={hours.length - 1} value={Math.min(selected, hours.length - 1)} onChange={event => select(Number(event.target.value))} aria-valuetext={describe(hours[Math.min(selected, hours.length - 1)])} /></label>}
+    {maxOffset > 0 && <input className="safecast-pan" type="range" min={0} max={maxOffset} value={first} onChange={event => { setOffset(Number(event.target.value)); setActive(null); }} aria-label={t('Move forecast window', language)} aria-valuetext={`${dateFormat.format(new Date(visible[0].utcDateTime))} ${hourFormat.format(new Date(visible[0].utcDateTime))} – ${dateFormat.format(new Date(visible[visible.length - 1].utcDateTime))} ${hourFormat.format(new Date(visible[visible.length - 1].utcDateTime))}`} />}
+    <details className="safecast-key"><summary>{t('View details', language)}</summary><p className="product-note">{t('Move the slider to view later hours. Select a point for details.', language)}</p>
+      <div className="burncast-legend">{(heat ? HEAT : FROST).map((name, i) => <span key={name}><i style={{ background: (heat ? HEAT_COLORS : FROST_COLORS)[i] }} />{t(name, language)}</span>)}</div>
+      {heat && <div className="burncast-legend"><span>{t('UV index', language)}</span>{['0–2', '3–5', '6–7', '8–10', '≥11'].map((label, i) => <span key={label}><i style={{ background: uvColor([0, 3, 6, 8, 11][i]) }} />{label}</span>)}</div>}
+    </details>
   </section>;
 }

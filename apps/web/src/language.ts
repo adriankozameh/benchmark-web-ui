@@ -1,6 +1,10 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  'Heat Stress': 'Estrés térmico',
+  'Frostbite': 'Congelación',
+  'Move forecast window': 'Mover el período visible del pronóstico',
+  'Move the slider to view later hours. Select a point for details.': 'Mueve el control para ver las horas siguientes. Selecciona un punto para ver los detalles.',
   'Heat and UV forecast': 'Pronóstico de calor y radiación UV',
   'Wind chill and frostbite forecast': 'Pronóstico de sensación térmica y congelación',
   'Hourly forecast summary': 'Resumen del pronóstico por hora',
