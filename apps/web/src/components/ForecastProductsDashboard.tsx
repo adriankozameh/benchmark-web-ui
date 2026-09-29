@@ -33,6 +33,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
   const [saved, setSaved] = useState(false);
   const selection = useRef('');
   const [days, setDays] = useState(7);
+  const forecastDays = kind === 'burncast' ? 15 : days;
   const [revision, setRevision] = useState(0);
   const [showSources, setShowSources] = useState(false);
   const [riskDetail, setRiskDetail] = useState<Record<string, string>>({});
@@ -50,7 +51,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
     setData(null); setError(null); setRiskDetail({});
     if (!selected) { setLoading(false); return; }
     setLoading(true);
-    void api.getForecastProducts(organizationId, selected.id, days).then(result => {
+    void api.getForecastProducts(organizationId, selected.id, forecastDays).then(result => {
       if (active) {
         setData(result);
         setGddStart(result.settings?.gddStartDate ?? '');
@@ -62,7 +63,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
       else setError(errorMessage(cause, lang.current));
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [api, organizationId, selected?.id, selected?.updatedAt, days, revision, onUnauthorized]);
+  }, [api, organizationId, selected?.id, selected?.updatedAt, forecastDays, revision, onUnauthorized]);
   const saveSettings = async () => {
     if (!selected || !canManage || saving) return;
     const target = selection.current;
@@ -89,24 +90,23 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
     values: Object.fromEntries(Object.entries(point.values).map(([key, value]) => [key, displayMetricValue(key, value, units)])),
   }));
   return <section className="forecast-products">
-    <div className="page-heading-row"><div><span className="eyebrow">UNIFIER</span><h2>{TITLES[kind]}</h2>
-      <p>{t('Forecasts combined by provider priority. Times use the station time zone.', language)}</p></div>
+    <div className="page-heading-row"><div><h2>{TITLES[kind]}</h2></div>
       <button className="secondary-button" type="button" disabled={loading || !selected} onClick={() => setRevision(v => v + 1)}>{t('Refresh', language)}</button>
     </div>
     <div className="product-controls">
       <label className="field"><span>{t('Station', language)}</span><select value={selected?.id ?? ''} onChange={e => setStationId(e.target.value)}>
         {stations.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-      <label className="field"><span>{t('Forecast period', language)}</span><select value={days} onChange={e => setDays(Number(e.target.value))}>
-        {[3, 7, 15].map(value => <option key={value} value={value}>{value} {t('days', language)}</option>)}</select></label>
+      {kind === 'burncast' ? <div className="field"><span>{t('Forecast period', language)}</span><strong>15 {t('days', language)}</strong></div> :
+        <label className="field"><span>{t('Forecast period', language)}</span><select value={days} onChange={e => setDays(Number(e.target.value))}>
+          {[3, 7, 15].map(value => <option key={value} value={value}>{value} {t('days', language)}</option>)}</select></label>}
     </div>
     {!selected && <p>{t('Create a station to view forecasts.', language)}</p>}
     {loading && <p role="status">{t('Loading forecasts…', language)}</p>}
     {error && <div className="alert error" role="alert">{error}</div>}
     {data && <>
       {data.notices.includes('ENRICHMENT_UNAVAILABLE') && <p role="status" className="product-note">{t('Historical data is still loading or temporarily unavailable. Refresh shortly; forecasts are available below.', language)}</p>}
-      <p className="product-note">{t('Provider priority', language)}: {data.forecast.providerPriority.join(' → ')} · {data.forecast.timeZone}</p>
       {data.forecast.count === 0 && <p role="status">{t('No forecast data available for this period.', language)}</p>}
-      {kind === 'farmcast' && <p className="product-note">{t('GDD uses a 10°C base. Chilling hours decrease during warm weather. Water balance is precipitation minus evapotranspiration. PMI starts at zero and resets after missing hours.', language)}</p>}
+      {kind === 'farmcast' && <p className="product-note">{t('GDD uses a 10°C base. Chilling hours decrease during warm weather. Water balance is precipitation minus evapotranspiration.', language)}</p>}
       {kind === 'burncast' && data.notices.includes('KBDI_UNAVAILABLE') && <p className="product-note">{t('KBDI needs a valid index dated yesterday and complete daily temperature and precipitation forecasts.', language)}</p>}
       {kind === 'safecast' && <>
         <p className="product-note">{t('Heat index is shown at temperatures of at least 26.7°C. Frostbite exposure times are estimates.', language)}</p>
@@ -147,7 +147,6 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
             {!total.complete && <span>{t('Incomplete historical data', language)}</span>}</>
             : <span>{t('Set a start date to calculate this total.', language)}</span>}
         </div>)}</div>
-        <p className="product-note">{t('Historical NASA totals end yesterday (UTC). GDD uses daily mean temperature above 10°C; chilling counts hours from 0°C to 7.22°C, as in the old backend. Forecast totals below use the forecast formulas.', language)}</p>
       </section>}
       {kind === 'farmcast' && <section className="station-form-card"><h3>{t('Forecast-period totals', language)}</h3>
         <div className="product-totals">{METRICS.farmcast.filter(([, , daily]) => daily).map(([metric, title]) => {

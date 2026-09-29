@@ -3,7 +3,7 @@ import type { UserLanguage } from '@benchmark/domain';
 const spanish: Record<string, string> = {
   "Dispersion index": "Índice de dispersión",
   "View details": "Ver detalles",
-  "Daily maxima. Arrows show the wind source direction at peak transport wind speed.": "Máximos diarios. Las flechas indican de dónde viene el viento en el momento de máxima velocidad de transporte.",
+  "Daily max. Arrows show the wind source direction at peak transport wind speed.": "Máximos diarios. Las flechas indican de dónde viene el viento en el momento de máxima velocidad de transporte.",
   "Fire Weather": "Condiciones para incendios",
   'Historical data is still loading or temporarily unavailable. Refresh shortly; forecasts are available below.': 'Los datos históricos siguen cargando o no están disponibles temporalmente. Actualiza en unos momentos; los pronósticos están disponibles abajo.',
 
@@ -17,8 +17,6 @@ const spanish: Record<string, string> = {
   "samples available": "muestras disponibles",
   "Incomplete historical data": "Datos históricos incompletos",
   "Set a start date to calculate this total.": "Establece una fecha inicial para calcular este total.",
-  "Historical NASA totals end yesterday (UTC). GDD uses daily mean temperature above 10°C; chilling counts hours from 0°C to 7.22°C, as in the old backend. Forecast totals below use the forecast formulas.": "Los totales históricos de NASA terminan ayer (UTC). GDD usa la temperatura media diaria sobre 10 °C; el frío cuenta horas entre 0 °C y 7,22 °C, como en el backend anterior. Los totales pronosticados de abajo usan las fórmulas del pronóstico.",
-
   'Forecast-period totals': 'Totales del período pronosticado',
   'Totals cover the selected forecast period, not the historical season. Incomplete periods show a dash.': 'Los totales cubren el período pronosticado seleccionado, no la temporada histórica. Los períodos incompletos se muestran con un guion.',
 
@@ -28,13 +26,11 @@ const spanish: Record<string, string> = {
   "UNIFIER": "UNIFIER",
   "KBDI": "KBDI",
   "Dashboard views": "Vistas del panel",
-  "Forecasts combined by provider priority. Times use the station time zone.": "Pronósticos combinados según la prioridad de proveedores. Los horarios usan la zona horaria de la estación.",
   "Forecast period": "Período del pronóstico",
   "days": "días",
   "Create a station to view forecasts.": "Crea una estación para ver pronósticos.",
-  "Provider priority": "Prioridad de proveedores",
   "No forecast data available for this period.": "No hay datos de pronóstico disponibles para este período.",
-  "GDD uses a 10°C base. Chilling hours decrease during warm weather. Water balance is precipitation minus evapotranspiration. PMI starts at zero and resets after missing hours.": "Valores del período pronosticado. GDD usa una base de 10 °C. El frío acumulado incluye la deducción por horas cálidas. El balance hídrico es precipitación menos evapotranspiración. PMI comienza en cero y se reinicia cuando faltan horas.",
+  "GDD uses a 10°C base. Chilling hours decrease during warm weather. Water balance is precipitation minus evapotranspiration.": "Valores del período pronosticado. GDD usa una base de 10 °C. El frío acumulado incluye la deducción por horas cálidas. El balance hídrico es precipitación menos evapotranspiración.",
   "KBDI needs a valid index dated yesterday and complete daily temperature and precipitation forecasts.": "KBDI requiere un índice válido con fecha de ayer y pronósticos diarios completos de temperatura y precipitación.",
   "Heat index is shown at temperatures of at least 26.7°C. Frostbite exposure times are estimates.": "El índice de calor se muestra a partir de 26,7 °C. Las bandas conservan los umbrales anteriores; los tiempos de congelación son estimados.",
   "Heat risk": "Riesgo por calor",

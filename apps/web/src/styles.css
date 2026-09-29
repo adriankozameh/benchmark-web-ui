@@ -788,7 +788,10 @@ button { color: inherit; }
 .burncast-direction { display: inline-block; margin-right: 8px; }
 .burncast-dashboard details { margin-top: 12px; }
 .burncast-dashboard summary { cursor: pointer; text-decoration: underline; margin-bottom: 12px; }
-@media (max-width: 900px) { .burncast-index-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 1200px) { .burncast-index-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 480px) { .burncast-table th:first-child { min-width: 135px; max-width: 150px; } }
 
-.burncast-index svg { max-height: 340px; }
+.burncast-index svg { max-height: 260px; }
+
+.burncast-chart { width: 100%; min-width: 0; }
+.burncast-chart svg { display: block; width: 100%; font-family: inherit; font-size: 11px; }
