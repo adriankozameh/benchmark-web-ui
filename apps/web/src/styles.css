@@ -802,3 +802,16 @@ button { color: inherit; }
 .safecast-chart svg { display: block; width: 100%; font-family: inherit; font-size: 11px; }
 .safecast-chart svg text { pointer-events: none; }
 .safecast-dashboard input[type="range"] { width: 100%; min-width: 0; padding: 0; }
+
+/* Legacy product artwork; masks inherit active/inactive navigation colors. */
+.product-nav-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}

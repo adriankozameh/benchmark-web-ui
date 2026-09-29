@@ -1,8 +1,8 @@
+import { ForecastIcon, BurncastIcon, FarmcastIcon, SafecastIcon } from './components/ProductIcons';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   CheckCircle2,
-  ChartNoAxesCombined,
   ChevronRight,
   CircleAlert,
   Gauge,
@@ -495,10 +495,10 @@ function AuthenticatedApp({
   }
 
   const dashboardNav = [
-    { page: 'forecast' as const, label: 'Forecast', icon: ChartNoAxesCombined },
-    { page: 'burncast' as const, label: 'Burncast', icon: ChartNoAxesCombined },
-    { page: 'farmcast' as const, label: 'Farmcast', icon: ChartNoAxesCombined },
-    { page: 'safecast' as const, label: 'Safecast', icon: ChartNoAxesCombined },
+    { page: 'forecast' as const, label: 'Forecast', icon: ForecastIcon },
+    { page: 'burncast' as const, label: 'Burncast', icon: BurncastIcon },
+    { page: 'farmcast' as const, label: 'Farmcast', icon: FarmcastIcon },
+    { page: 'safecast' as const, label: 'Safecast', icon: SafecastIcon },
     { page: 'observations' as const, label: 'Observations', icon: RadioTower },
     { page: 'historic' as const, label: 'Historic', icon: History },
   ];
@@ -536,6 +536,8 @@ function AuthenticatedApp({
             <button type="button" key={page}
               className={`nav-item ${route.page === page ? 'secondary-active' : ''}`}
               aria-current={route.page === page ? 'page' : undefined}
+              aria-label={t(label, language)}
+              title={t(label, language)}
               onClick={() => navigate({ section: 'dashboard', page })}>
               <Icon size={17} /> <span>{t(label, language)}</span>
             </button>
@@ -593,6 +595,8 @@ function AuthenticatedApp({
           {route.section === 'dashboard' && <nav className="forecast-product-tabs" aria-label={t('Dashboard views', language)}>
             {dashboardNav.map(({ page, label }) => <button type="button" key={page}
               aria-current={route.page === page ? 'page' : undefined} className={route.page === page ? 'active' : ''}
+              aria-label={t(label, language)}
+              title={t(label, language)}
               onClick={() => navigate({ section: 'dashboard', page })}>{t(label, language)}</button>)}
           </nav>}
           {error && (
