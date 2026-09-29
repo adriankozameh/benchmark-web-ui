@@ -87,7 +87,7 @@ function formatMetricValue(metric: string, value: number, units: DisplayUnits, l
 }
 
 export function ForecastDashboard({
-  api, organizationId, stations, onUnauthorized, units, language, focusStationId,
+  api, organizationId, stations, onUnauthorized, units, language, focusStationId, onStationChange,
 }: {
   api: BenchmarkApi;
   organizationId: string;
@@ -95,9 +95,10 @@ export function ForecastDashboard({
   units: DisplayUnits;
   language: UserLanguage;
   onUnauthorized: () => void;
-  focusStationId?: string | null;
+  focusStationId: string | null;
+  onStationChange: (stationId: string) => void;
 }) {
-  const [stationId, setStationId] = useState(focusStationId ?? stations[0]?.id ?? '');
+  const stationId = focusStationId ?? stations[0]?.id ?? '';
   const [rangeHours, setRangeHours] = useState<number>(72);
   const [windowStart, setWindowStart] = useState(() => Math.floor(Date.now() / HOUR_MS) * HOUR_MS);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -221,7 +222,7 @@ export function ForecastDashboard({
       <div className="forecast-controls">
         <label className="field">
           <span>{t('Station', language)}</span>
-          <select value={selectedStationId} onChange={(event) => setStationId(event.target.value)}>
+          <select value={selectedStationId} onChange={(event) => onStationChange(event.target.value)}>
             {stations.map((station) => <option key={station.id} value={station.id}>{station.name}</option>)}
           </select>
         </label>

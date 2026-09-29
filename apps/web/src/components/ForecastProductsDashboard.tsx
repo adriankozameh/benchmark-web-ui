@@ -19,11 +19,11 @@ const METRICS: Record<ProductKind, Array<[string, string, boolean?]>> = {
     ['UV_INDEX', 'UV index'], ['HEAT_INDEX', 'Heat index'], ['WIND_CHILL', 'Wind chill']],
 };
 const TITLES = { burncast: 'Burncast', farmcast: 'Farmcast', safecast: 'Safecast' };
-export function ForecastProductsDashboard({ api, organizationId, stations, kind, units, language, onUnauthorized, focusStationId, canManage = false }: {
+export function ForecastProductsDashboard({ api, organizationId, stations, kind, units, language, onUnauthorized, focusStationId, onStationChange, canManage = false }: {
   api: BenchmarkApi; organizationId: string; stations: WeatherStation[]; kind: ProductKind;
-  units: DisplayUnits; language: UserLanguage; onUnauthorized: () => void; focusStationId?: string | null; canManage?: boolean;
+  units: DisplayUnits; language: UserLanguage; onUnauthorized: () => void; focusStationId: string | null; onStationChange: (stationId: string) => void; canManage?: boolean;
 }) {
-  const [stationId, setStationId] = useState(focusStationId ?? stations[0]?.id ?? '');
+  const stationId = focusStationId ?? stations[0]?.id ?? '';
   const [gddStart, setGddStart] = useState('');
   const [chillStart, setChillStart] = useState('');
   const [saving, setSaving] = useState(false);
@@ -93,7 +93,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
       <button className="secondary-button" type="button" disabled={loading || !selected} onClick={() => setRevision(v => v + 1)}>{t('Refresh', language)}</button>
     </div>
     <div className="product-controls">
-      <label className="field"><span>{t('Station', language)}</span><select value={selected?.id ?? ''} onChange={e => setStationId(e.target.value)}>
+      <label className="field"><span>{t('Station', language)}</span><select value={selected?.id ?? ''} onChange={e => onStationChange(e.target.value)}>
         {stations.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       {fixedForecastPeriod ? <div className="field"><span>{t('Forecast period', language)}</span><strong>15 {t('days', language)}</strong></div> :
         <label className="field"><span>{t('Forecast period', language)}</span><select value={days} onChange={e => setDays(Number(e.target.value))}>

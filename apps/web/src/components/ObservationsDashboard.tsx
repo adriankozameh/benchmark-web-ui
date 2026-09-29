@@ -69,7 +69,7 @@ function presentValues(entries: [string, number | null][]): Record<string, numbe
 }
 
 export function ObservationsDashboard({
-                                          api, organizationId, stations, plan, units, language, onUnauthorized, focusStationId,
+                                          api, organizationId, stations, plan, units, language, onUnauthorized, focusStationId, onStationChange,
                                       }: {
     api: BenchmarkApi;
     organizationId: string;
@@ -78,10 +78,11 @@ export function ObservationsDashboard({
     units: DisplayUnits;
     language: UserLanguage;
     onUnauthorized: () => void;
-    focusStationId?: string | null;
+    focusStationId: string | null;
+    onStationChange: (stationId: string) => void;
 }) {
     const utcToday = utcDay(new Date());
-    const [stationId, setStationId] = useState(focusStationId ?? stations[0]?.id ?? '');
+    const stationId = focusStationId ?? stations[0]?.id ?? '';
     const [initialToday] = useState(() => localDay(new Date(),
         (stations.find((station) => station.id === focusStationId) ?? stations[0])?.timeZone || 'UTC'));
     const [viewFrom, setViewFrom] = useState(() => addUtcDays(initialToday, -6));
@@ -262,7 +263,7 @@ export function ObservationsDashboard({
 
         <form className="forecast-controls observation-controls" onSubmit={applyView}>
             <label className="field"><span>{t('Station', language)}</span>
-                <select value={selectedStationId} onChange={(event) => setStationId(event.target.value)}>
+                <select value={selectedStationId} onChange={(event) => onStationChange(event.target.value)}>
                     {stations.map((station) => <option key={station.id} value={station.id}>{station.name}</option>)}
                 </select>
             </label>

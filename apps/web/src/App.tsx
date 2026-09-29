@@ -398,7 +398,7 @@ function AuthenticatedApp({
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
   const [stations, setStations] = useState<WeatherStation[]>([]);
-  const [stationToView, setStationToView] = useState<string | null>(null);
+  const [stationByOrganization, setStationByOrganization] = useState<Record<string, string>>({});
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState<string | null>(null);
   const languageRef = useRef<UserLanguage>('en');
@@ -422,6 +422,12 @@ function AuthenticatedApp({
       ?? me?.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? me?.organizations[0] ?? null,
     [me, selectedOrganizationId],
   );
+
+  const stationToView = organization ? stationByOrganization[organization.id] ?? null : null;
+  const selectStation = (stationId: string) => {
+    if (!organization || !stations.some(station => station.id === stationId)) return;
+    setStationByOrganization(current => ({ ...current, [organization.id]: stationId }));
+  };
 
   const refresh = useCallback(async () => {
     setState('loading');
@@ -610,12 +616,12 @@ function AuthenticatedApp({
             <ForecastProductsDashboard api={api} organizationId={organization.id} stations={stations}
               canManage={organization.role === 'OWNER' || organization.role === 'ADMIN'}
               kind={route.page as 'burncast' | 'farmcast' | 'safecast'} units={units} language={language}
-              onUnauthorized={onUnauthorized} focusStationId={stationToView} />
+              onUnauthorized={onUnauthorized} focusStationId={stationToView} onStationChange={selectStation} />
           )}
 
           {organization && route.section === 'dashboard' && route.page === 'forecast' && (
             <ForecastDashboard api={api} organizationId={organization.id} stations={stations} units={units} language={language}
-              focusStationId={stationToView} onUnauthorized={onUnauthorized} />
+              focusStationId={stationToView} onStationChange={selectStation} onUnauthorized={onUnauthorized} />
           )}
 
           {organization && route.section === 'dashboard' && route.page === 'observations' && (
@@ -625,7 +631,7 @@ function AuthenticatedApp({
 
           {organization && route.section === 'dashboard' && route.page === 'historic' && (
             <ObservationsDashboard api={api} organizationId={organization.id} stations={stations}
-              plan={organization.plan} units={units} language={language} focusStationId={stationToView}
+              plan={organization.plan} units={units} language={language} focusStationId={stationToView} onStationChange={selectStation}
               onUnauthorized={onUnauthorized} />
           )}
 
@@ -635,7 +641,7 @@ function AuthenticatedApp({
               stationLimit={organization.stationLimit} sites={sites} stations={stations}
               onCreated={refresh} language={language} onUnauthorized={onUnauthorized} plan={organization.plan}
               onLocationChanged={(stationId) => {
-                setStationToView(stationId);
+                selectStation(stationId);
                 navigate({ section: 'dashboard', page: 'forecast' });
               }} />
           )}
