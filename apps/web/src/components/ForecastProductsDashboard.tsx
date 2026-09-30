@@ -197,7 +197,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
 
         <div className="product-table-scroll" tabIndex={0} role="region" aria-label={t('Forecast sources', language)}><table><thead><tr><th>{t('Local time', language)}</th><th>{t('Metric', language)}</th><th>{t('Provider', language)}</th></tr></thead>
           <tbody>{showSources && sources?.points.flatMap(point => Object.keys(point.sources).map(metric =>
-            <tr key={`${point.utcDateTime}-${metric}`}><td>{local(point.utcDateTime)}</td><td>{t(METRICS[kind].find(([key]) => key === metric)?.[1] ?? metric.replaceAll('_', ' '), language)}</td><td>{point.sources[metric]}</td></tr>))}</tbody>
+            <tr key={`${point.utcDateTime}-${metric}`}><td>{local(point.utcDateTime)}</td><td>{t(METRICS[kind].find(([key]) => key === metric)?.[1] ?? metric.replaceAll('_', ' '), language)}</td><td>{point.sources[metric] === 'IBM_GRAF' ? 'Benchmark' : point.sources[metric]}</td></tr>))}</tbody>
         </table></div><p className="product-note">{t('Derived metrics use the unified inputs for the same time or local day.', language)}</p>
       </details>
     </>}

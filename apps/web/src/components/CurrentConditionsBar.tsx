@@ -83,7 +83,7 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
       const candidate = data?.metrics[metric];
       // Enforce the display contract even while an older backend is being replaced.
       const reading = candidate && (metric === 'PRECIPITATION_CHANCE'
-        ? candidate.source === 'FORECAST' && candidate.provider === 'IBM_GRAF'
+        ? candidate.source === 'FORECAST' && ['Benchmark', 'IBM_GRAF'].includes(candidate.provider)
         : candidate.source === 'OBSERVED' && (metric !== 'PRECIPITATION_QUANTITY' || candidate.period === 'LOCAL_DAY')) ? candidate : undefined;
       const baseMetric = metric.startsWith('TEMPERATURE_') ? 'TEMPERATURE' : metric;
       const value = reading && Number.isFinite(reading.value)
@@ -91,7 +91,7 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
           ? t(COMPASS_DIRECTIONS[Math.round(((reading.value % 360 + 360) % 360) / 45) % 8], language)
           : new Intl.NumberFormat(locale(language), { maximumFractionDigits: metric === 'PRECIPITATION_QUANTITY' ? 2 : 1 })
           .format(displayMetricValue(baseMetric, reading.value, units)) : '—';
-      const details = reading ? `${reading.provider.replaceAll('_', ' ')} · ${localTime(reading.validAt)}${reading.periodStart && reading.periodEnd
+      const details = reading ? `${(reading.provider === 'IBM_GRAF' ? 'Benchmark' : reading.provider.replaceAll('_', ' '))} · ${localTime(reading.validAt)}${reading.periodStart && reading.periodEnd
         ? ` · ${localTime(reading.periodStart)} – ${localTime(reading.periodEnd)}` : ''}` : t('Unavailable', language);
       return <div key={metric} className="current-condition">
         <dt><span className="current-condition-icon" aria-hidden="true" style={{
@@ -100,7 +100,7 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
             ? `rotate(${reading.value}deg)` : undefined,
         }} /><span>{t(label, language)}</span></dt><dd><strong className={metric === 'WIND_DIRECTION' ? 'current-condition-direction' : undefined}>{value}</strong>{reading && metric !== 'WIND_DIRECTION' && <span>{metricUnit(baseMetric, units)}</span>}</dd>
         <small className={reading?.source === 'FORECAST' ? 'condition-forecast' : ''}>
-          {reading ? t(reading.source === 'OBSERVED' ? 'Observed' : 'IBM forecast', language) : t('Unavailable', language)}
+          {reading ? t(reading.source === 'OBSERVED' ? 'Observed' : 'Benchmark forecast', language) : t('Unavailable', language)}
         </small>
         {reading && <small>{t(PERIODS[reading.period], language)}</small>}
         {reading && <small className="condition-time" title={details}>{localTime(reading.validAt)}</small>}

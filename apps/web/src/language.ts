@@ -6,7 +6,7 @@ const spanish: Record<string, string> = {
   'Today — station local time': 'Hoy — hora local de la estación',
   'Station readings are stale.': 'Las lecturas de la estación están desactualizadas.',
   'Station readings unavailable.': 'Lecturas de la estación no disponibles.',
-  'IBM forecast': 'Pronóstico de IBM',
+  'Benchmark forecast': 'Pronóstico de Benchmark',
   "Current conditions": "Condiciones actuales",
   "Minimum temperature": "Temperatura mínima",
   "Maximum temperature": "Temperatura máxima",

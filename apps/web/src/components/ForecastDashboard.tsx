@@ -50,7 +50,7 @@ const METRIC_LABELS: Record<string, string> = {
 
 const PROVIDER_LABELS: Record<string, string> = {
   NOAA_GFS: 'NOAA GFS',
-  IBM_GRAF: 'IBM GRAF',
+  IBM_GRAF: 'Benchmark',
   WCS_ECMWF: 'ECMWF',
   WCS_GEFS: 'GEFS',
   WCS_ERA5: 'ERA5',
