@@ -60,6 +60,8 @@ const spanish: Record<string, string> = {
   "View details": "Ver detalles",
   "Daily max. Arrows show the wind source direction at peak transport wind speed.": "Máximos diarios. Las flechas indican de dónde viene el viento en el momento de máxima velocidad de transporte.",
   "Fire Weather": "Condiciones para incendios",
+  'Historical season totals are being prepared. This page refreshes automatically; forecasts are available below.': 'Se están preparando los totales históricos de la temporada. Esta página se actualiza automáticamente; los pronósticos están disponibles abajo.',
+  'Historical data could not be completed. Season totals may be missing or incomplete; forecasts are available below. We will retry automatically.': 'No se pudieron completar los datos históricos. Los totales de la temporada pueden faltar o estar incompletos; los pronósticos están disponibles abajo. Se reintentará automáticamente.',
   'Historical data is still loading or temporarily unavailable. Refresh shortly; forecasts are available below.': 'Los datos históricos siguen cargando o no están disponibles temporalmente. Actualiza en unos momentos; los pronósticos están disponibles abajo.',
 
   "(UTC)": "(UTC)",

@@ -135,7 +135,9 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
     {loading && <p role="status">{t('Loading forecasts…', language)}</p>}
     {error && <div className="alert error" role="alert">{error}</div>}
     {data && <>
-      {data.notices.includes('ENRICHMENT_UNAVAILABLE') && <p role="status" className="product-note">{t('Historical data is still loading or temporarily unavailable. Refresh shortly; forecasts are available below.', language)}</p>}
+      {data.notices.includes('ENRICHMENT_PENDING')
+        ? <p role="status" className="product-note">{t('Historical season totals are being prepared. This page refreshes automatically; forecasts are available below.', language)}</p>
+        : data.notices.includes('ENRICHMENT_UNAVAILABLE') && <p role="status" className="product-note">{t('Historical data could not be completed. Season totals may be missing or incomplete; forecasts are available below. We will retry automatically.', language)}</p>}
       {data.forecast.count === 0 && <p role="status">{t('No forecast data available for this period.', language)}</p>}
       {kind === 'farmcast' && <p className="product-note">{t('GDD uses a 10°C base. Chilling hours decrease during warm weather. Water balance is precipitation minus evapotranspiration.', language)}</p>}
       {kind === 'burncast' && data.notices.includes('KBDI_UNAVAILABLE') && <p className="product-note">{t('KBDI needs a valid index dated yesterday and complete daily temperature and precipitation forecasts.', language)}</p>}
