@@ -20,9 +20,13 @@ export function ExplorerMap(props: Props) {
   const redraw = useRef<() => void>(() => {});
   useEffect(() => {
     if (!element.current) return;
-    const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 });
-    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 });
-    const instance = L.map(element.current, { center: [39.5, -98.35], zoom: 4, layers: [street], preferCanvas: true, worldCopyJump: true });
+    const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 18, noWrap: true });
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 18, noWrap: true });
+    const usBounds = L.latLngBounds([24.396308, -125], [49.384358, -66.93457]);
+    const instance = L.map(element.current, { center: [39.5, -98.35], zoom: 4,
+      minZoom: 3, maxZoom: 18, maxBounds: usBounds.pad(0.25), maxBoundsViscosity: 1,
+      layers: [street], preferCanvas: true, worldCopyJump: false });
+    instance.fitBounds(usBounds, { padding: [20, 20], animate: false });
     map.current = instance;
     L.control.layers({ 'Street': street, 'Satellite': satellite }).addTo(instance);
     const markers = L.layerGroup().addTo(instance);
@@ -51,7 +55,7 @@ export function ExplorerMap(props: Props) {
         }).addTo(markers);
         marker.on('click', () => {
           if (single) onSelect(group[0]);
-          else { onGroup(group); instance.fitBounds(L.latLngBounds(group.map(s => [s.lat, s.lon])), { maxZoom: Math.min(19, instance.getZoom() + 3), padding: [30, 30] }); }
+          else { onGroup(group); instance.fitBounds(L.latLngBounds(group.map(s => [s.lat, s.lon])), { maxZoom: Math.min(18, instance.getZoom() + 3), padding: [30, 30] }); }
         });
       }
     };
