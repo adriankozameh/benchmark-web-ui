@@ -98,7 +98,7 @@ export function StationExplorer({ api, organizationId, language, units, onUnauth
       <label>{tr('Radius (km)', 'Radio (km)')} <select value={radius} onChange={e => setRadius(Number(e.target.value))}>{[1, 3, 5, 10, 25, 50, 100, 250].map(n => <option key={n}>{n}</option>)}</select></label>
       <label><input type="checkbox" checked={activeOnly} onChange={e => setActiveOnly(e.target.checked)} /> {tr('Active stations only', 'Solo estaciones activas')}</label>
       <input aria-label="Station name or ID" placeholder={tr('Station name or ID', 'Nombre o ID de estación')} value={query} onChange={e => setQuery(e.target.value)} />
-      <button onClick={() => { setCenter(null); setCoordinates(''); setQuery(''); setGroup(null); }}>{tr('Clear search', 'Limpiar búsqueda')}</button>
+      <button onClick={() => { setCenter(null); setCoordinates(''); setQuery(''); setGroup(null); setSelected(null); setPage(0); }}>{tr('Clear search', 'Limpiar búsqueda')}</button>
     </div>
     <div className="explorer-layout">
       <div className="explorer-main">
