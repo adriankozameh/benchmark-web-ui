@@ -60,8 +60,6 @@ const spanish: Record<string, string> = {
   "View details": "Ver detalles",
   "Daily max. Arrows show the wind source direction at peak transport wind speed.": "Máximos diarios. Las flechas indican de dónde viene el viento en el momento de máxima velocidad de transporte.",
   "Fire Weather": "Condiciones para incendios",
-  'Historical season totals are being prepared. This page refreshes automatically; forecasts are available below.': 'Se están preparando los totales históricos de la temporada. Esta página se actualiza automáticamente; los pronósticos están disponibles abajo.',
-  'Historical data could not be completed. Season totals may be missing or incomplete; forecasts are available below. We will retry automatically.': 'No se pudieron completar los datos históricos. Los totales de la temporada pueden faltar o estar incompletos; los pronósticos están disponibles abajo. Se reintentará automáticamente.',
   'Historical data is still loading or temporarily unavailable. Refresh shortly; forecasts are available below.': 'Los datos históricos siguen cargando o no están disponibles temporalmente. Actualiza en unos momentos; los pronósticos están disponibles abajo.',
 
   "(UTC)": "(UTC)",
@@ -88,7 +86,8 @@ const spanish: Record<string, string> = {
   "Create a station to view forecasts.": "Crea una estación para ver pronósticos.",
   "No forecast data available for this period.": "No hay datos de pronóstico disponibles para este período.",
   "GDD uses a 10°C base. Chilling hours decrease during warm weather. Water balance is precipitation minus evapotranspiration.": "Valores del período pronosticado. GDD usa una base de 10 °C. El frío acumulado incluye la deducción por horas cálidas. El balance hídrico es precipitación menos evapotranspiración.",
-  "KBDI needs a valid index dated yesterday and complete daily temperature and precipitation forecasts.": "KBDI requiere un índice válido con fecha de ayer y pronósticos diarios completos de temperatura y precipitación.",
+  "KBDI needs a stored seed and complete daily temperature and precipitation forecasts.": "KBDI requiere un valor inicial guardado y pronósticos diarios completos de temperatura y precipitación.",
+  'KBDI uses the last stored station index; newer daily observations have not been applied yet.': 'KBDI usa el último índice guardado de la estación; aún no se han aplicado las observaciones diarias más recientes.',
   "Heat index is shown at temperatures of at least 26.7°C. Frostbite exposure times are estimates.": "El índice de calor se muestra a partir de 26,7 °C. Las bandas conservan los umbrales anteriores; los tiempos de congelación son estimados.",
   "Heat risk": "Riesgo por calor",
   "Estimated frostbite exposure": "Tiempo estimado de exposición para congelación",

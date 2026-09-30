@@ -69,7 +69,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
         }
         const pending = result.notices.includes('ENRICHMENT_PENDING') && enrichmentChecks++ < 12;
         const expiry = Date.parse(result.expiresAt ?? '');
-        const delay = pending ? 5_000 : Number.isFinite(expiry) ? Math.min(60_000, Math.max(1_000, expiry - Date.now() + 100)) : 60_000;
+        const delay = pending ? 5_000 : Number.isFinite(expiry) ? Math.max(1_000, expiry - Date.now() + 100) : 3_600_000;
         timer = setTimeout(() => { if (active) load(true); }, delay);
       }).catch((cause: unknown) => {
         if (!active) return;
@@ -135,12 +135,10 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
     {loading && <p role="status">{t('Loading forecasts…', language)}</p>}
     {error && <div className="alert error" role="alert">{error}</div>}
     {data && <>
-      {data.notices.includes('ENRICHMENT_PENDING')
-        ? <p role="status" className="product-note">{t('Historical season totals are being prepared. This page refreshes automatically; forecasts are available below.', language)}</p>
-        : data.notices.includes('ENRICHMENT_UNAVAILABLE') && <p role="status" className="product-note">{t('Historical data could not be completed. Season totals may be missing or incomplete; forecasts are available below. We will retry automatically.', language)}</p>}
       {data.forecast.count === 0 && <p role="status">{t('No forecast data available for this period.', language)}</p>}
       {kind === 'farmcast' && <p className="product-note">{t('GDD uses a 10°C base. Chilling hours decrease during warm weather. Water balance is precipitation minus evapotranspiration.', language)}</p>}
-      {kind === 'burncast' && data.notices.includes('KBDI_UNAVAILABLE') && <p className="product-note">{t('KBDI needs a valid index dated yesterday and complete daily temperature and precipitation forecasts.', language)}</p>}
+      {kind === 'burncast' && data.notices.includes('KBDI_UNAVAILABLE') && <p className="product-note">{t('KBDI needs a stored seed and complete daily temperature and precipitation forecasts.', language)}</p>}
+      {kind === 'burncast' && data.notices.includes('KBDI_SEED_STALE') && <p className="product-note">{t('KBDI uses the last stored station index; newer daily observations have not been applied yet.', language)}</p>}
       {kind === 'farmcast' && <section className="station-form-card">
         <h3>{t('Season accumulation', language)}</h3>
         <form onSubmit={e => { e.preventDefault(); void saveSettings(); }}>
