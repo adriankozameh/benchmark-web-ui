@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import type { ReactNode } from 'react';
 import {
   CheckCircle2,
+  CreditCard,
   ChevronRight,
   CircleAlert,
   Gauge,
@@ -31,6 +32,7 @@ import { ObservationsDashboard } from './components/ObservationsDashboard';
 import { DataProviders } from './components/DataProviders';
 import { OrganizationMembers } from './components/OrganizationMembers';
 import { OrganizationInvitations } from './components/OrganizationInvitations';
+import { BillingSettings } from './components/BillingSettings';
 import { MapPicker } from './components/MapPicker';
 import { StationHardwareEditor } from './components/StationHardwareEditor';
 import { errorMessage, t } from './language';
@@ -363,7 +365,7 @@ function AuthenticatedApp({
   onUnauthorized: () => void;
 }) {
   type DashboardPage = 'forecast' | 'burncast' | 'farmcast' | 'safecast' | 'observations' | 'historic';
-  type SettingsPage = 'stations' | 'data-providers' | 'account';
+  type SettingsPage = 'stations' | 'data-providers' | 'account' | 'billing';
   type AppRoute =
     | { section: 'dashboard'; page: DashboardPage }
     | { section: 'settings'; page: SettingsPage };
@@ -385,6 +387,7 @@ function AuthenticatedApp({
     if (normalized === '/settings' || normalized === '/settings/stations') {
       return { section: 'settings', page: 'stations' };
     }
+    if (normalized === '/settings/billing' || normalized === '/subscribe') return { section: 'settings', page: 'billing' };
     if (normalized === '/settings/data-providers') return { section: 'settings', page: 'data-providers' };
     if (normalized === '/settings/account') {
       return { section: 'settings', page: 'account' };
@@ -421,7 +424,7 @@ function AuthenticatedApp({
   }, [parseRoute]);
 
   const organization = useMemo(
-    () => me?.organizations.find((item) => item.id === selectedOrganizationId && item.organizationStatus === 'ACTIVE')
+    () => me?.organizations.find((item) => item.id === selectedOrganizationId)
       ?? me?.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? me?.organizations[0] ?? null,
     [me, selectedOrganizationId],
   );
@@ -445,14 +448,14 @@ function AuthenticatedApp({
     try {
       const nextMe = await api.getMe();
       const nextOrganization = nextMe.organizations.find((item) =>
-        item.id === sessionStorage.getItem(ACTIVE_ORGANIZATION_KEY) && item.organizationStatus === 'ACTIVE')
+        item.id === sessionStorage.getItem(ACTIVE_ORGANIZATION_KEY))
         ?? nextMe.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? nextMe.organizations[0];
       if (!nextOrganization) throw new Error('No Benchmark organization is available for this account.');
 
       const [nextSettings, nextSites, nextStations] = await Promise.all([
         api.getUserSettings(),
-        api.listSites(nextOrganization.id),
-        api.listStations(nextOrganization.id),
+        nextOrganization.organizationStatus === 'ACTIVE' ? api.listSites(nextOrganization.id) : Promise.resolve([]),
+        nextOrganization.organizationStatus === 'ACTIVE' ? api.listStations(nextOrganization.id) : Promise.resolve([]),
       ]);
       setMe(nextMe);
       setUserSettings(nextSettings);
@@ -523,7 +526,7 @@ function AuthenticatedApp({
     ? route.page === 'forecast' ? 'Forecast'
       : route.page === 'observations' ? 'Observations'
       : route.page === 'historic' ? 'Historic' : route.page === 'burncast' ? 'Burncast' : route.page === 'farmcast' ? 'Farmcast' : 'Safecast'
-    : route.page === 'account' ? 'Account' : route.page === 'data-providers' ? 'Data providers' : 'Weather stations';
+    : route.page === 'billing' ? 'Billing' : route.page === 'account' ? 'Account' : route.page === 'data-providers' ? 'Data providers' : 'Weather stations';
 
   return (
     <div className="app-shell">
@@ -568,6 +571,11 @@ function AuthenticatedApp({
               onClick={() => navigate({ section: 'settings', page: 'data-providers' })}>
               <RadioTower size={17} /> <span>{t('Data providers', language)}</span>
             </button>
+            <button type="button" className={`nav-item ${route.page === 'billing' ? 'secondary-active' : ''}`}
+              aria-current={route.page === 'billing' ? 'page' : undefined}
+              onClick={() => navigate({ section: 'settings', page: 'billing' })}>
+              <CreditCard size={17} /> <span>{t('Billing', language)}</span>
+            </button>
             <button type="button" className={`nav-item ${route.page === 'account' ? 'secondary-active' : ''}`}
               aria-current={route.page === 'account' ? 'page' : undefined}
               onClick={() => navigate({ section: 'settings', page: 'account' })}>
@@ -601,6 +609,7 @@ function AuthenticatedApp({
           </div>
           <div className="topbar-actions">
             {organization && <span className={`plan-pill ${organization.plan.toLowerCase()}`}>{t(organization.plan, language)}</span>}
+            {organization?.plan === 'FREE' && ['OWNER', 'ADMIN'].includes(organization.role) && <button type="button" className="secondary-button" onClick={() => navigate({ section: 'settings', page: 'billing' })}>{t('Upgrade plan', language)}</button>}
             <button type="button" className="icon-button mobile-logout" onClick={onLogout} aria-label={t('Log out', language)}>
               <LogOut size={17} />
             </button>
@@ -645,6 +654,17 @@ function AuthenticatedApp({
               onUnauthorized={onUnauthorized} />
           )}
 
+          {organization && route.section === 'settings' && route.page === 'billing' && (
+            <BillingSettings key={organization.id} api={api} organization={organization}
+              language={language} onChanged={refresh} onUnauthorized={onUnauthorized} />
+          )}
+          {organization && organization.organizationStatus === 'SUSPENDED' && route.page !== 'billing' && (
+            <div className="billing-notice"><CircleAlert size={18} /><span>{t('Your account is suspended. Resolve billing to restore access.', language)}</span>
+              <button type="button" className="secondary-button" onClick={() => navigate({ section: 'settings', page: 'billing' })}>{t('Billing', language)}</button></div>
+          )}
+          {organization && route.section === 'settings' && route.page === 'stations' && stations.length >= organization.stationLimit && ['OWNER', 'ADMIN'].includes(organization.role) && (
+            <div className="billing-notice"><span>{t('Need more station capacity?', language)}</span><button type="button" className="secondary-button" onClick={() => navigate({ section: 'settings', page: 'billing' })}>{t('Upgrade or add capacity', language)}</button></div>
+          )}
           {organization && route.section === 'settings' && route.page === 'stations' && (
             <StationSettings api={api} organizationId={organization.id}
               organizationRole={organization.role} onManageProviders={() => navigate({ section: 'settings', page: 'data-providers' })}
@@ -676,7 +696,7 @@ function AuthenticatedApp({
                   setSelectedOrganizationId(id);
                   void refresh();
                 }}>
-                  {me.organizations.filter((item) => item.organizationStatus === 'ACTIVE').map((item) =>
+                  {me.organizations.filter((item) => item.organizationStatus !== 'CLOSED').map((item) =>
                     <option key={item.id} value={item.id}>{item.name}</option>)}
                 </select>
               </label>
@@ -710,6 +730,11 @@ function AuthenticatedApp({
           aria-current={route.section === 'settings' && route.page === 'data-providers' ? 'page' : undefined}
           onClick={() => navigate({ section: 'settings', page: 'data-providers' })}>
           <RadioTower size={20} /><span>{t('Providers', language)}</span>
+        </button>
+        <button type="button" className={route.section === 'settings' && route.page === 'billing' ? 'active' : ''}
+          aria-current={route.section === 'settings' && route.page === 'billing' ? 'page' : undefined}
+          onClick={() => navigate({ section: 'settings', page: 'billing' })} aria-label={t('Billing', language)}>
+          <CreditCard size={20} /><span>{t('Billing', language)}</span>
         </button>
         <button type="button" className={route.section === 'settings' && route.page === 'account' ? 'active' : ''}
           aria-current={route.section === 'settings' && route.page === 'account' ? 'page' : undefined}

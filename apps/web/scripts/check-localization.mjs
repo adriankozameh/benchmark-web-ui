@@ -6,6 +6,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const files = [
   'src/App.tsx',
   'src/components/AddressSearch.tsx',
+  'src/components/BillingSettings.tsx',
   'src/components/MapPicker.tsx',
   'src/components/ForecastDashboard.tsx',
   'src/components/CurrentConditionsBar.tsx',
@@ -27,7 +28,7 @@ function collectSpanish(node) {
 }
 collectSpanish(translationSource);
 
-const allowOriginal = new Set(['English', 'Español', 'cp apps/web/.env.example apps/web/.env']);
+const allowOriginal = new Set(['English', 'Español', 'PRO', 'PREMIUM', 'cp apps/web/.env.example apps/web/.env']);
 const missing = new Set();
 function check(text, file) {
   if (/[A-Za-zÁ-ÿ]/.test(text) && !spanish.has(text) && !allowOriginal.has(text)) missing.add(`${file}: ${text}`);

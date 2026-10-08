@@ -2,6 +2,12 @@ import type { ExplorerManifest, ExplorerStation, ExplorerDetails } from './stati
 export type { ExplorerManifest, ExplorerStation, ExplorerDetails } from './station-explorer';
 import type {
   ApiErrorPayload,
+  BillingSummary,
+  BillingSelection,
+  BillingInterval,
+  BillingQuote,
+  BillingChangeResult,
+  Plan,
   CurrentConditions,
   ForecastProductsResponse,
   ForecastProduct,
@@ -41,6 +47,7 @@ export class BenchmarkApiError extends Error {
 type AccessTokenProvider = () => Promise<string | null>;
 
 type RequestOptions = {
+  idempotencyKey?: string;
   signal?: AbortSignal;
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
@@ -90,6 +97,7 @@ export class BenchmarkApi {
     });
 
     if (options.body !== undefined) headers.set('Content-Type', 'application/json');
+    if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey);
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       signal: options.signal,
@@ -130,6 +138,34 @@ export class BenchmarkApi {
 
   getMe(): Promise<CurrentUser> {
     return this.request('/api/v1/me');
+  }
+
+  getBilling(organizationId: string): Promise<BillingSummary> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/billing`);
+  }
+  startSubscription(organizationId: string, plan: Exclude<Plan, 'FREE'>, interval: BillingInterval,
+    idempotencyKey: string): Promise<{ sessionId: string; url: string }> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/billing/checkout-session`, {
+      method: 'POST', idempotencyKey,
+      body: { plan, interval },
+    });
+  }
+  quoteBillingChange(organizationId: string, selection: BillingSelection): Promise<BillingQuote> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/billing/quote`, { method: 'POST', body: selection });
+  }
+  /** acceptedTerms records the customer's agreement to the amount due now and the renewal amounts. */
+  applyBillingQuote(organizationId: string, quoteId: string, acceptedTerms: boolean, idempotencyKey: string): Promise<BillingChangeResult> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/billing/changes`, {
+      method: 'POST', body: { quoteId, acceptedTerms }, idempotencyKey,
+    });
+  }
+  cancelUnpaidAnnualChange(organizationId: string): Promise<void> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/billing/annual-change`, {
+      method: 'DELETE', expectNoContent: true,
+    });
+  }
+  openBillingPortal(organizationId: string): Promise<{ url: string }> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/billing/portal-session`, { method: 'POST' });
   }
 
   listMembers(organizationId: string, signal?: AbortSignal): Promise<OrganizationMember[]> {
