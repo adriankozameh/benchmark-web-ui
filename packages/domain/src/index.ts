@@ -1,5 +1,73 @@
 export type Plan = 'FREE' | 'PRO' | 'PREMIUM';
 
+export type BillingInterval = 'MONTHLY' | 'ANNUAL';
+export type BillingSelection = {
+  plan: Exclude<Plan, 'FREE'>;
+  interval: BillingInterval;
+  stationsPurchased: number;
+  monthlySeatAddons: number;
+  annualSeatAddons: number;
+};
+export type BillingPrice = {
+  priceId: string;
+  kind: 'PLAN' | 'STATION' | 'SEAT';
+  plan: Plan | null;
+  interval: BillingInterval;
+  unitAmount: number;
+  currency: string;
+};
+export type BillingSummary = {
+  plan: Plan;
+  status: string;
+  selection: BillingSelection | null;
+  seatsPurchased: number;
+  stationsPurchased: number;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  pendingPayment: boolean;
+  paymentUrl: string | null;
+  pendingAnnualTransition: {
+    id: string;
+    status: 'AWAITING_PAYMENT' | 'PAID' | 'SCHEDULED';
+    startsAt: string;
+    endsAt: string;
+    amount: number;
+    currency: string;
+    sessionUrl: string | null;
+  } | null;
+  prices: BillingPrice[];
+  /** Scheduled moves of existing items to changed prices, applied at renewal. */
+  priceChanges?: BillingPriceChange[];
+  /** Where renewals are charged; brand and last4 are set for cards. */
+  paymentMethod?: { type: string; brand: string | null; last4: string | null } | null;
+};
+export type BillingPriceChange = {
+  id: string;
+  itemId: string;
+  from: BillingPrice;
+  to: BillingPrice;
+  quantity: number;
+  effectiveAt: string;
+  status: 'SCHEDULED';
+};
+export type BillingQuote = {
+  id: string;
+  selection: BillingSelection;
+  mode: 'IMMEDIATE' | 'ANNUAL_PREPAYMENT';
+  amountDue: number;
+  currency: string;
+  effectiveAt: string;
+  expiresAt: string;
+  lines: { description: string; amount: number; currency: string; periodStart: string | null; periodEnd: string | null }[];
+  /** Recurring charges after the change, per interval; renewsAt is null for a first item of that interval. */
+  renewals: { interval: BillingInterval; amount: number; currency: string; renewsAt: string | null }[];
+};
+export type BillingChangeResult = {
+  status: 'COMPLETE' | 'AWAITING_PAYMENT' | 'SCHEDULED';
+  actionUrl: string | null;
+};
+
 export type OrganizationSummary = {
   id: string;
   name: string;

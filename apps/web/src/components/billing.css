@@ -1,0 +1,46 @@
+.billing-settings { display:grid; gap:22px; max-width:1120px; }
+.billing-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+.billing-heading h2 { font-size:25px; margin:8px 0; letter-spacing:-.5px; }
+.billing-heading p, .billing-panel p { color:#66758a; line-height:1.6; font-size:13px; }
+.billing-panel, .billing-plan { background:white; border:1px solid #dce4ec; border-radius:14px; padding:26px; }
+.billing-panel h3 { margin:0 0 12px; font-size:19px; }
+.billing-current { display:flex; align-items:center; gap:26px; flex-wrap:wrap; }
+.billing-current > div:first-child { margin-right:auto; }
+.billing-current h3 { margin:6px 0; font-size:23px; }
+.billing-status { background:#e8f3f0; color:#24715d; font-size:10px; padding:5px 8px; border-radius:5px; vertical-align:middle; }
+.billing-capacity { display:grid; gap:4px; text-align:center; min-width:65px; }
+.billing-capacity strong { font-size:24px; }
+.billing-capacity span { font-size:11px; color:#738198; }
+.billing-plans { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+.billing-plan.premium { border-top:4px solid #1859a3; }
+.billing-plan.pro { border-top:4px solid #8ca6bf; }
+.billing-plan h3 { font-size:21px; margin:16px 0 22px; }
+.billing-price { font-size:38px; font-weight:760; margin:0; letter-spacing:-1px; }
+.billing-price span { font-size:13px; font-weight:400; color:#738198; letter-spacing:0; }
+.billing-plan ul { list-style:none; padding:0; margin:26px 0; display:grid; gap:14px; font-size:13px; color:#607087; }
+.billing-plan li::before { content:'✓'; color:#24715d; margin-right:9px; }
+.billing-interval { display:flex; justify-content:center; gap:4px; background:#e6ecf3; border-radius:9px; padding:4px; width:fit-content; margin:auto; }
+.billing-interval button { background:transparent; border:0; padding:10px 24px; border-radius:6px; cursor:pointer; font-weight:650; font-size:13px; }
+.billing-interval .selected { background:white; box-shadow:0 2px 5px #17284412; }
+.billing-secure { display:flex; justify-content:center; align-items:center; gap:8px; color:#748198; font-size:12px; }
+.billing-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.billing-fields small { color:#738198; font-size:11px; }
+.billing-notice { display:flex; align-items:center; gap:10px; background:#eaf3fa; color:#245b85; border:1px solid #d3e4f1; border-radius:10px; padding:15px 18px; font-size:13px; }
+.billing-notice svg { flex-shrink:0; }
+.billing-annual { border-left:4px solid #1859a3; }
+.billing-review { border:2px solid #1859a3; }
+.billing-review .eyebrow { margin-bottom:14px; }
+.billing-line-items { margin:20px 0; display:grid; }
+.billing-line-items > div { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding:14px 0; border-bottom:1px solid #e7edf3; font-size:12px; }
+.billing-line-items dt small { display:block; color:#748198; margin-top:6px; }
+.billing-line-items dd { margin:0; white-space:nowrap; font-weight:650; }
+.billing-review h4 { margin:18px 0 0; font-size:13px; }
+.billing-payment-method { display:flex; align-items:center; gap:10px; padding:12px 14px; margin:8px 0 16px; border:1px solid #e7edf3; border-radius:10px; font-size:13px; }
+.billing-payment-method span { flex:1; letter-spacing:.02em; }
+.billing-consent { display:flex; align-items:flex-start; gap:10px; margin:8px 0 14px; font-size:13px; line-height:1.5; cursor:pointer; }
+.billing-consent input { margin-top:3px; width:16px; height:16px; flex:none; }
+.billing-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:20px; }
+.billing-loading { display:flex; align-items:center; gap:12px; color:#738198; padding:40px 0; }
+@media(max-width:650px) { .billing-plans,.billing-fields { grid-template-columns:1fr; } .billing-heading { flex-direction:column; } .billing-panel,.billing-plan { padding:20px; } .billing-current { gap:18px; } .billing-current > div:first-child { flex-basis:100%; } .billing-secure { align-items:flex-start; line-height:1.5; } }
+.billing-payment-method .link-button { background:none; border:0; padding:0; color:#1859a3; font:inherit; font-weight:650; cursor:pointer; }
+.billing-payment-method .link-button:disabled { opacity:.5; cursor:default; }

@@ -472,7 +472,7 @@ button { color: inherit; }
     right: 0;
     bottom: 0;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     min-height: calc(62px + env(safe-area-inset-bottom));
     padding: 5px 8px calc(5px + env(safe-area-inset-bottom));
     background: rgba(255,255,255,.96);
