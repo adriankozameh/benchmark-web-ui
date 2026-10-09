@@ -656,7 +656,8 @@ function AuthenticatedApp({
 
           {organization && route.section === 'settings' && route.page === 'billing' && (
             <BillingSettings key={organization.id} api={api} organization={organization}
-              language={language} onChanged={refresh} onUnauthorized={onUnauthorized} />
+              language={language} onChanged={refresh} onUnauthorized={onUnauthorized}
+              onExit={() => navigate({ section: 'dashboard', page: 'forecast' })} />
           )}
           {organization && organization.organizationStatus === 'SUSPENDED' && route.page !== 'billing' && (
             <div className="billing-notice"><CircleAlert size={18} /><span>{t('Your account is suspended. Resolve billing to restore access.', language)}</span>

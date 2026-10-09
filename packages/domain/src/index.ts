@@ -27,6 +27,8 @@ export type BillingSummary = {
   cancelAtPeriodEnd: boolean;
   pendingPayment: boolean;
   paymentUrl: string | null;
+  /** Latest declined charge on the open invoice; changes on every new decline. */
+  paymentFailureId: string | null;
   pendingAnnualTransition: {
     id: string;
     status: 'AWAITING_PAYMENT' | 'PAID' | 'SCHEDULED';

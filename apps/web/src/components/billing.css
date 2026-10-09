@@ -27,6 +27,15 @@
 .billing-fields small { color:#738198; font-size:11px; }
 .billing-notice { display:flex; align-items:center; gap:10px; background:#eaf3fa; color:#245b85; border:1px solid #d3e4f1; border-radius:10px; padding:15px 18px; font-size:13px; }
 .billing-notice svg { flex-shrink:0; }
+.billing-alert { display:flex; align-items:center; gap:14px; border:1px solid; border-radius:10px; padding:16px 18px; }
+.billing-alert > svg { flex-shrink:0; align-self:flex-start; margin-top:1px; }
+.billing-alert.pending { background:#fff8eb; border-color:#f3dcae; color:#8a5a12; }
+.billing-alert.failed { background:#fdecec; border-color:#f5c2c2; color:#a32020; }
+.billing-alert-copy { display:grid; gap:3px; min-width:0; }
+.billing-alert-copy strong { font-size:14px; }
+.billing-alert-copy p { margin:0; font-size:13px; line-height:1.5; color:inherit; opacity:.9; }
+.billing-alert-actions { display:flex; gap:10px; margin-left:auto; flex-shrink:0; }
+@media(max-width:650px) { .billing-alert { flex-wrap:wrap; } .billing-alert-copy { flex:1 1 0; } .billing-alert-actions { width:100%; margin-left:0; } .billing-alert-actions button { flex:1; } }
 .billing-annual { border-left:4px solid #1859a3; }
 .billing-review { border:2px solid #1859a3; }
 .billing-review .eyebrow { margin-bottom:14px; }
