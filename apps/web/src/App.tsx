@@ -663,7 +663,14 @@ function AuthenticatedApp({
               <button type="button" className="secondary-button" onClick={() => navigate({ section: 'settings', page: 'billing' })}>{t('Billing', language)}</button></div>
           )}
           {organization && route.section === 'settings' && route.page === 'stations' && stations.length >= organization.stationLimit && ['OWNER', 'ADMIN'].includes(organization.role) && (
-            <div className="billing-notice"><span>{t('Need more station capacity?', language)}</span><button type="button" className="secondary-button" onClick={() => navigate({ section: 'settings', page: 'billing' })}>{t('Upgrade or add capacity', language)}</button></div>
+            <section className="capacity-upsell" aria-labelledby="capacity-upsell-title">
+              <span className="capacity-upsell-icon" aria-hidden="true"><MapPin size={18} /></span>
+              <div className="capacity-upsell-copy">
+                <strong id="capacity-upsell-title">{t('Need more station capacity?', language)}</strong>
+                <span>{t('Add stations or move to a higher plan from Billing.', language)}</span>
+              </div>
+              <button type="button" className="secondary-button" onClick={() => navigate({ section: 'settings', page: 'billing' })}>{t('Upgrade or add capacity', language)}</button>
+            </section>
           )}
           {organization && route.section === 'settings' && route.page === 'stations' && (
             <StationSettings api={api} organizationId={organization.id}

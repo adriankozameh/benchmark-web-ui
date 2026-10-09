@@ -115,14 +115,42 @@ button { color: inherit; }
 .user-summary span { margin-top: 2px; color: rgba(255,255,255,.42); font-size: 9px; }
 
 .main-content { min-width: 0; }
-.topbar { min-height: 92px; padding: 22px 34px; display: flex; align-items: center; justify-content: space-between; gap: 20px; background: white; border-bottom: 1px solid var(--benchmark-line); }
+.topbar {
+  min-height: 92px;
+  /* Right edge tracks .content-wrap (max-width 1240px, 34px gutter) so header actions line up with the content column. */
+  padding: 22px max(34px, calc(100% - 1206px)) 22px 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: white;
+  border-bottom: 1px solid var(--benchmark-line);
+}
+.topbar-actions { display: flex; align-items: center; gap: 12px; }
+.topbar-actions .secondary-button { min-height: 38px; padding: 0 16px; }
 .topbar h1 { margin: 4px 0 0; font-size: 23px; letter-spacing: -.025em; }
-.plan-pill { border-radius: 999px; padding: 6px 9px; font-size: 9px; font-weight: 820; letter-spacing: .06em; }
+.plan-pill { display: inline-flex; align-items: center; height: 26px; border-radius: 999px; padding: 0 11px; font-size: 10px; font-weight: 820; letter-spacing: .08em; line-height: 1; }
 .plan-pill.free { background: #eef2f5; color: #657386; }
 .plan-pill.pro { background: #edf4fb; color: #365f88; }
 .plan-pill.premium { background: #fff0f0; color: #d73535; }
 .content-wrap { max-width: 1240px; padding: 34px; }
 .page-heading-row { display: flex; justify-content: space-between; gap: 22px; align-items: flex-start; margin-bottom: 17px; }
+.content-wrap > .billing-notice { margin-bottom: 24px; }
+.capacity-upsell {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 30px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid #d3e4f1;
+  border-radius: 12px;
+}
+.capacity-upsell-icon { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 10px; background: #eaf3fa; color: #1859a3; }
+.capacity-upsell-copy { display: grid; gap: 3px; min-width: 0; }
+.capacity-upsell-copy strong { font-size: 14px; color: var(--benchmark-navy); }
+.capacity-upsell-copy span { font-size: 12px; color: var(--benchmark-text-muted); line-height: 1.5; }
+.capacity-upsell .secondary-button { margin-left: auto; flex: 0 0 auto; }
 .page-heading-row h2 { margin: 0 0 6px; font-size: 19px; }
 .page-heading-row p { margin: 0; color: var(--benchmark-text-muted); font-size: 11px; line-height: 1.55; }
 
@@ -440,9 +468,13 @@ button { color: inherit; }
     white-space: nowrap;
     font-size: 18px;
   }
-  .topbar-actions { display: flex; align-items: center; gap: 7px; }
+  .topbar-actions { gap: 7px; }
+  .topbar-actions .secondary-button { min-height: 38px; }
   .mobile-logout { display: grid; background: #f3f5f7; width: 38px; height: 38px; }
-  .plan-pill { padding: 6px 8px; }
+  .plan-pill { height: 24px; padding: 0 9px; }
+  .capacity-upsell { flex-wrap: wrap; margin-bottom: 22px; padding: 16px; }
+  .capacity-upsell-copy { flex: 1 1 0; }
+  .capacity-upsell .secondary-button { width: 100%; margin-left: 0; }
 
   .content-wrap { max-width: none; padding: 20px 14px 24px; }
   .page-heading-row { flex-direction: column; gap: 13px; margin-bottom: 14px; }

@@ -1,4 +1,4 @@
-.billing-settings { display:grid; gap:22px; max-width:1120px; }
+.billing-settings { display:grid; gap:22px; }
 .billing-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
 .billing-heading h2 { font-size:25px; margin:8px 0; letter-spacing:-.5px; }
 .billing-heading p, .billing-panel p { color:#66758a; line-height:1.6; font-size:13px; }

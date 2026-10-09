@@ -4,6 +4,7 @@ const spanish: Record<string, string> = {
   "Billing": "Facturación",
   "Upgrade plan": "Actualizar plan",
   "Need more station capacity?": "¿Necesitas más capacidad de estaciones?",
+  "Add stations or move to a higher plan from Billing.": "Agrega estaciones o cambia a un plan superior desde Facturación.",
   "The payment link is invalid. Refresh Billing and try again.": "El enlace de pago no es válido. Actualiza Facturación e inténtalo de nuevo.",
   "Only the account owner and administrators can manage billing.": "Solo el propietario de la cuenta y los administradores pueden gestionar la facturación.",
   "Loading billing…": "Cargando facturación…",
