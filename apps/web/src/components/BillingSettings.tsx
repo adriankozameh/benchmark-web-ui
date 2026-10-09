@@ -8,6 +8,16 @@ import './billing.css';
 
 type PendingPurchase = { selection: BillingSelection; mode: 'INITIAL' | 'IMMEDIATE' | 'ANNUAL_PREPAYMENT' };
 const pendingKey = (org: string) => `benchmark.billing.pending.${org}`;
+/**
+ * Stripe's hosted invoice page has no way back to the app, so it opens beside Billing, which keeps
+ * polling. Returns false when the browser blocked the tab.
+ */
+function openPaymentTab(url: string): boolean {
+  const tab = window.open(safeBillingUrl(url), '_blank');
+  if (!tab) return false;
+  tab.opener = null;
+  return true;
+}
 const money = (amount: number, currency: string, language: UserLanguage) =>
   new Intl.NumberFormat(locale(language), { style: 'currency', currency }).format(amount / 100);
 const date = (value: string | null, language: UserLanguage) => value ?
@@ -100,6 +110,15 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
     return () => { live = false; window.clearTimeout(timer); };
   }, [polling, organization.id, reload, onChanged, failure]);
 
+  useEffect(() => {
+    const resume = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (sessionStorage.getItem(pendingKey(organization.id)) || summary?.pendingPayment) setPolling(true);
+    };
+    document.addEventListener('visibilitychange', resume);
+    return () => document.removeEventListener('visibilitychange', resume);
+  }, [organization.id, summary?.pendingPayment]);
+
   async function run(action: () => Promise<void>) {
     setBusy(true); setError(null);
     try { await action(); } catch (cause) { failure(cause); } finally { setBusy(false); }
@@ -125,9 +144,12 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
     await run(async () => {
       const result = await api.applyBillingQuote(organization.id, quote.id, accepted, key(`quote-${quote.id}`));
       if (result.status === 'AWAITING_PAYMENT') {
-        track(quote.selection, quote.mode); setQuote(null); setPolling(true);
-        setNotice('Your purchase needs payment confirmation. Complete the secure payment to activate it.');
-        if (result.actionUrl) window.location.assign(safeBillingUrl(result.actionUrl));
+        track(quote.selection, quote.mode); setQuote(null);
+        const opened = result.actionUrl ? openPaymentTab(result.actionUrl) : false;
+        setNotice(opened
+          ? 'Complete the payment in the new tab. This page updates automatically.'
+          : 'Your purchase needs payment confirmation. Select Resolve payment to complete it.');
+        await reload(false); setPolling(true);
       } else {
         setQuote(null); setNotice('Your subscription has been updated.');
         await reload(); await onChanged();
@@ -158,7 +180,11 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
         <button type="button" className="secondary-button" disabled={busy} onClick={() => { void portal(); }}><CreditCard size={16} />{t('Payments and invoices', language)}</button></section>}
       {organization.organizationStatus === 'SUSPENDED' && <div className="alert error"><CircleAlert size={18} /><span>{t('Your account is suspended. Resolve billing to restore access.', language)}</span></div>}
       {summary.pendingPayment && <section className="billing-panel"><h3>{t('Payment needs attention', language)}</h3><p>{t('Complete the payment before your new plan or capacity becomes available.', language)}</p>
-        <button type="button" className="primary-button" disabled={busy} onClick={() => { if (summary.paymentUrl) window.location.assign(safeBillingUrl(summary.paymentUrl)); else void portal(); }}>{t('Resolve payment', language)}</button></section>}
+        <button type="button" className="primary-button" disabled={busy} onClick={() => {
+          if (!summary.paymentUrl) { void portal(); return; }
+          if (!openPaymentTab(summary.paymentUrl)) { window.location.assign(safeBillingUrl(summary.paymentUrl)); return; }
+          setNotice('Complete the payment in the new tab. This page updates automatically.'); setPolling(true);
+        }}>{t('Resolve payment', language)}</button></section>}
       {summary.cancelAtPeriodEnd && <div className="billing-notice"><CircleAlert size={18} /><span>{t('Your subscription is scheduled to cancel. Resume it in Payments and invoices before purchasing changes.', language)}</span></div>}
       {summary.priceChanges && summary.priceChanges.length > 0 && <section className="billing-panel"><span className="eyebrow">{t('Upcoming price change', language)}</span>
         <p>{t('New prices apply from your renewal. Nothing changes before then.', language)}</p>
