@@ -140,8 +140,8 @@ export class BenchmarkApi {
     return this.request('/api/v1/me');
   }
 
-  getBilling(organizationId: string): Promise<BillingSummary> {
-    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/billing`);
+  getBilling(organizationId: string, signal?: AbortSignal): Promise<BillingSummary> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/billing`, { signal });
   }
   startSubscription(organizationId: string, plan: Exclude<Plan, 'FREE'>, interval: BillingInterval,
     idempotencyKey: string): Promise<{ sessionId: string; url: string }> {

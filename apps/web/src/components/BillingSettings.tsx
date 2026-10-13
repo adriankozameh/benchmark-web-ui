@@ -3,11 +3,24 @@ import { CheckCircle2, CircleAlert, CreditCard, LoaderCircle, ShieldCheck } from
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { BillingInterval, BillingPrice, BillingQuote, BillingSelection, BillingSummary, OrganizationSummary, UserLanguage } from '@benchmark/domain';
 import { errorMessage, locale, t } from '../language';
-import { includedSeats, reallocateIncludedSeats, safeBillingUrl, sameSelection } from './billingSelection';
+import { billingPaymentConfirmed, hasPendingBillingPayment, includedSeats, parsePendingPurchase, reallocateIncludedSeats, safeBillingUrl, sameSelection } from './billingSelection';
+import type { PendingPurchase } from './billingSelection';
+import { pollBilling } from './billingPolling';
 import './billing.css';
 
-type PendingPurchase = { selection: BillingSelection; mode: 'INITIAL' | 'IMMEDIATE' | 'ANNUAL_PREPAYMENT' };
 const pendingKey = (org: string) => `benchmark.billing.pending.${org}`;
+function readPendingPurchase(org: string): PendingPurchase | null {
+  const raw = sessionStorage.getItem(pendingKey(org));
+  const pending = parsePendingPurchase(raw);
+  if (raw !== null && !pending) sessionStorage.removeItem(pendingKey(org));
+  return pending;
+}
+function clearBillingReturn() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('billing')) return;
+  url.searchParams.delete('billing');
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+}
 /** The decline already on the invoice when the user last started paying; a different one means that try failed. */
 const seenFailureKey = (org: string) => `benchmark.billing.seen-failure.${org}`;
 const paymentFailed = (summary: BillingSummary, org: string) =>
@@ -46,6 +59,8 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
   const reviewRef = useRef<HTMLElement>(null);
   const languageRef = useRef(language);
   languageRef.current = language;
+  const onChangedRef = useRef(onChanged);
+  onChangedRef.current = onChanged;
   useEffect(() => {
     if (quote) { reviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); reviewRef.current?.focus({ preventScroll: true }); }
   }, [quote]);
@@ -64,6 +79,23 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
     if (resetDraft) setDraft(next.selection);
     return next;
   }, [api, organization.id]);
+  const reconcilePayment = useCallback((next: BillingSummary) => {
+    const pending = readPendingPurchase(organization.id);
+    if (paymentFailed(next, organization.id)) {
+      setPolling(false); setNotice(null);
+      sessionStorage.removeItem(pendingKey(organization.id));
+      clearBillingReturn();
+      return true;
+    }
+    if (!billingPaymentConfirmed(next, pending)) return false;
+    setPolling(false); setDraft(next.selection);
+    setNotice(pending?.mode === 'ANNUAL_PREPAYMENT' && next.pendingAnnualTransition?.status === 'SCHEDULED'
+      ? 'Annual payment confirmed. Your annual plan starts after your current monthly period ends.'
+      : pending ? 'Payment confirmed. Your subscription is up to date.' : 'Your billing status is up to date.');
+    sessionStorage.removeItem(pendingKey(organization.id));
+    clearBillingReturn();
+    return true;
+  }, [organization.id]);
 
   useEffect(() => {
     if (!manager) { setLoading(false); return; }
@@ -74,58 +106,37 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
       setSummary(next); setDraft(next.selection); setLoading(false);
       const result = new URLSearchParams(window.location.search).get('billing');
       if (result === 'cancelled') {
-        setNotice('Checkout cancelled. You can review your purchase again.');
+        setPolling(false); setNotice('Checkout cancelled. You can review your purchase again.');
         sessionStorage.removeItem(pendingKey(organization.id));
-      } else if (paymentFailed(next, organization.id)) {
-        sessionStorage.removeItem(pendingKey(organization.id));
-      } else if (result === 'success' || sessionStorage.getItem(pendingKey(organization.id))) {
-        setNotice('Confirming your payment…'); setPolling(true);
-      } else if (next.pendingPayment || next.pendingAnnualTransition?.status === 'AWAITING_PAYMENT') setPolling(true);
+        clearBillingReturn();
+      } else if (result === 'success' || readPendingPurchase(organization.id) || hasPendingBillingPayment(next)) {
+        if (reconcilePayment(next)) void onChangedRef.current().catch(failure);
+        else { setNotice('Confirming your payment…'); setPolling(true); }
+      }
     }).catch(cause => { if (live) { failure(cause); setLoading(false); } });
     return () => { live = false; };
-  }, [api, organization.id, manager, failure]);
+  }, [api, organization.id, manager, failure, reconcilePayment]);
 
   useEffect(() => {
     if (!polling) return;
-    let live = true;
-    let timer: number | undefined;
-    const until = Date.now() + 120_000;
-    const poll = async () => {
-      try {
-        const next = await reload(false);
-        if (!live) return;
-        if (paymentFailed(next, organization.id)) {
-          setPolling(false); setNotice(null);
-          sessionStorage.removeItem(pendingKey(organization.id));
-          return;
-        }
-        let pending: PendingPurchase | null = null;
-        try { pending = JSON.parse(sessionStorage.getItem(pendingKey(organization.id)) ?? 'null') as PendingPurchase | null; } catch { /* Ignore invalid browser state. */ }
-        const matches = pending && sameSelection(pending.selection, next.selection);
-        const scheduled = next.pendingAnnualTransition?.status === 'SCHEDULED';
-        const confirmed = pending?.mode === 'ANNUAL_PREPAYMENT' ? scheduled || (matches && !next.pendingPayment)
-          : pending ? matches && !next.pendingPayment && ['ACTIVE', 'TRIALING'].includes(next.status)
-          : !next.pendingPayment && next.pendingAnnualTransition?.status !== 'AWAITING_PAYMENT';
-        if (confirmed) {
-          setPolling(false); setDraft(next.selection);
-          setNotice(scheduled ? 'Annual payment confirmed. Your annual plan starts after your current monthly period ends.' : 'Payment confirmed. Your subscription is up to date.');
-          sessionStorage.removeItem(pendingKey(organization.id));
-          window.history.replaceState({}, '', window.location.pathname);
-          await onChanged(); return;
-        }
-      } catch (cause) { if (live) failure(cause); }
-      if (live && Date.now() >= until) { setPolling(false); setNotice('Payment confirmation is taking longer. Refresh Billing to check its status.'); return; }
-      if (live) timer = window.setTimeout(() => { void poll(); }, 4000);
-    };
-    void poll();
-    return () => { live = false; window.clearTimeout(timer); };
-  }, [polling, organization.id, reload, onChanged, failure]);
+    return pollBilling(signal => api.getBilling(organization.id, signal), next => {
+      setSummary(next); setError(null);
+      if (!reconcilePayment(next)) return false;
+      void onChangedRef.current().catch(failure);
+      return true;
+    }, failure, () => {
+      setPolling(false);
+      sessionStorage.removeItem(pendingKey(organization.id));
+      clearBillingReturn();
+      setNotice('Payment confirmation is taking longer. Refresh Billing to check its status.');
+    });
+  }, [api, polling, organization.id, reconcilePayment, failure]);
 
   useEffect(() => {
     const resume = () => {
       if (document.visibilityState !== 'visible') return;
       if (summary && paymentFailed(summary, organization.id)) return;
-      if (sessionStorage.getItem(pendingKey(organization.id)) || summary?.pendingPayment) setPolling(true);
+      if (readPendingPurchase(organization.id) || (summary && hasPendingBillingPayment(summary))) setPolling(true);
     };
     document.addEventListener('visibilitychange', resume);
     return () => document.removeEventListener('visibilitychange', resume);
@@ -134,6 +145,15 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
   async function run(action: () => Promise<void>) {
     setBusy(true); setError(null);
     try { await action(); } catch (cause) { failure(cause); } finally { setBusy(false); }
+  }
+  async function refreshBilling() {
+    const next = await reload();
+    if (!reconcilePayment(next)) {
+      if (readPendingPurchase(organization.id) || hasPendingBillingPayment(next)) {
+        setNotice('Confirming your payment…'); setPolling(true);
+      } else { setPolling(false); setNotice(null); }
+    }
+    await onChangedRef.current();
   }
   function track(selection: BillingSelection, mode: PendingPurchase['mode']) {
     sessionStorage.setItem(pendingKey(organization.id), JSON.stringify({ selection, mode } satisfies PendingPurchase));
@@ -173,7 +193,9 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
           setNotice('Your purchase needs payment confirmation. Select Resolve payment to complete it.'); setPolling(true);
         }
       } else {
-        setQuote(null); setNotice('Your subscription has been updated.');
+        sessionStorage.removeItem(pendingKey(organization.id));
+        clearBillingReturn();
+        setPolling(false); setQuote(null); setNotice('Your subscription has been updated.');
         await reload(); await onChanged();
       }
     });
@@ -191,7 +213,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
   if (loading) return <div className="billing-loading"><LoaderCircle className="spin" size={22} />{t('Loading billing…', language)}</div>;
   return <div className="billing-settings">
     <div className="billing-heading"><div><span className="eyebrow">{t('Your subscription', language)}</span><h2>{t('Choose the right plan for your stations', language)}</h2><p>{t('Start with a plan. Add stations and users whenever you need them.', language)}</p></div>
-      <button type="button" className="secondary-button" disabled={busy} onClick={() => { void run(async () => { await reload(); await onChanged(); }); }}>{t('Refresh', language)}</button></div>
+      <button type="button" className="secondary-button" disabled={busy} onClick={() => { void run(refreshBilling); }}>{t('Refresh', language)}</button></div>
     {error && <div className="alert error" role="alert"><CircleAlert size={18} /><span>{error}</span></div>}
     {notice && <div className="billing-notice" role="status"><CheckCircle2 size={18} /><span>{t(notice, language)}</span>{polling && <LoaderCircle size={16} className="spin" />}</div>}
     {summary?.pendingPayment && (() => {
@@ -226,7 +248,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
         <p>{t('Your remaining monthly days are preserved. User add-ons keep their own billing dates.', language)}</p>
         {summary.pendingAnnualTransition.status === 'AWAITING_PAYMENT' && <div className="billing-actions">
           {summary.pendingAnnualTransition.sessionUrl && <button type="button" className="primary-button" disabled={busy} onClick={() => window.location.assign(safeBillingUrl(summary.pendingAnnualTransition!.sessionUrl!))}>{t('Continue annual payment', language)}</button>}
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => { void run(async () => { await api.cancelUnpaidAnnualChange(organization.id); sessionStorage.removeItem(pendingKey(organization.id)); setPolling(false); await reload(); }); }}>{t('Cancel unpaid change', language)}</button></div>}</section>}
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => { void run(async () => { await api.cancelUnpaidAnnualChange(organization.id); sessionStorage.removeItem(pendingKey(organization.id)); setPolling(false); clearBillingReturn(); if (!reconcilePayment(await reload())) setNotice(null); }); }}>{t('Cancel unpaid change', language)}</button></div>}</section>}
       {!active && <>
         <div className="billing-interval" aria-label={t('Billing interval', language)}>{(['MONTHLY', 'ANNUAL'] as const).map(cadence => <button type="button" key={cadence} aria-pressed={billingInterval === cadence} className={billingInterval === cadence ? 'selected' : ''} onClick={() => setBillingInterval(cadence)}>{t(cadence === 'MONTHLY' ? 'Monthly' : 'Annual', language)}</button>)}</div>
         <div className="billing-plans">{(['PRO', 'PREMIUM'] as const).map(plan => <section className={`billing-plan ${plan.toLowerCase()}`} key={plan}>
@@ -259,7 +281,6 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
         <dl className="billing-line-items">{quote.renewals.map(renewal => <div key={renewal.interval}><dt>{t(renewal.interval === 'MONTHLY' ? 'Monthly' : 'Annual', language)}<small>{renewal.renewsAt ? `${t('Next renewal', language)}: ${date(renewal.renewsAt, language)}` : t('Billed from today', language)}</small></dt><dd>{money(renewal.amount, renewal.currency, language)} / {t(renewal.interval === 'MONTHLY' ? 'month' : 'year', language)}</dd></div>)}</dl></>}
       {summary?.paymentMethod && <div className="billing-payment-method"><CreditCard size={16} /><span>{summary.paymentMethod.last4 ? `${(summary.paymentMethod.brand ?? summary.paymentMethod.type).toUpperCase()} •••• ${summary.paymentMethod.last4}` : summary.paymentMethod.type}</span><button type="button" className="link-button" disabled={busy} onClick={() => { void portal(); }}>{t('Change', language)}</button></div>}
       <label className="billing-consent"><input type="checkbox" checked={accepted} disabled={busy} onChange={event => setAccepted(event.target.checked)} /><span>{t('I authorize Benchmark Labs to charge my payment method the amount due now and the renewal amounts above on each renewal until I cancel. I can cancel anytime from Billing.', language)}</span></label>
-      <p className="muted">{t('Quote expires', language)}: {new Date(quote.expiresAt).toLocaleTimeString(locale(language))}</p>
       <div className="billing-actions"><button type="button" className="primary-button" disabled={busy || !accepted || Date.parse(quote.expiresAt) <= Date.now()} onClick={() => { void confirm(); }}>{busy && <LoaderCircle size={16} className="spin" />}{t(quote.mode === 'ANNUAL_PREPAYMENT' ? 'Continue to annual payment' : 'Confirm purchase', language)}</button>
         <button type="button" className="secondary-button" disabled={busy} onClick={() => setQuote(null)}>{t('Cancel', language)}</button></div></section>}
   </div>;
