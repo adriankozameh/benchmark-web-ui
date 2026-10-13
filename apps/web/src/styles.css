@@ -165,6 +165,9 @@ button { color: inherit; }
 .usage-card strong { display: block; margin-top: 4px; font-size: 16px; }
 .usage-track { height: 7px; border-radius: 999px; background: #edf1f4; overflow: hidden; }
 .usage-track span { display: block; height: 100%; min-width: 4px; background: var(--benchmark-red); border-radius: inherit; }
+.usage-card.seat-capacity-card { grid-template-columns: 150px minmax(0, 1fr) auto; }
+.seat-capacity-card .primary-button { white-space: nowrap; }
+@media (max-width: 720px) { .usage-card.seat-capacity-card { grid-template-columns: 1fr; } .seat-capacity-card .primary-button { width: 100%; } }
 
 .station-list-card { background: white; border: 1px solid var(--benchmark-line); border-radius: 11px; padding: 7px; box-shadow: var(--benchmark-shadow); margin-bottom: 18px; }
 .station-row { display: grid; width: 100%; grid-template-columns: 38px minmax(0, 1fr) auto 17px; align-items: center; gap: 11px; min-height: 62px; padding: 8px 10px; border: 0; border-radius: 8px; background: white; color: inherit; text-align: left; font: inherit; cursor: pointer; }

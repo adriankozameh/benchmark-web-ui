@@ -53,3 +53,11 @@
 @media(max-width:650px) { .billing-plans,.billing-fields { grid-template-columns:1fr; } .billing-heading { flex-direction:column; } .billing-panel,.billing-plan { padding:20px; } .billing-current { gap:18px; } .billing-current > div:first-child { flex-basis:100%; } .billing-secure { align-items:flex-start; line-height:1.5; } }
 .billing-payment-method .link-button { background:none; border:0; padding:0; color:#1859a3; font:inherit; font-weight:650; cursor:pointer; }
 .billing-payment-method .link-button:disabled { opacity:.5; cursor:default; }
+.billing-seat-fields .billing-interval { margin:0; }
+.seat-purchase-dialog { width:min(850px,calc(100vw - 32px)); max-height:calc(100dvh - 48px); margin:auto; padding:0; overflow-y:auto; background:#f6f8fa; color:var(--benchmark-navy); border:1px solid var(--benchmark-line); border-radius:16px; box-shadow:0 20px 60px #10233f40; }
+.seat-purchase-dialog::backdrop { background:#10233f80; }
+.seat-purchase-heading { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:22px 26px; background:white; border-bottom:1px solid var(--benchmark-line); }
+.seat-purchase-heading h2 { margin:0; font-size:23px; }
+.seat-purchase-dialog .billing-settings, .seat-purchase-dialog .billing-loading { padding:24px; }
+.seat-purchase-dialog .billing-heading p { margin:0; }
+@media(max-width:650px) { .seat-purchase-heading { padding:18px; } .seat-purchase-heading h2 { font-size:19px; } .seat-purchase-dialog .billing-settings, .seat-purchase-dialog .billing-loading { padding:16px; } .seat-purchase-dialog .billing-actions button { flex:1; } }

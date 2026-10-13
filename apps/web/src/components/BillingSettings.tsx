@@ -3,7 +3,7 @@ import { CheckCircle2, CircleAlert, CreditCard, LoaderCircle, ShieldCheck } from
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { BillingInterval, BillingPrice, BillingQuote, BillingSelection, BillingSummary, OrganizationSummary, UserLanguage } from '@benchmark/domain';
 import { errorMessage, locale, t } from '../language';
-import { billingPaymentConfirmed, hasPendingBillingPayment, includedSeats, parsePendingPurchase, reallocateIncludedSeats, safeBillingUrl, sameSelection } from './billingSelection';
+import { addSeats, billingPaymentConfirmed, hasPendingBillingPayment, includedSeats, parsePendingPurchase, reallocateIncludedSeats, safeBillingUrl, sameSelection } from './billingSelection';
 import type { PendingPurchase } from './billingSelection';
 import { pollBilling } from './billingPolling';
 import './billing.css';
@@ -40,14 +40,16 @@ const money = (amount: number, currency: string, language: UserLanguage) =>
 const date = (value: string | null, language: UserLanguage) => value ?
   new Intl.DateTimeFormat(locale(language), { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value)) : '—';
 
-export function BillingSettings({ api, organization, language, onChanged, onUnauthorized, onExit }: {
+export function BillingSettings({ api, organization, language, onChanged, onUnauthorized, onExit, seatsOnly = false, onBusyChange }: {
   api: BenchmarkApi; organization: OrganizationSummary; language: UserLanguage;
   onChanged: () => Promise<void>; onUnauthorized: () => void; onExit: () => void;
+  seatsOnly?: boolean; onBusyChange?: (busy: boolean) => void;
 }) {
   const manager = ['OWNER', 'ADMIN'].includes(organization.role);
   const [summary, setSummary] = useState<BillingSummary | null>(null);
   const [draft, setDraft] = useState<BillingSelection | null>(null);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('MONTHLY');
+  const [seatsToAdd, setSeatsToAdd] = useState(1);
   const [quote, setQuote] = useState<BillingQuote | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -61,6 +63,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
   languageRef.current = language;
   const onChangedRef = useRef(onChanged);
   onChangedRef.current = onChanged;
+  useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
   useEffect(() => {
     if (quote) { reviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); reviewRef.current?.focus({ preventScroll: true }); }
   }, [quote]);
@@ -104,6 +107,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
     api.getBilling(organization.id).then(next => {
       if (!live) return;
       setSummary(next); setDraft(next.selection); setLoading(false);
+      if (seatsOnly) setBillingInterval(next.selection?.interval ?? 'MONTHLY');
       const result = new URLSearchParams(window.location.search).get('billing');
       if (result === 'cancelled') {
         setPolling(false); setNotice('Checkout cancelled. You can review your purchase again.');
@@ -115,7 +119,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
       }
     }).catch(cause => { if (live) { failure(cause); setLoading(false); } });
     return () => { live = false; };
-  }, [api, organization.id, manager, failure, reconcilePayment]);
+  }, [api, organization.id, manager, failure, reconcilePayment, seatsOnly]);
 
   useEffect(() => {
     if (!polling) return;
@@ -208,11 +212,17 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
   const active = summary?.selection && !['CANCELED', 'INCOMPLETE_EXPIRED'].includes(summary.status);
   const blocked = busy || Boolean(summary?.cancelAtPeriodEnd || summary?.pendingPayment || summary?.pendingAnnualTransition);
   const changed = draft && summary?.selection && !sameSelection(draft, summary.selection);
+  const seatAddonLimit = 10000 - (summary?.selection?.[billingInterval === 'MONTHLY' ? 'monthlySeatAddons' : 'annualSeatAddons'] ?? 0);
+  const seatSelection = seatsOnly && summary?.selection && seatsToAdd <= seatAddonLimit
+    ? addSeats(summary.selection, billingInterval, seatsToAdd) : null;
+  const seatPrice = summary?.prices.find(price => price.kind === 'SEAT' && price.interval === billingInterval);
 
   if (!manager) return <section className="billing-panel"><h2>{t('Billing', language)}</h2><p>{t('Only the account owner and administrators can manage billing.', language)}</p></section>;
   if (loading) return <div className="billing-loading"><LoaderCircle className="spin" size={22} />{t('Loading billing…', language)}</div>;
   return <div className="billing-settings">
-    <div className="billing-heading"><div><span className="eyebrow">{t('Your subscription', language)}</span><h2>{t('Choose the right plan for your stations', language)}</h2><p>{t('Start with a plan. Add stations and users whenever you need them.', language)}</p></div>
+    <div className="billing-heading"><div>{seatsOnly
+      ? <p>{t('Add seats for your team. Review the cost before confirming.', language)}</p>
+      : <><span className="eyebrow">{t('Your subscription', language)}</span><h2>{t('Choose the right plan for your stations', language)}</h2><p>{t('Start with a plan. Add stations and users whenever you need them.', language)}</p></>}</div>
       <button type="button" className="secondary-button" disabled={busy} onClick={() => { void run(refreshBilling); }}>{t('Refresh', language)}</button></div>
     {error && <div className="alert error" role="alert"><CircleAlert size={18} /><span>{error}</span></div>}
     {notice && <div className="billing-notice" role="status"><CheckCircle2 size={18} /><span>{t(notice, language)}</span>{polling && <LoaderCircle size={16} className="spin" />}</div>}
@@ -236,7 +246,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
     {summary && <>
       {active && <section className="billing-panel billing-current"><div><span className="eyebrow">{t('Current plan', language)}</span><h3>{summary.plan} <span className="billing-status">{t(summary.status, language)}</span></h3>
         <p>{t(summary.selection!.interval === 'ANNUAL' ? 'Annual billing' : 'Monthly billing', language)} · {t('Plan next renewal', language)}: {date(summary.currentPeriodEnd, language)}</p></div>
-        <div className="billing-capacity"><strong>{summary.stationsPurchased}</strong><span>{t('Stations', language)}</span></div><div className="billing-capacity"><strong>{summary.seatsPurchased}</strong><span>{t('Users', language)}</span></div>
+        {!seatsOnly && <div className="billing-capacity"><strong>{summary.stationsPurchased}</strong><span>{t('Stations', language)}</span></div>}<div className="billing-capacity"><strong>{summary.seatsPurchased}</strong><span>{t('Users', language)}</span></div>
         <button type="button" className="secondary-button" disabled={busy} onClick={() => { void portal(); }}><CreditCard size={16} />{t('Payments and invoices', language)}</button></section>}
       {organization.organizationStatus === 'SUSPENDED' && <div className="alert error"><CircleAlert size={18} /><span>{t('Your account is suspended. Resolve billing to restore access.', language)}</span></div>}
       {summary.cancelAtPeriodEnd && <div className="billing-notice"><CircleAlert size={18} /><span>{t('Your subscription is scheduled to cancel. Resume it in Payments and invoices before purchasing changes.', language)}</span></div>}
@@ -250,6 +260,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
           {summary.pendingAnnualTransition.sessionUrl && <button type="button" className="primary-button" disabled={busy} onClick={() => window.location.assign(safeBillingUrl(summary.pendingAnnualTransition!.sessionUrl!))}>{t('Continue annual payment', language)}</button>}
           <button type="button" className="secondary-button" disabled={busy} onClick={() => { void run(async () => { await api.cancelUnpaidAnnualChange(organization.id); sessionStorage.removeItem(pendingKey(organization.id)); setPolling(false); clearBillingReturn(); if (!reconcilePayment(await reload())) setNotice(null); }); }}>{t('Cancel unpaid change', language)}</button></div>}</section>}
       {!active && <>
+        {seatsOnly && <p>{t('Choose a plan before buying additional seats.', language)}</p>}
         <div className="billing-interval" aria-label={t('Billing interval', language)}>{(['MONTHLY', 'ANNUAL'] as const).map(cadence => <button type="button" key={cadence} aria-pressed={billingInterval === cadence} className={billingInterval === cadence ? 'selected' : ''} onClick={() => setBillingInterval(cadence)}>{t(cadence === 'MONTHLY' ? 'Monthly' : 'Annual', language)}</button>)}</div>
         <div className="billing-plans">{(['PRO', 'PREMIUM'] as const).map(plan => <section className={`billing-plan ${plan.toLowerCase()}`} key={plan}>
           <span className="eyebrow">{plan}</span><h3>{t(plan === 'PRO' ? 'Find your best forecast' : 'Forecasts trained for your station', language)}</h3>
@@ -258,7 +269,34 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
           <button type="button" className="primary-button wide" disabled={busy} onClick={() => { void checkout(plan); }}>{t('Subscribe', language)} · {plan}</button></section>)}</div>
         <p className="billing-secure"><ShieldCheck size={16} />{t('Secure checkout with Stripe. Receipts go to the account owner.', language)}</p>
       </>}
-      {active && draft && <section className="billing-panel"><h3>{t('Upgrade or add capacity', language)}</h3>
+      {active && seatsOnly && <section className="billing-panel"><h3>{t('Add seats', language)}</h3>
+        <div className="billing-fields billing-seat-fields">
+          <label className="field"><span>{t('Seats to add', language)}</span>
+            <input autoFocus type="number" min="1" max={Math.max(1, seatAddonLimit)} step="1" value={seatsToAdd}
+              disabled={blocked || seatAddonLimit < 1} onChange={event => {
+                const quantity = Number(event.target.value);
+                if (Number.isSafeInteger(quantity) && quantity >= 1 && quantity <= seatAddonLimit) { setQuote(null); setSeatsToAdd(quantity); }
+              }} />
+          </label>
+          <div className="field"><span>{t('Billing interval', language)}</span>
+            <div className="billing-interval" role="group" aria-label={t('Billing interval', language)}>
+              {(['MONTHLY', 'ANNUAL'] as const).map(cadence => <button type="button" key={cadence} disabled={blocked}
+                aria-pressed={billingInterval === cadence} className={billingInterval === cadence ? 'selected' : ''} onClick={() => {
+                  setQuote(null); setBillingInterval(cadence);
+                  const limit = 10000 - summary.selection![cadence === 'MONTHLY' ? 'monthlySeatAddons' : 'annualSeatAddons'];
+                  setSeatsToAdd(quantity => Math.min(quantity, Math.max(1, limit)));
+                }}>{t(cadence === 'MONTHLY' ? 'Monthly' : 'Annual', language)}</button>)}
+            </div>
+            <small>{seatPrice ? money(seatPrice.unitAmount, seatPrice.currency, language) : '—'} / {t(billingInterval === 'MONTHLY' ? 'user per month' : 'user per year', language)}</small>
+          </div>
+        </div>
+        <p>{t('Seats after purchase', language)}: <strong>{summary.seatsPurchased + seatsToAdd}</strong></p>
+        {seatPrice ? <p>{t('Additional recurring cost', language)}: <strong>{money(seatPrice.unitAmount * seatsToAdd, seatPrice.currency, language)} / {t(billingInterval === 'MONTHLY' ? 'month' : 'year', language)}</strong></p>
+          : <p>{t('Seat pricing is currently unavailable. Refresh billing to try again.', language)}</p>}
+        <button type="button" className="primary-button" disabled={blocked || !seatSelection || !seatPrice}
+          onClick={() => { if (seatSelection) void review(seatSelection); }}>{t('Review cost', language)}</button>
+      </section>}
+      {active && draft && !seatsOnly && <section className="billing-panel"><h3>{t('Upgrade or add capacity', language)}</h3>
         <div className="billing-fields"><label className="field"><span>{t('Plan', language)}</span><select value={draft.plan} disabled={blocked} onChange={event => { setQuote(null); setDraft(reallocateIncludedSeats(draft, event.target.value as BillingSelection['plan'], draft.stationsPurchased)); }}>
           {summary.plan === 'PRO' && <option value="PRO">PRO</option>}<option value="PREMIUM">PREMIUM</option></select></label>
           <label className="field"><span>{t('Total stations', language)}</span><input type="number" min={summary.stationsPurchased} max={10000} step="1" value={draft.stationsPurchased} disabled={blocked} onChange={event => { const n=Number(event.target.value); if (Number.isInteger(n) && n >= summary.stationsPurchased && n <= 10000) { setQuote(null); setDraft(reallocateIncludedSeats(draft, draft.plan, n)); } }} /></label>
@@ -268,7 +306,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
         <p className="muted">{t('Additional station', language)}: {priceLabel('STATION', draft.plan, draft.interval)} / {t(draft.interval === 'MONTHLY' ? 'month' : 'year', language)}. {t('PREMIUM adds 10 included users per station. Stations follow the plan interval; extra users can use either interval.', language)}</p>
         <button type="button" className="primary-button" disabled={blocked || !changed} onClick={() => { void review(draft); }}>{t('Review cost', language)}</button>
       </section>}
-      {active && summary.selection?.interval === 'MONTHLY' && <section className="billing-panel"><h3>{t('Switch to annual', language)}</h3>
+      {active && !seatsOnly && summary.selection?.interval === 'MONTHLY' && <section className="billing-panel"><h3>{t('Switch to annual', language)}</h3>
         <p>{t('Pay for a year now. Your annual coverage starts when the current paid monthly period ends.', language)}</p>
         <p>{t('Annual coverage starts', language)}: <strong>{date(summary.currentPeriodEnd, language)}</strong></p>
         <button type="button" className="secondary-button" disabled={blocked} onClick={() => { void review({ ...summary.selection!, interval: 'ANNUAL' }); }}>{t('Review annual payment', language)}</button></section>}

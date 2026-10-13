@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { CircleAlert, LoaderCircle, MailPlus, RefreshCw } from 'lucide-react';
+import { CircleAlert, LoaderCircle, MailPlus, RefreshCw, UserPlus } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { OrganizationInvitation, UserLanguage } from '@benchmark/domain';
 import { errorMessage, locale, t } from '../language';
 
-export function OrganizationInvitations({ api, organizationId, organizationRole, seatLimit, language, onUnauthorized, membershipRevision }: {
+export function OrganizationInvitations({ api, organizationId, organizationRole, seatLimit, language, onUnauthorized, membershipRevision, onBuySeats }: {
   api: BenchmarkApi;
   organizationId: string;
   organizationRole: string;
@@ -13,6 +13,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
   membershipRevision: number;
   language: UserLanguage;
   onUnauthorized: () => void;
+  onBuySeats: () => void;
 }) {
   const [seatsUsed, setSeatsUsed] = useState<number | null>(null);
   const [capacityError, setCapacityError] = useState<string | null>(null);
@@ -155,11 +156,14 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
 
   return <>
     {canInvite && <>
-      <div className="usage-card" aria-live="polite">
+      <div className="usage-card seat-capacity-card" aria-live="polite">
         <div><span className="eyebrow">{t('Seat capacity', language)}</span>
           <strong>{seatsUsed === null ? t(capacityError ? 'Seat capacity unavailable' : 'Checking seat capacity…', language) : <>{seatsUsed} {t('of', language)} {seatLimit}</>}</strong>
         </div>
         <div className="usage-track"><span style={{ width: `${Math.min(100, ((seatsUsed ?? 0) / Math.max(1, seatLimit)) * 100)}%` }} /></div>
+        <button type="button" className="primary-button" disabled={busy !== null} onClick={onBuySeats}>
+          <UserPlus size={16} />{t('Buy more seats', language)}
+        </button>
       </div>
       {atSeatLimit && <div className="alert neutral" role="status">
         <CircleAlert size={18} />

@@ -33,6 +33,7 @@ import { DataProviders } from './components/DataProviders';
 import { OrganizationMembers } from './components/OrganizationMembers';
 import { OrganizationInvitations } from './components/OrganizationInvitations';
 import { BillingSettings } from './components/BillingSettings';
+import { SeatPurchaseDialog } from './components/SeatPurchaseDialog';
 import { MapPicker } from './components/MapPicker';
 import { StationHardwareEditor } from './components/StationHardwareEditor';
 import { errorMessage, t } from './language';
@@ -400,6 +401,7 @@ function AuthenticatedApp({
 
   const [me, setMe] = useState<CurrentUser | null>(null);
   const [membershipRevision, setMembershipRevision] = useState(0);
+  const [buySeatsFor, setBuySeatsFor] = useState<string | null>(null);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState(() => sessionStorage.getItem(ACTIVE_ORGANIZATION_KEY));
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
@@ -411,6 +413,7 @@ function AuthenticatedApp({
   const [route, setRoute] = useState<AppRoute | null>(() => parseRoute(window.location.pathname));
 
   const navigate = useCallback((nextRoute: AppRoute, replace = false) => {
+    setBuySeatsFor(null);
     const path = routePath(nextRoute);
     if (replace) window.history.replaceState({}, '', path);
     else window.history.pushState({}, '', path);
@@ -418,7 +421,7 @@ function AuthenticatedApp({
   }, [routePath]);
 
   useEffect(() => {
-    const handlePopState = () => setRoute(parseRoute(window.location.pathname));
+    const handlePopState = () => { setBuySeatsFor(null); setRoute(parseRoute(window.location.pathname)); };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [parseRoute]);
@@ -700,6 +703,7 @@ function AuthenticatedApp({
               <label className="field"><span>{t('Active organization', language)}</span>
                 <select value={organization.id} onChange={(event) => {
                   const id = event.target.value;
+                  setBuySeatsFor(null);
                   sessionStorage.setItem(ACTIVE_ORGANIZATION_KEY, id);
                   setSelectedOrganizationId(id);
                   void refresh();
@@ -716,7 +720,11 @@ function AuthenticatedApp({
               language={language} onUnauthorized={onUnauthorized} />}
             {organization && <OrganizationInvitations key={`invitations:${organization.id}`} membershipRevision={membershipRevision} api={api} organizationId={organization.id}
               organizationRole={organization.role} seatLimit={organization.seatLimit}
-              language={language} onUnauthorized={onUnauthorized} />}
+              language={language} onUnauthorized={onUnauthorized} onBuySeats={() => setBuySeatsFor(organization.id)} />}
+            {organization && buySeatsFor === organization.id && ['OWNER', 'ADMIN'].includes(organization.role) &&
+              <SeatPurchaseDialog key={`seats:${organization.id}`} api={api} organization={organization} language={language}
+                onUnauthorized={onUnauthorized} onClose={() => setBuySeatsFor(null)}
+                onChanged={async () => { await refresh(); setMembershipRevision(value => value + 1); }} />}
           </>}
         </div>
       </main>

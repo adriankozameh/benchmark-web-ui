@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import ts from 'typescript';
-import { billingPaymentConfirmed, hasPendingBillingPayment, includedSeats, parsePendingPurchase, reallocateIncludedSeats, safeBillingUrl, sameSelection } from '../src/components/billingSelection.ts';
+import { addSeats, billingPaymentConfirmed, hasPendingBillingPayment, includedSeats, parsePendingPurchase, reallocateIncludedSeats, safeBillingUrl, sameSelection } from '../src/components/billingSelection.ts';
 import { pollBilling } from '../src/components/billingPolling.ts';
 
 test('PREMIUM stations include ten users each; PRO stations include one user total', () => {
@@ -38,6 +38,22 @@ test('server confirmation compares selection values independently of JSON proper
 const selection = { plan: 'PREMIUM', interval: 'ANNUAL', stationsPurchased: 1, monthlySeatAddons: 4, annualSeatAddons: 0 };
 const summary = { status: 'ACTIVE', selection, pendingPayment: false, pendingAnnualTransition: null };
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); };
+
+test('buying monthly seats adds to existing seats without changing the plan or stations', () => {
+  const current = { ...selection, annualSeatAddons: 3 };
+  assert.deepEqual(addSeats(current, 'MONTHLY', 2), { ...current, monthlySeatAddons: 6 });
+  assert.equal(current.monthlySeatAddons, 4);
+});
+
+test('buying annual seats keeps existing monthly seats and the plan billing interval', () => {
+  const current = { ...selection, interval: 'MONTHLY', annualSeatAddons: 3 };
+  assert.deepEqual(addSeats(current, 'ANNUAL', 2), { ...current, annualSeatAddons: 5 });
+});
+
+test('seat purchases reject invalid quantities and respect the total add-on limit', () => {
+  for (const quantity of [-1, 0, 1.5, NaN, Infinity, 10000]) assert.throws(() => addSeats(selection, 'MONTHLY', quantity), RangeError);
+  assert.equal(addSeats(selection, 'MONTHLY', 9996).monthlySeatAddons, 10000);
+});
 
 test('an initial checkout is settled when the active plan already includes extra users', () => {
   const initial = { mode: 'INITIAL', selection: { ...selection, monthlySeatAddons: 0 } };

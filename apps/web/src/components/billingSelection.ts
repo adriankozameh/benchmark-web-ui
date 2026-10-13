@@ -1,4 +1,13 @@
-import type { BillingSelection, BillingSummary } from '@benchmark/domain';
+import type { BillingInterval, BillingSelection, BillingSummary } from '@benchmark/domain';
+
+/** Add paid seats to one cadence while preserving the plan, stations and existing add-ons. */
+export function addSeats(selection: BillingSelection, interval: BillingInterval, quantity: number): BillingSelection {
+  if (!Number.isSafeInteger(quantity) || quantity < 1) throw new RangeError('Seat quantity must be a positive integer.');
+  const key = interval === 'MONTHLY' ? 'monthlySeatAddons' : 'annualSeatAddons';
+  const total = selection[key] + quantity;
+  if (total > 10000) throw new RangeError('Seat quantity exceeds the purchase limit.');
+  return { ...selection, [key]: total };
+}
 
 export type PendingPurchase = { selection: BillingSelection; mode: 'INITIAL' | 'IMMEDIATE' | 'ANNUAL_PREPAYMENT' };
 
