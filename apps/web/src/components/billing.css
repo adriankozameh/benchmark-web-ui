@@ -17,11 +17,15 @@
 .billing-plan h3 { font-size:21px; margin:16px 0 22px; }
 .billing-price { font-size:38px; font-weight:760; margin:0; letter-spacing:-1px; }
 .billing-price span { font-size:13px; font-weight:400; color:#738198; letter-spacing:0; }
+.billing-payment-cadence { margin:8px 0 0; font-size:12px; color:#66758a; line-height:1.5; }
+.billing-plan-savings { display:flex; flex-wrap:wrap; gap:4px 6px; margin:12px 0 0; font-size:13px; font-weight:650; color:#24715d; line-height:1.5; }
 .billing-plan ul { list-style:none; padding:0; margin:26px 0; display:grid; gap:14px; font-size:13px; color:#607087; }
 .billing-plan li::before { content:'✓'; color:#24715d; margin-right:9px; }
-.billing-interval { display:flex; justify-content:center; gap:4px; background:#e6ecf3; border-radius:9px; padding:4px; width:fit-content; margin:auto; }
-.billing-interval button { background:transparent; border:0; padding:10px 24px; border-radius:6px; cursor:pointer; font-weight:650; font-size:13px; }
+.billing-interval { display:flex; justify-content:center; gap:4px; background:#e6ecf3; border-radius:9px; padding:4px; width:fit-content; max-width:100%; margin:auto; }
+.billing-interval button { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:7px; min-width:0; background:transparent; border:0; padding:10px 24px; border-radius:6px; cursor:pointer; font-weight:650; font-size:13px; }
 .billing-interval .selected { background:white; box-shadow:0 2px 5px #17284412; }
+.billing-savings-badge { padding:4px 8px; border-radius:999px; background:#e8f3f0; color:#176349; font-size:11px; font-weight:700; line-height:1.3; white-space:nowrap; }
+@media(max-width:650px) { .billing-interval button { padding:10px 12px; } }
 .billing-secure { display:flex; justify-content:center; align-items:center; gap:8px; color:#748198; font-size:12px; }
 .billing-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
 .billing-fields small { color:#738198; font-size:11px; }

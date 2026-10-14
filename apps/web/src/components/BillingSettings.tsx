@@ -35,10 +35,22 @@ function openPaymentTab(url: string): boolean {
   tab.opener = null;
   return true;
 }
-const money = (amount: number, currency: string, language: UserLanguage) =>
-  new Intl.NumberFormat(locale(language), { style: 'currency', currency }).format(amount / 100);
+const money = (amount: number, currency: string, language: UserLanguage, minimumFractionDigits?: number) =>
+  new Intl.NumberFormat(locale(language), { style: 'currency', currency, minimumFractionDigits }).format(amount / 100);
 const date = (value: string | null, language: UserLanguage) => value ?
   new Intl.DateTimeFormat(locale(language), { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(value)) : '—';
+
+function annualSavings(prices: BillingPrice[] | undefined, plan: BillingSelection['plan']) {
+  const monthly = prices?.find(price => price.kind === 'PLAN' && price.plan === plan && price.interval === 'MONTHLY');
+  const annual = prices?.find(price => price.kind === 'PLAN' && price.plan === plan && price.interval === 'ANNUAL');
+  if (!monthly || !annual || monthly.currency.toLowerCase() !== annual.currency.toLowerCase()
+    || !Number.isSafeInteger(monthly.unitAmount) || !Number.isSafeInteger(annual.unitAmount)
+    || monthly.unitAmount <= 0 || annual.unitAmount < 0) return null;
+  const monthlyTotal = monthly.unitAmount * 12;
+  if (!Number.isSafeInteger(monthlyTotal) || annual.unitAmount >= monthlyTotal) return null;
+  const amount = monthlyTotal - annual.unitAmount;
+  return { amount, percentage: amount * 100 / monthlyTotal, currency: annual.currency };
+}
 
 export function BillingSettings({ api, organization, language, onChanged, onUnauthorized, onExit, seatsOnly = false, onBusyChange }: {
   api: BenchmarkApi; organization: OrganizationSummary; language: UserLanguage;
@@ -208,6 +220,16 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
     summary?.prices.find(p => p.kind === kind && p.interval === cadence && (kind === 'SEAT' || p.plan === plan))?.unitAmount ?? 0;
   const currency = summary?.prices[0]?.currency ?? 'usd';
   const priceLabel = (kind: BillingPrice['kind'], plan: BillingSelection['plan'] | null, cadence: BillingInterval) => money(amount(kind, plan, cadence), currency, language);
+  const planSavings = { PRO: annualSavings(summary?.prices, 'PRO'), PREMIUM: annualSavings(summary?.prices, 'PREMIUM') };
+  const annualToggleSavings = planSavings.PRO && planSavings.PREMIUM
+    ? Math.min(planSavings.PRO.percentage, planSavings.PREMIUM.percentage) : 0;
+  const percentageLabel = (percentage: number, toggle = false) => {
+    const rounded = Math.floor(percentage);
+    const label = toggle
+      ? percentage > rounded ? 'Save over {percent}%' : 'Save {percent}%'
+      : percentage > rounded ? 'Over {percent}% off' : '{percent}% off';
+    return t(label, language).replace('{percent}', String(rounded));
+  };
   const priceName = (price: BillingPrice) => `${price.kind === 'PLAN' ? price.plan : t(price.kind === 'STATION' ? 'Additional station' : 'Additional user', language)} · ${t(price.interval === 'MONTHLY' ? 'Monthly' : 'Annual', language)}`;
   const active = summary?.selection && !['CANCELED', 'INCOMPLETE_EXPIRED'].includes(summary.status);
   const blocked = busy || Boolean(summary?.cancelAtPeriodEnd || summary?.pendingPayment || summary?.pendingAnnualTransition);
@@ -261,12 +283,20 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
           <button type="button" className="secondary-button" disabled={busy} onClick={() => { void run(async () => { await api.cancelUnpaidAnnualChange(organization.id); sessionStorage.removeItem(pendingKey(organization.id)); setPolling(false); clearBillingReturn(); if (!reconcilePayment(await reload())) setNotice(null); }); }}>{t('Cancel unpaid change', language)}</button></div>}</section>}
       {!active && <>
         {seatsOnly && <p>{t('Choose a plan before buying additional seats.', language)}</p>}
-        <div className="billing-interval" aria-label={t('Billing interval', language)}>{(['MONTHLY', 'ANNUAL'] as const).map(cadence => <button type="button" key={cadence} aria-pressed={billingInterval === cadence} className={billingInterval === cadence ? 'selected' : ''} onClick={() => setBillingInterval(cadence)}>{t(cadence === 'MONTHLY' ? 'Monthly' : 'Annual', language)}</button>)}</div>
-        <div className="billing-plans">{(['PRO', 'PREMIUM'] as const).map(plan => <section className={`billing-plan ${plan.toLowerCase()}`} key={plan}>
+        <div className="billing-interval" aria-label={t('Billing interval', language)}>{(['MONTHLY', 'ANNUAL'] as const).map(cadence => <button type="button" key={cadence} aria-pressed={billingInterval === cadence} className={billingInterval === cadence ? 'selected' : ''} onClick={() => setBillingInterval(cadence)}>{t(cadence === 'MONTHLY' ? 'Monthly' : 'Annual', language)}
+          {cadence === 'ANNUAL' && annualToggleSavings >= 1 && <span className="billing-savings-badge">{percentageLabel(annualToggleSavings, true)}</span>}</button>)}</div>
+        <div className="billing-plans">{(['PRO', 'PREMIUM'] as const).map(plan => {
+          const savings = billingInterval === 'ANNUAL' ? planSavings[plan] : null;
+          const annualPrice = summary.prices.find(price => price.kind === 'PLAN' && price.plan === plan && price.interval === 'ANNUAL');
+          return <section className={`billing-plan ${plan.toLowerCase()}`} key={plan}>
           <span className="eyebrow">{plan}</span><h3>{t(plan === 'PRO' ? 'Find your best forecast' : 'Forecasts trained for your station', language)}</h3>
           <p className="billing-price">{priceLabel('PLAN', plan, billingInterval)}<span> / {t(billingInterval === 'MONTHLY' ? 'month' : 'year', language)}</span></p>
+          {billingInterval === 'ANNUAL' && annualPrice && <p className="billing-payment-cadence">{t('{amount} billed annually', language).replace('{amount}', money(annualPrice.unitAmount, annualPrice.currency, language, 0))}</p>}
+          {savings && <p className="billing-plan-savings"><span>{t('Save {amount}/year', language).replace('{amount}', money(savings.amount, savings.currency, language, 0))}</span>
+            {savings.percentage >= 1 && <span>{' · '}{percentageLabel(savings.percentage)}</span>}</p>}
           <ul><li>{t(plan === 'PRO' ? '1 station and 1 user included' : '1 trained station and 10 users included', language)}</li><li>{t('Add more stations and users from your dashboard', language)}</li></ul>
-          <button type="button" className="primary-button wide" disabled={busy} onClick={() => { void checkout(plan); }}>{t('Subscribe', language)} · {plan}</button></section>)}</div>
+          <button type="button" className="primary-button wide" disabled={busy} onClick={() => { void checkout(plan); }}>{t('Subscribe', language)} · {plan}</button></section>;
+        })}</div>
         <p className="billing-secure"><ShieldCheck size={16} />{t('Secure checkout with Stripe. Receipts go to the account owner.', language)}</p>
       </>}
       {active && seatsOnly && <section className="billing-panel"><h3>{t('Add seats', language)}</h3>
