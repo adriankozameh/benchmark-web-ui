@@ -78,7 +78,7 @@ export function DataProviders({ api, organizationId, organizationRole, plan, lan
 
   if (plan !== 'PREMIUM') return <section className="station-form-card">
     <h2>{t('Data providers', language)}</h2>
-    <p>{t('Weather station hardware setup is available on the PREMIUM plan.', language)}</p>
+    <p>{t('Weather station hardware setup is available on the PREMIUM plans.', language)}</p>
   </section>;
 
   return <section className="data-providers">

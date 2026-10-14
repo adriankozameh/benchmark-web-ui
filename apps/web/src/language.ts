@@ -455,8 +455,8 @@ const spanish: Record<string, string> = {
   'Station location': 'Ubicación de la estación',
   'Location is fixed on the FREE plan. Upgrade to PRO or PREMIUM to change it.':
       'La ubicación queda fija en el plan GRATIS. Actualiza a PRO o PREMIUM para cambiarla.',
-  'Weather station hardware setup is available on the PREMIUM plan.':
-      'La configuración del equipo meteorológico está disponible con el plan PREMIUM.',
+  'Weather station hardware setup is available on the PRO and PREMIUM plans.':
+      'La configuración del equipo meteorológico está disponible con los planes PRO y PREMIUM.',
   'Time zone is calculated from the station coordinates.': 'La zona horaria se calcula a partir de las coordenadas de la estación.',
   'Additional station metadata (JSON)': 'Metadatos adicionales de la estación (JSON)',
   'For hardware fields such as STATION_TYPE. Never put API keys or passwords here.':

@@ -230,7 +230,7 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
     </form>
 
     {!canConfigureHardware && <p className="station-details-hint station-hardware-upgrade">
-      {t(plan !== 'PREMIUM' ? 'Weather station hardware setup is available on the PREMIUM plan.' : 'Only organization Owners and Admins can manage provider accounts.', language)}
+      {t(plan !== 'PREMIUM' ? 'Weather station hardware setup is available on the PRO and PREMIUM plans.' : 'Only organization Owners and Admins can manage provider accounts.', language)}
     </p>}
     {canConfigureHardware && <form className="station-details-section" onSubmit={(event) => void saveHardware(event)}>
       <h4>{t('Weather station hardware', language)}</h4>
