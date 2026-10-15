@@ -6,6 +6,7 @@ import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { DisplayUnits, StationTimeSeriesPoint, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { errorMessage, locale, t } from '../language';
+import { createChartTimeFormatter } from '../chartTime';
 
 const RANGES = [
   { label: '24 hours', hours: 24 },
@@ -62,14 +63,6 @@ const WIND_DIRECTIONS: Record<string, string> = {
 };
 
 export type ChartPoint = StationTimeSeriesPoint & { time: number };
-
-function localLabel(timestamp: number | string, timeZone: string, language: UserLanguage, includeTime = false, includeOffset = false): string {
-  return new Intl.DateTimeFormat(locale(language), {
-    timeZone, month: 'short', day: 'numeric',
-    ...(includeTime ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' as const } : {}),
-    ...(includeOffset ? { timeZoneName: 'shortOffset' as const } : {}),
-  }).format(typeof timestamp === 'string' ? new Date(timestamp) : timestamp);
-}
 
 function metricLabel(metric: string, language: UserLanguage): string {
   return t(METRIC_LABELS[metric] ?? metric.replaceAll('_', ' ').toLowerCase(), language);
@@ -272,11 +265,11 @@ export function ForecastDashboard({
 }
 
 const WIDTH = 760;
-const HEIGHT = 220;
+const HEIGHT = 236;
 const LEFT = 57;
 const RIGHT = 14;
 const TOP = 16;
-const BOTTOM = 31;
+const BOTTOM = 47;
 
 export function MetricChart({ metric, points, secondaryPoints, providers, colors, timeZone, windowStart, windowEnd, units, language, chartKind = 'forecast', title, maxGapMs }: {
   metric: string;
@@ -294,6 +287,7 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
   windowEnd: number;
 }) {
   const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const timeFormatter = useMemo(() => createChartTimeFormatter(timeZone, language), [timeZone, language]);
   const directionMetric = WIND_DIRECTIONS[metric];
   const series = useMemo(() => providers.flatMap((provider) => {
     const matching = (source: ChartPoint[]) => source.filter((point) => point.provider === provider &&
@@ -334,8 +328,8 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
   return (
     <section className="forecast-chart-card" aria-label={`${metricLabel(metric, language)} ${t(chartKind === 'forecast' ? 'forecast chart' : 'observation chart', language)}${metricUnit(metric, units) ? ` ${t('in', language)} ${metricUnit(metric, units)}` : ''}`}>
       <div className="forecast-chart-heading"><h3>{title ?? metricLabel(metric, language)}{metricUnit(metric, units) ? ` (${metricUnit(metric, units)})` : ''}</h3>
-        <span>{activeTime === null ? timeZone
-          : localLabel(active[0]?.point?.localDateTime ?? activeTime, timeZone, language, true, true)}</span></div>
+        <span title={timeZone}>{activeTime === null ? timeFormatter.zone(windowStart)
+          : timeFormatter.dateTime(activeTime)}</span></div>
       {secondaryPoints && <div className="observation-range-legend">
         <span><i />{t('Daily maximum', language)}</span>
         <span><i className="minimum" />{t('Daily minimum', language)}</span>
@@ -344,7 +338,7 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
       {all.length === 0 ? <div className="forecast-chart-blank">{t('Select a provider to view this metric.', language)}</div> : (
         <>
           <svg className="forecast-plot" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img"
-            aria-label={`${metricLabel(metric, language)} ${t('by provider', language)}, ${localLabel(minTime, timeZone, language)} ${t('to', language)} ${localLabel(maxTime, timeZone, language)} ${timeZone}${directionMetric ? `; ${t('arrows point toward the wind source', language)}` : ''}`}
+            aria-label={`${metricLabel(metric, language)} ${t('by provider', language)}, ${timeFormatter.dateTime(minTime)} ${t('to', language)} ${timeFormatter.dateTime(maxTime)}${directionMetric ? `; ${t('arrows point toward the wind source', language)}` : ''}`}
             onPointerMove={move} onPointerLeave={() => setHoverTime(null)}>
             {[0, 0.5, 1].map((fraction) => {
               const rowY = TOP + fraction * (HEIGHT - TOP - BOTTOM);
@@ -353,11 +347,16 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
                 <text x={LEFT - 9} y={rowY + 4} textAnchor="end" className="forecast-axis">{formatMetricValue(metric, max - fraction * (max - min), units, language)}</text>
               </g>;
             })}
-            {[0, 0.25, 0.5, 0.75, 1].map((fraction) => (
-              <text key={fraction} x={LEFT + fraction * (WIDTH - LEFT - RIGHT)} y={HEIGHT - 6}
+            {[0, 0.25, 0.5, 0.75, 1].map((fraction) => {
+              const tickX = LEFT + fraction * (WIDTH - LEFT - RIGHT);
+              const timestamp = minTime + fraction * (maxTime - minTime);
+              return <text key={fraction} x={tickX} y={HEIGHT - 22}
                 textAnchor={fraction === 0 ? 'start' : fraction === 1 ? 'end' : 'middle'}
-                className="forecast-axis">{localLabel(minTime + fraction * (maxTime - minTime), timeZone, language, maxTime - minTime <= 48 * 60 * 60 * 1000)}</text>
-            ))}
+                className="forecast-axis">
+                <tspan x={tickX}>{timeFormatter.date(timestamp)}</tspan>
+                <tspan x={tickX} dy={15}>{timeFormatter.time(timestamp)}</tspan>
+              </text>;
+            })}
             {activeTime !== null && <line x1={x(activeTime)} x2={x(activeTime)} y1={TOP} y2={HEIGHT - BOTTOM}
               stroke="#9aa9b8" strokeDasharray="4 4" pointerEvents="none" />}
             {series.map(({ provider, bound, points: providerPoints }) => {
