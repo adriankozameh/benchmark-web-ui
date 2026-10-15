@@ -302,10 +302,12 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
   const values = all.map((point) => point.values[metric]);
   const minTime = windowStart;
   const maxTime = windowEnd;
-  const low = Math.min(...values);
-  const high = Math.max(...values);
+  const low = values.length ? Math.min(...values) : 0;
+  const high = values.length ? Math.max(...values) : 0;
   const padding = Math.max((high - low) * 0.08, Math.abs(high) * 0.01, 0.1);
-  const min = low - padding;
+  // Temperature readings and water balance can be negative; other metrics start at zero.
+  const signed = ['TEMPERATURE', 'HEAT_INDEX', 'WIND_CHILL', 'WATER_BALANCE'].includes(metric);
+  const min = signed ? low - padding : 0;
   const max = high + padding;
   const x = (time: number) => LEFT + (time - minTime) / (maxTime - minTime || 1) * (WIDTH - LEFT - RIGHT);
   const y = (value: number) => TOP + (max - value) / (max - min) * (HEIGHT - TOP - BOTTOM);
