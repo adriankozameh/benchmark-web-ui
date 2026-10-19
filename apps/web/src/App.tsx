@@ -307,8 +307,7 @@ function AuthScreen({ onLogin, onSignup, onGoogle, googleEnabled }: { onLogin: (
           <span className="eyebrow light">Benchmark Labs weather intelligence</span>
           <h1>Your weather network starts with one station.</h1>
           <p>
-            Sign in to Benchmark Labs, configure your first station, and build from there. The same
-            account will later power the web, iPhone, iPad, and Android experiences.
+            Sign in to Benchmark Labs, configure your first station, and build from there.
           </p>
         </div>
         <div className="auth-feature-row">
