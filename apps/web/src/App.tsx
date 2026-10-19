@@ -304,10 +304,10 @@ function AuthScreen({ onLogin, onSignup, onGoogle, googleEnabled }: { onLogin: (
       <section className="auth-hero">
         <BrandLogo variant="white" className="auth-logo" />
         <div className="auth-copy">
-          <span className="eyebrow light">Benchmark weather intelligence</span>
+          <span className="eyebrow light">Benchmark Labs weather intelligence</span>
           <h1>Your weather network starts with one station.</h1>
           <p>
-            Sign in to Benchmark, configure your first station, and build from there. The same
+            Sign in to Benchmark Labs, configure your first station, and build from there. The same
             account will later power the web, iPhone, iPad, and Android experiences.
           </p>
         </div>
@@ -321,11 +321,11 @@ function AuthScreen({ onLogin, onSignup, onGoogle, googleEnabled }: { onLogin: (
       <section className="auth-panel-wrap">
         <div className="auth-panel">
           <div className="auth-panel-mark"><BrandLogo variant="icon" /></div>
-          <span className="eyebrow">Welcome to Benchmark</span>
+          <span className="eyebrow">Welcome to Benchmark Labs</span>
           <h2>Sign in to continue</h2>
-          <p className="muted">
-            Authentication is handled securely by your Benchmark Cognito account.
-          </p>
+          {/*<p className="muted">*/}
+          {/*  Authentication is handled securely by your Benchmark Cognito account.*/}
+          {/*</p>*/}
 
           {googleEnabled && (
             <>
@@ -347,9 +347,9 @@ function AuthScreen({ onLogin, onSignup, onGoogle, googleEnabled }: { onLogin: (
             Create account with email
           </button>
 
-          <div className="auth-footnote">
-            New accounts are provisioned automatically on the first authenticated API request.
-          </div>
+          {/*<div className="auth-footnote">*/}
+          {/*  New accounts are provisioned automatically on the first authenticated API request.*/}
+          {/*</div>*/}
         </div>
       </section>
     </div>
