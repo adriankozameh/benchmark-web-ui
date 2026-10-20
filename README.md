@@ -1,5 +1,7 @@
 ## Organization data providers
 
+Hardware setup chat panel: [HARDWARE_ASSISTANT.md](HARDWARE_ASSISTANT.md).
+
 See [DATA_PROVIDER_MANAGEMENT.md](DATA_PROVIDER_MANAGEMENT.md) for the dedicated
 Settings → Data providers page, backend credential validation, Test connection,
 supported providers, and deployment instructions. Credential management now lives

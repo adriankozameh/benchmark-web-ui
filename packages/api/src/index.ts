@@ -1,6 +1,7 @@
 import type { ExplorerManifest, ExplorerStation, ExplorerDetails } from './station-explorer';
 export type { ExplorerManifest, ExplorerStation, ExplorerDetails } from './station-explorer';
 import type {
+  HardwareChatRequest,
   ApiErrorPayload,
   BillingSummary,
   BillingSelection,
@@ -138,6 +139,13 @@ export class BenchmarkApi {
 
   getMe(): Promise<CurrentUser> {
     return this.request('/api/v1/me');
+  }
+
+  askHardwareAssistant(organizationId: string, input: HardwareChatRequest,
+    signal?: AbortSignal): Promise<{ message: string }> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/hardware-assistant/messages`, {
+      method: 'POST', body: input, signal,
+    });
   }
 
   getBilling(organizationId: string, signal?: AbortSignal): Promise<BillingSummary> {
