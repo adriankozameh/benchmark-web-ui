@@ -1,0 +1,29 @@
+.data-providers-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 370px); gap: 24px; align-items: start; }
+.data-providers-layout > * { min-width: 0; }
+.hardware-assistant { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 14px; }
+.hardware-assistant-heading, .hardware-assistant-heading > div { display: flex; align-items: center; gap: 10px; }
+.hardware-assistant-heading { justify-content: space-between; }
+.hardware-assistant-heading h2 { margin: 0; font-size: 17px; }
+.hardware-assistant > p { margin: 0; font-size: 13px; line-height: 1.5; }
+.hardware-assistant-privacy { padding: 10px 12px; border-radius: 8px; background: #f0f4f8; color: #44546a; }
+.hardware-assistant-log { max-height: 420px; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; }
+.hardware-assistant-welcome { margin: 0; padding: 16px 0; color: #637086; font-size: 14px; line-height: 1.6; }
+.hardware-assistant-message { padding: 12px; border-radius: 10px; background: #f3f5f8; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.hardware-assistant-message.user { background: #e9eff6; }
+.hardware-assistant-message strong { font-size: 12px; color: #44546a; }
+.hardware-assistant-message p { margin: 5px 0 0; white-space: pre-wrap; }
+.hardware-assistant-thinking { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #637086; }
+.hardware-assistant-suggestions { display: flex; flex-direction: column; gap: 7px; }
+.hardware-assistant-suggestions button { border: 1px solid #dce2e9; border-radius: 8px; background: white; padding: 9px 12px; min-height: 40px; text-align: left; color: #324155; cursor: pointer; font: inherit; font-size: 13px; }
+.hardware-assistant-compose { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
+.hardware-assistant-compose textarea { width: 100%; resize: vertical; min-height: 84px; max-height: 220px; font: inherit; border: 1px solid #c9d2df; border-radius: 8px; padding: 10px 12px; box-sizing: border-box; }
+.hardware-assistant-compose .primary-button { align-self: flex-end; min-height: 44px; }
+.hardware-assistant-error { color: #a22c2c; line-height: 1.5; font-size: 13px; margin: 0; }
+.hardware-assistant button:disabled { cursor: default; opacity: .6; }
+@media (max-width: 1180px) {
+  .data-providers-layout { grid-template-columns: minmax(0, 1fr); }
+  .hardware-assistant { position: static; }
+}
+@media (max-width: 767px) {
+  .hardware-assistant-compose textarea { font-size: 16px; }
+}

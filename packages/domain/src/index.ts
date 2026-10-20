@@ -1,5 +1,15 @@
 export type Plan = 'FREE' | 'PRO' | 'PREMIUM';
 
+export type HardwareProvider = 'WEATHER_LINK' | 'AMBIENT_WEATHER' | 'TEMPEST'
+  | 'SENSECAP_GLOBAL' | 'SENSECAP_CHINA' | 'METOS' | 'ZEUS' | 'RANCH_SYSTEM' | 'FAWN';
+export type HardwareChatTurn = { role: 'user' | 'assistant'; content: string };
+export type HardwareChatRequest = {
+  message: string;
+  provider: HardwareProvider | null;
+  language: 'en' | 'es';
+  history: HardwareChatTurn[];
+};
+
 export type BillingInterval = 'MONTHLY' | 'ANNUAL';
 export type BillingSelection = {
   plan: Exclude<Plan, 'FREE'>;
