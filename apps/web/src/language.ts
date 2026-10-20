@@ -1,6 +1,7 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  "Weather station hardware setup is available on the PREMIUM plans.": "La configuración de hardware de estaciones meteorológicas está disponible en los planes PREMIUM.",
   "Billing": "Facturación",
   "Upgrade plan": "Actualizar plan",
   "Need more station capacity?": "¿Necesitas más capacidad de estaciones?",

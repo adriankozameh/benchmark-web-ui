@@ -3,6 +3,8 @@ import { CheckCircle2, CircleAlert, LoaderCircle, Plus, RadioTower, Trash2 } fro
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { DataProvider, Plan, ProviderDeletionPreview, ProviderConnectionResult, ProviderCredentials, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { errorMessage, t } from '../language';
+import { HardwareSetupAssistant } from './HardwareSetupAssistant';
+import { HARDWARE_PROVIDERS as PROVIDERS } from './hardwareProviders';
 
 type CredentialField = keyof ProviderCredentials;
 const FIELDS: { key: CredentialField; label: string; flag: keyof DataProvider }[] = [
@@ -11,17 +13,6 @@ const FIELDS: { key: CredentialField; label: string; flag: keyof DataProvider }[
   { key: 'username', label: 'Username', flag: 'usernameConfigured' },
   { key: 'password', label: 'Password', flag: 'passwordConfigured' },
   { key: 'token', label: 'Access token', flag: 'tokenConfigured' },
-];
-const PROVIDERS: { id: string; label: string; fields: CredentialField[] }[] = [
-  { id: 'WEATHER_LINK', label: 'WeatherLink', fields: ['apiKey', 'apiKeySecret'] },
-  { id: 'AMBIENT_WEATHER', label: 'Ambient Weather', fields: ['apiKey'] },
-  { id: 'TEMPEST', label: 'Tempest', fields: ['token'] },
-  { id: 'SENSECAP_GLOBAL', label: 'SenseCAP Global', fields: ['apiKey', 'apiKeySecret'] },
-  { id: 'SENSECAP_CHINA', label: 'SenseCAP China', fields: ['apiKey', 'apiKeySecret'] },
-  { id: 'METOS', label: 'METOS', fields: ['apiKey', 'apiKeySecret'] },
-  { id: 'ZEUS', label: 'Zeus', fields: ['username', 'password'] },
-  { id: 'RANCH_SYSTEM', label: 'Ranch System', fields: ['username', 'password'] },
-  { id: 'FAWN', label: 'FAWN', fields: [] },
 ];
 const emptyCredentials = (): Record<CredentialField, string> => ({ apiKey: '', apiKeySecret: '', username: '', password: '', token: '' });
 const connectionAccepted = (result: ProviderConnectionResult) => ['CONNECTED', 'NO_AUTH_REQUIRED'].includes(result.status);
@@ -76,12 +67,15 @@ export function DataProviders({ api, organizationId, organizationRole, plan, lan
     } finally { setTesting(null); }
   }
 
-  if (plan !== 'PREMIUM') return <section className="station-form-card">
+  const assistant = <HardwareSetupAssistant key={organizationId} api={api}
+    organizationId={organizationId} language={language} onUnauthorized={onUnauthorized} />;
+
+  if (plan !== 'PREMIUM') return <div className="data-providers-layout"><section className="station-form-card">
     <h2>{t('Data providers', language)}</h2>
     <p>{t('Weather station hardware setup is available on the PREMIUM plans.', language)}</p>
-  </section>;
+  </section>{assistant}</div>;
 
-  return <section className="data-providers">
+  return <div className="data-providers-layout"><section className="data-providers">
     <div className="form-card-heading">
       <div><h2>{t('Provider accounts', language)}</h2>
         <p className="muted">{t('Create one account for your organization and reuse it across stations.', language)}</p></div>
@@ -144,7 +138,7 @@ export function DataProviders({ api, organizationId, organizationRole, plan, lan
         </div>}
       </article>;
     })}</div>
-  </section>;
+  </section>{assistant}</div>;
 }
 
 function ProviderEditor({ api, organizationId, provider, language, onSaved, onCancel, onUnauthorized }: {
