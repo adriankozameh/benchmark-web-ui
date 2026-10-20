@@ -1,5 +1,7 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { memo, useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import Markdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import { LoaderCircle, MessageCircle, RotateCcw, Send } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { HardwareChatTurn, HardwareProvider, UserLanguage } from '@benchmark/domain';
@@ -7,6 +9,25 @@ import { HARDWARE_PROVIDERS, hardwareHistory } from './hardwareProviders';
 import './hardware-assistant.css';
 
 type Message = HardwareChatTurn & { id: string };
+
+const markdownComponents: Components = {
+  a: ({ children, href, title }) => href
+    ? <a href={href} title={title} target="_blank" rel="noopener noreferrer">{children}</a>
+    : <span>{children}</span>,
+  img: ({ alt }) => alt ? <span>{alt}</span> : null,
+};
+
+function assistantUrl(url: string): string | undefined {
+  return /^https?:\/\//i.test(url) ? url : undefined;
+}
+
+const AssistantReply = memo(function AssistantReply({ content }: { content: string }) {
+  return <div className="hardware-assistant-markdown">
+    <Markdown skipHtml components={markdownComponents} urlTransform={assistantUrl}>
+      {content}
+    </Markdown>
+  </div>;
+});
 
 export function HardwareSetupAssistant({ api, organizationId, language, onUnauthorized }: {
   api: BenchmarkApi; organizationId: string; language: UserLanguage; onUnauthorized: () => void;
@@ -97,7 +118,8 @@ export function HardwareSetupAssistant({ api, organizationId, language, onUnauth
         'Elige un proveedor y dime en qué necesitas ayuda. Te guiaré paso a paso.')}</p>}
       {messages.map(turn => <div key={turn.id} className={`hardware-assistant-message ${turn.role}`}>
         <strong>{turn.role === 'user' ? tr('You', 'Tú') : tr('Assistant', 'Asistente')}</strong>
-        <p>{turn.content}</p>
+        {turn.role === 'assistant' ? <AssistantReply content={turn.content} />
+          : <p className="hardware-assistant-user-text">{turn.content}</p>}
       </div>)}
       {busy && <p className="hardware-assistant-thinking" role="status"><LoaderCircle className="spin" size={16} />
         {tr('Preparing your answer…', 'Preparando tu respuesta…')}</p>}
