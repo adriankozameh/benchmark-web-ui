@@ -67,16 +67,6 @@ export function AdminOrganizationMembers({ api, organization, language, revision
     return () => controller.abort();
   }, [api, organization.id, revision, reload, onUnauthorized, onForbidden, onMembershipChanged]);
 
-  // A customer accepts in another session. Refresh joined members while this page is visible.
-  useEffect(() => {
-    const refresh = () => {
-      if (!blocked && !inFlight.current && document.visibilityState === 'visible') setReload(value => value + 1);
-    };
-    const interval = window.setInterval(refresh, 15000);
-    window.addEventListener('focus', refresh);
-    return () => { window.clearInterval(interval); window.removeEventListener('focus', refresh); };
-  }, [blocked]);
-
   useEffect(() => {
     if (target) dialog.current?.showModal();
     return () => dialog.current?.close();
@@ -121,7 +111,7 @@ export function AdminOrganizationMembers({ api, organization, language, revision
   return <div className="admin-people">
     <section className="admin-details admin-members" aria-labelledby="admin-members-title" aria-busy={refreshing}>
       <div className="admin-members-heading"><div><h3 id="admin-members-title">{t('Members and ownership', language)}</h3>
-        <p>{t('Invite the future owner as a member. Ownership can be transferred only after they accept and join.', language)}</p></div>
+        <p>{t('Invite the future owner as a member. Click Refresh members after they accept and join.', language)}</p></div>
         <button type="button" className="secondary-button" disabled={blocked || refreshing} onClick={() => setReload(value => value + 1)}>
           <RefreshCw size={15} />{t('Refresh members', language)}</button></div>
       {loadError !== null && <div className="alert error" role="alert"><CircleAlert size={17} /><span>{errorMessage(loadError, language)}</span></div>}
@@ -151,7 +141,7 @@ export function AdminOrganizationMembers({ api, organization, language, revision
         seatLimit={data.subscription.effective.seatLimit} membershipRevision={membershipRevision + revision}
         language={language} onUnauthorized={onUnauthorized} onBuySeats={onManageAccess}
         capacityActionLabel="Manage subscription access" disabled={blocked || loadError !== null || refreshing}
-        onBusyChange={onBusy} />
+        onBusyChange={onBusy} refreshCapacityOnFocus={false} />
     </div>}
     {organization.status !== 'ACTIVE' && <p className="admin-explanation">{t('Restore organization access before sending invitations.', language)}</p>}
     {target && <dialog ref={dialog} className="station-delete-dialog admin-transfer-dialog" aria-labelledby="admin-transfer-title"

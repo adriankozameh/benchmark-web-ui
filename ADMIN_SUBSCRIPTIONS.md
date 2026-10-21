@@ -20,9 +20,13 @@ The page is available at `/admin/organizations`; `/admin` and the earlier
 4. The customer signs in or creates an account with the invited email address,
    opens the invitation, and accepts it. The backend checks the email, token,
    organization status, and available capacity before adding the membership.
-5. After they appear under **Members and ownership**, select **Make owner** and
-   confirm. Joined members refresh every fifteen seconds while the page is
-   visible; **Refresh members** loads them immediately.
+5. After the customer accepts, click **Refresh members**. When they appear under
+   **Members and ownership**, select **Make owner** and confirm.
+
+Admin data loads when you select an organization and updates after admin actions.
+Use the page's **Refresh** button to reload the directory and selected organization,
+**Refresh members** to check who has joined, or **Refresh delivery status** to check
+invitations. The Admin page does not poll or fetch data when you return to its tab.
 
 Ownership transfer is a separate, explicit action after acceptance. It atomically
 makes the selected member OWNER and the previous owner ADMIN, preserving exactly

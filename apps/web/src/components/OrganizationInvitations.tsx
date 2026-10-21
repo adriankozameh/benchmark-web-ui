@@ -6,7 +6,7 @@ import type { OrganizationInvitation, UserLanguage } from '@benchmark/domain';
 import { errorMessage, locale, t } from '../language';
 
 export function OrganizationInvitations({ api, organizationId, organizationRole, seatLimit, language, onUnauthorized, membershipRevision, onBuySeats,
-  capacityActionLabel = 'Buy more seats', disabled = false, onBusyChange }: {
+  capacityActionLabel = 'Buy more seats', disabled = false, onBusyChange, refreshCapacityOnFocus = true }: {
   api: BenchmarkApi;
   organizationId: string;
   organizationRole: string;
@@ -18,6 +18,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
   capacityActionLabel?: string;
   disabled?: boolean;
   onBusyChange?: (busy: boolean) => void;
+  refreshCapacityOnFocus?: boolean;
 }) {
   const [seatsUsed, setSeatsUsed] = useState<number | null>(null);
   const [capacityError, setCapacityError] = useState<string | null>(null);
@@ -56,14 +57,16 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
     }
     const onVisible = () => { if (document.visibilityState === 'visible') void refreshCapacity(); };
     void refreshCapacity();
-    window.addEventListener('focus', onVisible);
-    document.addEventListener('visibilitychange', onVisible);
+    if (refreshCapacityOnFocus) {
+      window.addEventListener('focus', onVisible);
+      document.addEventListener('visibilitychange', onVisible);
+    }
     return () => {
       active = false;
       window.removeEventListener('focus', onVisible);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [api, organizationId, canInvite, seatLimit, membershipRevision, capacityRevision, onUnauthorized, language]);
+  }, [api, organizationId, canInvite, seatLimit, membershipRevision, capacityRevision, onUnauthorized, language, refreshCapacityOnFocus]);
 
   const activeInvitations = invitations.filter(invitation =>
     invitation.status === 'PENDING' && Date.parse(invitation.expiresAt) > now);

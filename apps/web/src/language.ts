@@ -548,7 +548,7 @@ const spanish: Record<string, string> = {
   'Organization created with you as its initial owner.': 'Se creó la organización contigo como propietario inicial.',
   'New organization': 'Organización nueva',
   'Members and ownership': 'Miembros y titularidad',
-  'Invite the future owner as a member. Ownership can be transferred only after they accept and join.': 'Invita al futuro propietario como miembro. Podrás transferirle la titularidad cuando acepte y se una.',
+  'Invite the future owner as a member. Click Refresh members after they accept and join.': 'Invita al futuro propietario como miembro. Haz clic en Actualizar miembros después de que acepte la invitación y se una.',
   'Refresh members': 'Actualizar miembros',
   'Joined members': 'Miembros incorporados',
   'Ownership': 'Titularidad',
