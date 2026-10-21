@@ -148,6 +148,7 @@ function ProviderEditor({ api, organizationId, provider, language, onSaved, onCa
   const [name, setName] = useState(provider?.name ?? '');
   const [type, setType] = useState(provider?.provider ?? 'WEATHER_LINK');
   const [credentials, setCredentials] = useState(emptyCredentials);
+  const [verificationStationId, setVerificationStationId] = useState(provider?.verificationStationId ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const definition = PROVIDERS.find(item => item.id === type);
@@ -158,12 +159,15 @@ function ProviderEditor({ api, organizationId, provider, language, onSaved, onCa
     setBusy(true);
     setError(null);
     const supplied = Object.fromEntries(Object.entries(credentials).filter(([, value]) => value.trim() !== '')) as ProviderCredentials;
+    const stationChanged = definition?.requiresVerificationStation
+      && verificationStationId.trim() !== (provider?.verificationStationId ?? '');
+    const verification = stationChanged ? { verificationStationId: verificationStationId.trim() } : {};
     try {
       const saved = provider
-        ? await api.updateDataProvider(organizationId, provider.id, { name: name.trim(), ...supplied })
-        : await api.createDataProvider(organizationId, { name: name.trim(), provider: type, ...supplied });
+        ? await api.updateDataProvider(organizationId, provider.id, { name: name.trim(), ...supplied, ...verification })
+        : await api.createDataProvider(organizationId, { name: name.trim(), provider: type, ...supplied, ...verification });
       setCredentials(emptyCredentials());
-      onSaved(saved, !provider || Object.keys(supplied).length > 0);
+      onSaved(saved, !provider || Object.keys(supplied).length > 0 || Boolean(stationChanged));
     } catch (cause) {
       if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
       else setError(errorMessage(cause, language));
@@ -172,14 +176,13 @@ function ProviderEditor({ api, organizationId, provider, language, onSaved, onCa
 
   return <form className="station-form-card provider-editor" onSubmit={event => void save(event)}>
     <h3>{t(provider ? 'Edit provider account' : 'Add provider', language)}</h3>
-    {!provider && <p className="station-details-hint">{t('Account verification is not yet available for Vaisala, METER, CIMIS, Acuity, or LI-COR / HOBO.', language)}</p>}
     {error && <div className="alert error compact" role="alert">{error}</div>}
     <fieldset disabled={busy} className="provider-fields">
       <div className="station-details-grid">
         <label className="field"><span>{t('Provider account name', language)}</span>
           <input value={name} maxLength={200} required onChange={event => setName(event.target.value)} /></label>
         <label className="field"><span>{t('Hardware provider', language)}</span>
-          <select value={type} disabled={provider !== null} onChange={event => { setType(event.target.value); setCredentials(emptyCredentials()); setError(null); }}>
+          <select value={type} disabled={provider !== null} onChange={event => { setType(event.target.value); setCredentials(emptyCredentials()); setVerificationStationId(''); setError(null); }}>
             {!definition && <option value={type}>{type}</option>}
             {PROVIDERS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select></label>
@@ -188,6 +191,13 @@ function ProviderEditor({ api, organizationId, provider, language, onSaved, onCa
       {provider && <p className="station-details-hint">{t('Leave credential fields blank to keep saved values.', language)}{' '}
         {t('Changing saved credentials affects every station using this provider account.', language)}</p>}
       {type === 'FAWN' && <p>{t('FAWN uses public data. No credentials are required or tested.', language)}</p>}
+      {definition?.requiresVerificationStation && <label className="field">
+        <span>{t('Station ID for connection test', language)}</span>
+        <input value={verificationStationId} maxLength={255}
+          required={!provider || Object.values(credentials).some(value => value.trim() !== '')}
+          onChange={event => setVerificationStationId(event.target.value)} />
+        <small>{t('Enter a logger or device serial number accessible with these credentials. This checks one device; link each station separately under Stations.', language)}</small>
+      </label>}
       <div className="station-details-grid">{FIELDS.filter(field => definition?.fields.includes(field.key)).map(field =>
         <label className="field" key={field.key}><span>{t(field.label, language)}
           {provider?.[field.flag] ? ` · ${t('Configured', language)}` : ''}</span>

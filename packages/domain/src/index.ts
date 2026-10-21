@@ -1,7 +1,8 @@
 export type Plan = 'FREE' | 'PRO' | 'PREMIUM';
 
 export type HardwareProvider = 'WEATHER_LINK' | 'AMBIENT_WEATHER' | 'TEMPEST'
-  | 'SENSECAP_GLOBAL' | 'SENSECAP_CHINA' | 'METOS' | 'ZEUS' | 'RANCH_SYSTEM' | 'FAWN';
+  | 'SENSECAP_GLOBAL' | 'SENSECAP_CHINA' | 'METOS' | 'ZEUS' | 'RANCH_SYSTEM' | 'FAWN'
+  | 'ACUITY' | 'CIMIS' | 'LICOR_HOBO' | 'METER' | 'VAISALA';
 export type HardwareChatTurn = { role: 'user' | 'assistant'; content: string };
 export type HardwareChatRequest = {
   message: string;
@@ -234,6 +235,7 @@ export type DataProvider = {
   name: string;
   provider: string;
   region: string | null;
+  verificationStationId?: string | null;
   apiKeyConfigured: boolean;
   apiKeySecretConfigured: boolean;
   usernameConfigured: boolean;
@@ -255,11 +257,13 @@ export type CreateDataProviderInput = ProviderCredentials & {
   name: string;
   provider: string;
   region?: string;
+  verificationStationId?: string;
 };
 
 export type UpdateDataProviderInput = ProviderCredentials & {
   name?: string;
   region?: string;
+  verificationStationId?: string;
 };
 
 export type UpdateStationInput = {
