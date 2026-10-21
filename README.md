@@ -21,6 +21,13 @@ forecast charts, and API errors using the language stored in user settings. Logi
 Cognito are unchanged. Third-party place names follow their provider's available localization.
 Deploy backend migration V7 and the settings endpoint before deploying this frontend.
 
+## Sites and station grouping
+
+In **Stations**, create sites and use **Filter by site** or **Group by site** to organize station
+views. Choose the site when creating a station, or change it in the existing station editor.
+FREE includes one site; PRO and PREMIUM support multiple sites, including organizations upgraded
+with a manual subscription grant. See [STATION_SITES.md](STATION_SITES.md) for details and validation.
+
 ## Weather station hardware
 
 In Settings → Stations, select an existing station to edit its name, site, location,

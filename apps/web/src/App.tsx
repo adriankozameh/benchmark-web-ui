@@ -38,6 +38,7 @@ import { AdminSubscriptions } from './components/AdminSubscriptions';
 import { SeatPurchaseDialog } from './components/SeatPurchaseDialog';
 import { MapPicker } from './components/MapPicker';
 import { StationHardwareEditor } from './components/StationHardwareEditor';
+import { StationSites } from './components/StationSites';
 import { errorMessage, t } from './language';
 import { loadAppConfig } from './config';
 import type { AppConfig, ConfigurationIssue } from './config';
@@ -697,9 +698,13 @@ function AuthenticatedApp({
             </section>
           )}
           {organization && route.section === 'settings' && route.page === 'stations' && (
-            <StationSettings api={api} organizationId={organization.id}
+            <StationSettings key={organization.id} api={api} organizationId={organization.id}
               organizationRole={organization.role} onManageProviders={() => navigate({ section: 'settings', page: 'data-providers' })}
               stationLimit={organization.stationLimit} sites={sites} stations={stations}
+              canManageSites={isSuperAdmin || ['OWNER', 'ADMIN'].includes(organization.role)}
+              organizationActive={organization.organizationStatus === 'ACTIVE'}
+              onManageBilling={() => navigate({ section: 'settings', page: 'billing' })}
+              onSiteCreated={site => setSites(current => current.some(item => item.id === site.id) ? current : [...current, site])}
               onCreated={refresh} language={language} onUnauthorized={onUnauthorized} plan={organization.plan}
               onLocationChanged={(stationId) => {
                 selectStation(stationId);
@@ -883,6 +888,10 @@ function StationSettings({
   onUnauthorized,
   plan,
   onLocationChanged,
+  canManageSites,
+  organizationActive,
+  onManageBilling,
+  onSiteCreated,
 }: {
   api: BenchmarkApi;
   organizationId: string;
@@ -896,7 +905,12 @@ function StationSettings({
   onUnauthorized: () => void;
   plan: Plan;
   onLocationChanged: (stationId: string) => void;
+  canManageSites: boolean;
+  organizationActive: boolean;
+  onManageBilling: () => void;
+  onSiteCreated: (site: Site) => void;
 }) {
+  const [siteFilterId, setSiteFilterId] = useState('');
   const [showForm, setShowForm] = useState(stations.length === 0);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [draft, setDraft] = useState<StationDraft>(() => ({ ...emptyDraft, siteId: sites[0]?.id ?? '' }));
@@ -911,6 +925,12 @@ function StationSettings({
   useEffect(() => {
     if (stations.length === 0) setShowForm(true);
   }, [stations.length]);
+
+  useEffect(() => {
+    if (!selectedStationId || !siteFilterId) return;
+    const selected = stations.find(station => station.id === selectedStationId);
+    if (selected && selected.siteId !== siteFilterId) setSiteFilterId(selected.siteId);
+  }, [selectedStationId, siteFilterId, stations]);
 
   const atLimit = stations.length >= stationLimit;
   const lat = draft.latitude === '' ? null : Number(draft.latitude);
@@ -934,7 +954,8 @@ function StationSettings({
     try {
       const createdStation = await api.createStation(organizationId, input);
       setSelectedStationId(createdStation.id);
-      setDraft({ ...emptyDraft, siteId: sites[0]?.id ?? '' });
+      setDraft({ ...emptyDraft, siteId: createdStation.siteId });
+      if (siteFilterId) setSiteFilterId(createdStation.siteId);
       setShowForm(false);
       await onCreated();
     } catch (cause) {
@@ -954,7 +975,10 @@ function StationSettings({
           </p>
         </div>
         {stations.length > 0 && !showForm && (
-          <button className="primary-button" type="button" onClick={() => setShowForm(true)} disabled={atLimit}>
+          <button className="primary-button" type="button" onClick={() => {
+            setDraft(current => ({ ...current, siteId: siteFilterId || current.siteId }));
+            setShowForm(true);
+          }} disabled={atLimit}>
             <Plus size={16} /> {t('Add station', language)}
           </button>
         )}
@@ -968,26 +992,18 @@ function StationSettings({
         <div className="usage-track"><span style={{ width: `${Math.min(100, (stations.length / Math.max(1, stationLimit)) * 100)}%` }} /></div>
       </div>
 
-      {stations.length > 0 && (
-        <div className="station-list-card">
-          {stations.map((station) => (
-            <button className={`station-row ${selectedStationId === station.id ? 'selected' : ''}`} type="button"
-              key={station.id} aria-expanded={selectedStationId === station.id}
-              onClick={() => setSelectedStationId((current) => current === station.id ? null : station.id)}>
-              <div className="station-icon"><MapPin size={17} /></div>
-              <div>
-                <strong>{station.name}</strong>
-                <span>{station.latitude.toFixed(5)}, {station.longitude.toFixed(5)}</span>
-              </div>
-              <div className="station-meta">
-                <span>{station.timeZone}</span>
-                <small>{t(station.status, language)}</small>
-              </div>
-              <ChevronRight className="station-row-chevron" size={17} aria-hidden="true" />
-            </button>
-          ))}
-        </div>
-      )}
+      <StationSites api={api} organizationId={organizationId} plan={plan} canManage={canManageSites}
+        active={organizationActive} sites={sites} stations={stations} language={language}
+        onUnauthorized={onUnauthorized} onManageBilling={onManageBilling}
+        selectedStationId={selectedStationId} siteFilterId={siteFilterId}
+        onSiteFilterChange={siteId => { setSiteFilterId(siteId); setSelectedStationId(null); }}
+        onSelectStation={stationId => setSelectedStationId(current => current === stationId ? null : stationId)}
+        onSiteCreated={site => {
+          onSiteCreated(site);
+          setDraft(current => ({ ...current, siteId: site.id }));
+          setSiteFilterId(site.id);
+          setSelectedStationId(null);
+        }} />
 
       {stations.filter((station) => station.id === selectedStationId).map((station) =>
         <StationHardwareEditor key={station.id} api={api} organizationId={organizationId}
@@ -1024,10 +1040,11 @@ function StationSettings({
 
               <label className="field">
                 <span>{t('Site', language)}</span>
-                <select value={draft.siteId} onChange={(event) => setDraft({ ...draft, siteId: event.target.value })}>
-                  {sites.map((site) => <option value={site.id} key={site.id}>{t(site.name, language)}</option>)}
+                <select aria-label={t('Site', language)} aria-describedby="station-create-site-hint"
+                  value={draft.siteId} onChange={(event) => setDraft({ ...draft, siteId: event.target.value })}>
+                  {sites.map((site) => <option value={site.id} key={site.id}>{site.name === 'Default Site' ? t('Default Site', language) : site.name}</option>)}
                 </select>
-                <small>{t('Every new account already has a Default Site.', language)}</small>
+                <small id="station-create-site-hint">{t('Choose a site to group this station.', language)}</small>
               </label>
 
               <div className="field">

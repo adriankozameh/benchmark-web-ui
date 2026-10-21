@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { BenchmarkApi, BenchmarkApiError } from '../../../packages/api/src/index.ts';
-import { billingAccess, grantDraft, grantInput, minimumGrantLimits, validateGrant } from '../src/components/adminSubscriptions.ts';
+import { billingAccess, grantDraft, grantInput, minimumGrantLimits, validateGrant } from '../src/components/subscriptionGrantRules.ts';
 
 const subscription = {
   organizationId: 'organization',

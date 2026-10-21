@@ -199,7 +199,9 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
       <h4>{t('Station location', language)}</h4>
       <div className="station-details-grid">
         <label className="field"><span>{t('Station name', language)}</span><input value={name} maxLength={200} onChange={(event) => setName(event.target.value)} required /></label>
-        <label className="field"><span>{t('Site', language)}</span><select value={siteId} onChange={(event) => setSiteId(event.target.value)}>{sites.map((site) => <option key={site.id} value={site.id}>{t(site.name, language)}</option>)}</select></label>
+        <label className="field"><span>{t('Site', language)}</span><select aria-label={t('Site', language)}
+          aria-describedby="station-edit-site-hint" value={siteId} onChange={(event) => setSiteId(event.target.value)}>{sites.map((site) => <option key={site.id} value={site.id}>{site.name === 'Default Site' ? t('Default Site', language) : site.name}</option>)}</select>
+          <small id="station-edit-site-hint">{t('Choose a site to group this station.', language)}</small></label>
         <label className="field"><span>{t('Latitude', language)}</span><input type="number" step="any" min={-90} max={90} value={latitude} onChange={(event) => setLatitude(event.target.value)} required disabled={!canChangeLocation} /></label>
         <label className="field"><span>{t('Longitude', language)}</span><input type="number" step="any" min={-180} max={180} value={longitude} onChange={(event) => setLongitude(event.target.value)} required disabled={!canChangeLocation} /></label>
       </div>

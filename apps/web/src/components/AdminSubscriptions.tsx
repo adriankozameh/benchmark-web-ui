@@ -3,7 +3,7 @@ import { Building2, ChevronLeft, ChevronRight, CircleAlert, LoaderCircle, Plus, 
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { AdminEntitlements, AdminOrganization, AdminSubscription, PageResponse, UserLanguage } from '@benchmark/domain';
 import { errorMessage, locale, t } from '../language';
-import { billingAccess, grantDraft, grantInput, minimumGrantLimits, validateGrant, type GrantDraft } from './adminSubscriptions';
+import { billingAccess, grantDraft, grantInput, minimumGrantLimits, validateGrant, type GrantDraft } from './subscriptionGrantRules';
 import { CreateAdminOrganization } from './CreateAdminOrganization';
 import { AdminOrganizationMembers } from './AdminOrganizationMembers';
 import './admin.css';

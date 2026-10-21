@@ -35,6 +35,7 @@ import type {
   UpdateStationInput,
   UserSettings,
   Site,
+  CreateSiteInput,
   StationTimeSeries,
   WeatherStation,
 } from '@benchmark/domain';
@@ -265,8 +266,14 @@ export class BenchmarkApi {
     return this.request('/api/v1/me/settings', { method: 'PATCH', body: { metadata } });
   }
 
-  listSites(organizationId: string): Promise<Site[]> {
-    return this.request(`/api/v1/organizations/${organizationId}/sites`);
+  listSites(organizationId: string, signal?: AbortSignal): Promise<Site[]> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/sites`, { signal });
+  }
+
+  createSite(organizationId: string, input: CreateSiteInput): Promise<Site> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/sites`, {
+      method: 'POST', body: { name: input.name },
+    });
   }
 
   listStations(organizationId: string): Promise<WeatherStation[]> {

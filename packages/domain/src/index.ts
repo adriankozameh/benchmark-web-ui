@@ -200,6 +200,10 @@ export type Site = {
   updatedAt: string;
 };
 
+export type CreateSiteInput = {
+  name: string;
+};
+
 export type WeatherStation = {
   id: string;
   organizationId: string;
