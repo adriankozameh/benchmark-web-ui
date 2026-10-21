@@ -17,6 +17,9 @@ const files = [
   'src/components/OrganizationMembers.tsx',
   'src/components/StationHardwareEditor.tsx',
   'src/components/DataProviders.tsx',
+  'src/components/AdminSubscriptions.tsx',
+  'src/components/CreateAdminOrganization.tsx',
+  'src/components/AdminOrganizationMembers.tsx',
   '../../packages/validation/src/index.ts',
 ];
 const translationSource = ts.createSourceFile('language.ts', fs.readFileSync(path.join(root, 'src/language.ts'), 'utf8'), ts.ScriptTarget.Latest, true);
@@ -29,7 +32,7 @@ function collectSpanish(node) {
 }
 collectSpanish(translationSource);
 
-const allowOriginal = new Set(['English', 'Español', 'PRO', 'PREMIUM', 'cp apps/web/.env.example apps/web/.env']);
+const allowOriginal = new Set(['English', 'Español', 'PRO', 'PREMIUM', 'SUPERADMIN', 'cp apps/web/.env.example apps/web/.env']);
 const missing = new Set();
 function check(text, file) {
   if (/[A-Za-zÁ-ÿ]/.test(text) && !spanish.has(text) && !allowOriginal.has(text)) missing.add(`${file}: ${text}`);

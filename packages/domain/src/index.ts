@@ -102,7 +102,70 @@ export type CurrentUser = {
   username: string | null;
   email: string;
   displayName: string | null;
+  systemRole: 'USER' | 'SUPERADMIN';
   organizations: OrganizationSummary[];
+};
+
+export type PageResponse<T> = {
+  items: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type AdminOrganization = {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  statusReason: string | null;
+  statusChangedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateAdminOrganizationInput = {
+  name: string;
+  type: 'PERSONAL' | 'TEAM';
+};
+
+export type SubscriptionGrantInput = {
+  plan: Exclude<Plan, 'FREE'>;
+  seatLimit: number;
+  stationLimit: number;
+  reason: string;
+};
+
+export type AdminSubscription = {
+  organizationId: string;
+  billing: {
+    id: string;
+    plan: Plan;
+    status: string;
+    seatsPurchased: number;
+    stationsPurchased: number;
+    stripeBacked: boolean;
+    currentPeriodStart: string | null;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+  };
+  effective: { plan: Plan; seatLimit: number; stationLimit: number };
+  usage: { seatsUsed: number; stationsUsed: number };
+  override: {
+    plan: Plan;
+    seatLimit: number;
+    stationLimit: number;
+    reason: string;
+    updatedByUserId: string;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+};
+
+export type AdminEntitlements = {
+  activeEntitlements: string[];
+  manualEntitlements: string[];
 };
 
 export type OrganizationInvitation = {

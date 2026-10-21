@@ -2,6 +2,12 @@ import type { ExplorerManifest, ExplorerStation, ExplorerDetails } from './stati
 export type { ExplorerManifest, ExplorerStation, ExplorerDetails } from './station-explorer';
 import type {
   HardwareChatRequest,
+  AdminOrganization,
+  CreateAdminOrganizationInput,
+  AdminSubscription,
+  AdminEntitlements,
+  PageResponse,
+  SubscriptionGrantInput,
   ApiErrorPayload,
   BillingSummary,
   BillingSelection,
@@ -190,8 +196,8 @@ export class BenchmarkApi {
       { method: 'DELETE', expectNoContent: true, signal });
   }
 
-  listInvitations(organizationId: string): Promise<OrganizationInvitation[]> {
-    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/invitations`);
+  listInvitations(organizationId: string, signal?: AbortSignal): Promise<OrganizationInvitation[]> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/invitations`, { signal });
   }
 
   inviteUser(organizationId: string, email: string, role: 'MEMBER' | 'ADMIN'): Promise<CreatedOrganizationInvitation> {
@@ -215,6 +221,44 @@ export class BenchmarkApi {
 
   getUserSettings(): Promise<UserSettings> {
     return this.request('/api/v1/me/settings');
+  }
+
+  listAdminOrganizations(page = 0, size = 25, signal?: AbortSignal): Promise<PageResponse<AdminOrganization>> {
+    return this.request(`/api/v1/admin/organizations?${new URLSearchParams({ page: String(page), size: String(size) })}`, { signal });
+  }
+
+  createAdminOrganization(input: CreateAdminOrganizationInput): Promise<AdminOrganization> {
+    return this.request('/api/v1/admin/organizations', { method: 'POST', body: { name: input.name, type: input.type } });
+  }
+
+  transferOrganizationOwnership(organizationId: string, newOwnerUserId: string): Promise<OrganizationMember> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/ownership-transfer`, {
+      method: 'POST', body: { newOwnerUserId },
+    });
+  }
+
+  getAdminSubscription(organizationId: string, signal?: AbortSignal): Promise<AdminSubscription> {
+    return this.request(`/api/v1/admin/organizations/${encodeURIComponent(organizationId)}/subscription`, { signal });
+  }
+
+  getAdminEntitlements(organizationId: string, signal?: AbortSignal): Promise<AdminEntitlements> {
+    return this.request(`/api/v1/admin/organizations/${encodeURIComponent(organizationId)}/entitlements`, { signal });
+  }
+
+  async saveSubscriptionGrant(organizationId: string, grant: SubscriptionGrantInput): Promise<AdminSubscription> {
+    const result = await this.request<AdminSubscription>(`/api/v1/admin/organizations/${encodeURIComponent(organizationId)}/subscription`, {
+      method: 'PUT', body: grant,
+    });
+    this.clearForecastCache();
+    return result;
+  }
+
+  async revokeSubscriptionGrant(organizationId: string): Promise<AdminSubscription> {
+    const result = await this.request<AdminSubscription>(`/api/v1/admin/organizations/${encodeURIComponent(organizationId)}/subscription/override`, {
+      method: 'DELETE',
+    });
+    this.clearForecastCache();
+    return result;
   }
 
   updateUserSettings(metadata: Partial<Pick<UserSettings['metadata'], 'language' | 'units'>>): Promise<UserSettings> {

@@ -950,3 +950,9 @@ Node and pnpm should normally resolve through:
 ```text
 ~/.nvm/versions/node/...
 ```
+# Platform administration
+
+SUPERADMIN users can create organizations, invite people, transfer ownership to
+joined members, and grant, update, or revoke subscription access from the Admin
+tab. See [ADMIN_SUBSCRIPTIONS.md](ADMIN_SUBSCRIPTIONS.md) for usage,
+deployment order, role requirements, and validation.

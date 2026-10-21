@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { CircleAlert, LoaderCircle, MailPlus, RefreshCw, UserPlus } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { OrganizationInvitation, UserLanguage } from '@benchmark/domain';
 import { errorMessage, locale, t } from '../language';
 
-export function OrganizationInvitations({ api, organizationId, organizationRole, seatLimit, language, onUnauthorized, membershipRevision, onBuySeats }: {
+export function OrganizationInvitations({ api, organizationId, organizationRole, seatLimit, language, onUnauthorized, membershipRevision, onBuySeats,
+  capacityActionLabel = 'Buy more seats', disabled = false, onBusyChange }: {
   api: BenchmarkApi;
   organizationId: string;
   organizationRole: string;
@@ -14,6 +15,9 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
   language: UserLanguage;
   onUnauthorized: () => void;
   onBuySeats: () => void;
+  capacityActionLabel?: string;
+  disabled?: boolean;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [seatsUsed, setSeatsUsed] = useState<number | null>(null);
   const [capacityError, setCapacityError] = useState<string | null>(null);
@@ -27,10 +31,11 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const inFlight = useRef(false);
   const canInvite = organizationRole === 'OWNER' || organizationRole === 'ADMIN';
 
   const atSeatLimit = seatsUsed !== null && seatsUsed >= seatLimit;
-  const invitationUnavailable = !canInvite || seatsUsed === null || atSeatLimit;
+  const invitationUnavailable = !canInvite || seatsUsed === null || atSeatLimit || disabled;
 
   useEffect(() => {
     if (!canInvite) return;
@@ -122,10 +127,13 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
       else setError(errorMessage(cause, language));
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [api, organizationId, canInvite, onUnauthorized, language]);
+  }, [api, organizationId, canInvite, onUnauthorized, language, membershipRevision]);
 
   async function perform(key: string, action: () => Promise<{ localPreviewUrl: string | null } | void>, message: string) {
+    if (inFlight.current || disabled) return false;
+    inFlight.current = true;
     setBusy(key);
+    onBusyChange?.(true);
     setError(null);
     setNotice(null);
     setPreviewUrl(null);
@@ -141,6 +149,8 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
       else setError(errorMessage(cause, language));
       return false;
     } finally {
+      inFlight.current = false;
+      onBusyChange?.(false);
       setCapacityRevision(value => value + 1);
       setBusy(null);
     }
@@ -161,8 +171,8 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
           <strong>{seatsUsed === null ? t(capacityError ? 'Seat capacity unavailable' : 'Checking seat capacity…', language) : <>{seatsUsed} {t('of', language)} {seatLimit}</>}</strong>
         </div>
         <div className="usage-track"><span style={{ width: `${Math.min(100, ((seatsUsed ?? 0) / Math.max(1, seatLimit)) * 100)}%` }} /></div>
-        <button type="button" className="primary-button" disabled={busy !== null} onClick={onBuySeats}>
-          <UserPlus size={16} />{t('Buy more seats', language)}
+        <button type="button" className="primary-button" disabled={busy !== null || disabled} onClick={onBuySeats}>
+          <UserPlus size={16} />{t(capacityActionLabel, language)}
         </button>
       </div>
       {atSeatLimit && <div className="alert neutral" role="status">
@@ -203,7 +213,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
       {notice && <p role="status" className="invitation-notice">{notice}</p>}
       {previewUrl && <p className="invitation-notice">{t('Local preview link:', language)} <a href={previewUrl}>{previewUrl}</a></p>}
       <div className="invitation-list-heading"><h3>{t('Invitations', language)}</h3>
-        <button type="button" className="secondary-button" disabled={loading || busy !== null}
+        <button type="button" className="secondary-button" disabled={loading || busy !== null || disabled}
           onClick={() => { void refreshDelivery(); }}><RefreshCw size={15} />{t('Refresh delivery status', language)}</button>
       </div>
       {loading ? <p><LoaderCircle className="spin" size={16} /> {t('Loading invitations…', language)}</p>
@@ -218,7 +228,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
               <button type="button" className="secondary-button" disabled={busy !== null || invitationUnavailable}
                 onClick={() => { void perform(invitation.id, () => api.resendInvitation(organizationId, invitation.id),
                   t('Invitation resent.', language)); }}>{t('Resend', language)}</button>
-              <button type="button" className="text-button" disabled={busy !== null}
+              <button type="button" className="text-button" disabled={busy !== null || disabled}
                 onClick={() => { void perform(invitation.id, () => revoke(invitation.id),
                   t('Invitation revoked.', language)); }}>{t('Revoke', language)}</button>
             </div>

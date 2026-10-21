@@ -16,6 +16,7 @@ import {
   Plus,
   RadioTower,
   Settings,
+  ShieldCheck,
   SlidersHorizontal,
   UserRound,
 } from 'lucide-react';
@@ -33,6 +34,7 @@ import { DataProviders } from './components/DataProviders';
 import { OrganizationMembers } from './components/OrganizationMembers';
 import { OrganizationInvitations } from './components/OrganizationInvitations';
 import { BillingSettings } from './components/BillingSettings';
+import { AdminSubscriptions } from './components/AdminSubscriptions';
 import { SeatPurchaseDialog } from './components/SeatPurchaseDialog';
 import { MapPicker } from './components/MapPicker';
 import { StationHardwareEditor } from './components/StationHardwareEditor';
@@ -368,10 +370,14 @@ function AuthenticatedApp({
   type SettingsPage = 'stations' | 'data-providers' | 'account' | 'billing';
   type AppRoute =
     | { section: 'dashboard'; page: DashboardPage }
-    | { section: 'settings'; page: SettingsPage };
+    | { section: 'settings'; page: SettingsPage }
+    | { section: 'admin'; page: 'organizations' };
 
   const parseRoute = useCallback((pathname: string): AppRoute | null => {
     const normalized = pathname.replace(/\/+$/, '') || '/';
+    if (normalized === '/admin' || normalized === '/admin/organizations' || normalized === '/admin/subscriptions') {
+      return { section: 'admin', page: 'organizations' };
+    }
     if (normalized === '/dashboard' || normalized === '/dashboard/forecast') {
       return { section: 'dashboard', page: 'forecast' };
     }
@@ -452,12 +458,12 @@ function AuthenticatedApp({
       const nextOrganization = nextMe.organizations.find((item) =>
         item.id === sessionStorage.getItem(ACTIVE_ORGANIZATION_KEY))
         ?? nextMe.organizations.find((item) => item.organizationStatus === 'ACTIVE') ?? nextMe.organizations[0];
-      if (!nextOrganization) throw new Error('No Benchmark organization is available for this account.');
+      if (!nextOrganization && nextMe.systemRole !== 'SUPERADMIN') throw new Error('No Benchmark organization is available for this account.');
 
       const [nextSettings, nextSites, nextStations] = await Promise.all([
         api.getUserSettings(),
-        nextOrganization.organizationStatus === 'ACTIVE' ? api.listSites(nextOrganization.id) : Promise.resolve([]),
-        nextOrganization.organizationStatus === 'ACTIVE' ? api.listStations(nextOrganization.id) : Promise.resolve([]),
+        nextOrganization?.organizationStatus === 'ACTIVE' ? api.listSites(nextOrganization.id) : Promise.resolve([]),
+        nextOrganization?.organizationStatus === 'ACTIVE' ? api.listStations(nextOrganization.id) : Promise.resolve([]),
       ]);
       setMe(nextMe);
       setUserSettings(nextSettings);
@@ -476,6 +482,7 @@ function AuthenticatedApp({
   }, [api, onUnauthorized]);
 
   const language: UserLanguage = userSettings?.metadata.language ?? 'en';
+  const isSuperAdmin = me?.systemRole === 'SUPERADMIN';
   useEffect(() => {
     document.documentElement.lang = language;
     return () => { document.documentElement.lang = 'en'; };
@@ -497,12 +504,12 @@ function AuthenticatedApp({
   useEffect(() => {
     if (state !== 'success' || route !== null) return;
     navigate(
-      stations.length > 0
+      isSuperAdmin ? { section: 'admin', page: 'organizations' } : stations.length > 0
         ? { section: 'dashboard', page: 'forecast' }
         : { section: 'settings', page: 'stations' },
       true,
     );
-  }, [navigate, route, state, stations.length]);
+  }, [navigate, route, state, stations.length, isSuperAdmin]);
 
   if ((state === 'loading' && !me) || route === null) {
     return (
@@ -528,6 +535,7 @@ function AuthenticatedApp({
     ? route.page === 'forecast' ? 'Forecast'
       : route.page === 'observations' ? 'Observations'
       : route.page === 'historic' ? 'Historic' : route.page === 'burncast' ? 'Burncast' : route.page === 'farmcast' ? 'Farmcast' : 'Safecast'
+    : route.section === 'admin' ? 'Organization administration'
     : route.page === 'billing' ? 'Billing' : route.page === 'account' ? 'Account' : route.page === 'data-providers' ? 'Data providers' : 'Weather stations';
 
   return (
@@ -547,10 +555,16 @@ function AuthenticatedApp({
             onClick={() => navigate({ section: 'settings', page: 'stations' })}>
             <Settings size={17} /> <span>{t('Settings', language)}</span>
           </button>
+          {isSuperAdmin && <button type="button" className={`nav-item ${route.section === 'admin' ? 'active' : ''}`}
+            aria-current={route.section === 'admin' ? 'page' : undefined}
+            aria-label={t('Admin', language)} title={t('Admin', language)}
+            onClick={() => navigate({ section: 'admin', page: 'organizations' })}>
+            <ShieldCheck size={17} /> <span>{t('Admin', language)}</span>
+          </button>}
         </nav>
 
         <div className="sidebar-label settings-label">
-          {t(route.section === 'dashboard' ? 'Dashboard' : 'Settings', language)}
+          {t(route.section === 'dashboard' ? 'Dashboard' : route.section === 'admin' ? 'Admin' : 'Settings', language)}
         </div>
         <nav className="sidebar-nav">
           {route.section === 'dashboard' ? dashboardNav.map(({ page, label, icon: Icon }) => (
@@ -562,7 +576,7 @@ function AuthenticatedApp({
               onClick={() => navigate({ section: 'dashboard', page })}>
               <Icon size={17} /> <span>{t(label, language)}</span>
             </button>
-          )) : <>
+          )) : route.section === 'settings' ? <>
             <button type="button" className={`nav-item ${route.page === 'stations' ? 'secondary-active' : ''}`}
               aria-current={route.page === 'stations' ? 'page' : undefined}
               onClick={() => navigate({ section: 'settings', page: 'stations' })}>
@@ -583,7 +597,10 @@ function AuthenticatedApp({
               onClick={() => navigate({ section: 'settings', page: 'account' })}>
               <UserRound size={17} /> <span>{t('Account', language)}</span>
             </button>
-          </>}
+          </> : isSuperAdmin && <button type="button" className="nav-item secondary-active" aria-current="page"
+            onClick={() => navigate({ section: 'admin', page: 'organizations' })}>
+            <ShieldCheck size={17} /><span>{t('Organizations', language)}</span>
+          </button>}
         </nav>
 
         <div className="sidebar-bottom">
@@ -606,12 +623,13 @@ function AuthenticatedApp({
             <BrandLogo variant="icon" />
           </div>
           <div className="topbar-title">
-            <span className="eyebrow">{t(route.section === 'dashboard' ? 'Dashboard' : 'Settings', language)}</span>
+            <span className="eyebrow">{t(route.section === 'dashboard' ? 'Dashboard' : route.section === 'admin' ? 'Admin' : 'Settings', language)}</span>
             <h1>{t(headerTitle, language)}</h1>
           </div>
           <div className="topbar-actions">
-            {organization && <span className={`plan-pill ${organization.plan.toLowerCase()}`}>{t(organization.plan, language)}</span>}
-            {organization?.plan === 'FREE' && ['OWNER', 'ADMIN'].includes(organization.role) && <button type="button" className="secondary-button" onClick={() => navigate({ section: 'settings', page: 'billing' })}>{t('Upgrade plan', language)}</button>}
+            {route.section === 'admin' && isSuperAdmin && <span className="plan-pill pro platform-admin-pill">SUPERADMIN</span>}
+            {organization && route.section !== 'admin' && <span className={`plan-pill ${organization.plan.toLowerCase()}`}>{t(organization.plan, language)}</span>}
+            {route.section !== 'admin' && organization?.plan === 'FREE' && ['OWNER', 'ADMIN'].includes(organization.role) && <button type="button" className="secondary-button" onClick={() => navigate({ section: 'settings', page: 'billing' })}>{t('Upgrade plan', language)}</button>}
             <button type="button" className="icon-button mobile-logout" onClick={onLogout} aria-label={t('Log out', language)}>
               <LogOut size={17} />
             </button>
@@ -619,6 +637,9 @@ function AuthenticatedApp({
         </header>
 
         <div className="content-wrap">
+          {route.section === 'admin' && (isSuperAdmin
+            ? <AdminSubscriptions api={api} language={language} onUnauthorized={onUnauthorized} onChanged={refresh} />
+            : <div className="alert error" role="alert"><CircleAlert size={18} /><span>{t('Only platform SUPERADMIN users can access this page.', language)}</span></div>)}
           {route.section === 'dashboard' && <nav className="forecast-product-tabs" aria-label={t('Dashboard views', language)}>
             {dashboardNav.map(({ page, label }) => <button type="button" key={page}
               aria-current={route.page === page ? 'page' : undefined} className={route.page === page ? 'active' : ''}
@@ -661,7 +682,7 @@ function AuthenticatedApp({
               language={language} onChanged={refresh} onUnauthorized={onUnauthorized}
               onExit={() => navigate({ section: 'dashboard', page: 'forecast' })} />
           )}
-          {organization && organization.organizationStatus === 'SUSPENDED' && route.page !== 'billing' && (
+          {organization && organization.organizationStatus === 'SUSPENDED' && route.section !== 'admin' && route.page !== 'billing' && (
             <div className="billing-notice"><CircleAlert size={18} /><span>{t('Your account is suspended. Resolve billing to restore access.', language)}</span>
               <button type="button" className="secondary-button" onClick={() => navigate({ section: 'settings', page: 'billing' })}>{t('Billing', language)}</button></div>
           )}
@@ -728,7 +749,7 @@ function AuthenticatedApp({
         </div>
       </main>
 
-      <nav className="mobile-bottom-nav" aria-label={t('Primary navigation', language)}>
+      <nav className={`mobile-bottom-nav${isSuperAdmin ? ' has-admin' : ''}`} aria-label={t('Primary navigation', language)}>
         <button type="button" className={route.section === 'dashboard' ? 'active' : ''}
           aria-current={route.section === 'dashboard' ? 'page' : undefined}
           onClick={() => navigate({ section: 'dashboard', page: 'forecast' })}>
@@ -757,6 +778,11 @@ function AuthenticatedApp({
           <UserRound size={20} />
           <span>{t('Account', language)}</span>
         </button>
+        {isSuperAdmin && <button type="button" className={route.section === 'admin' ? 'active' : ''}
+          aria-current={route.section === 'admin' ? 'page' : undefined}
+          onClick={() => navigate({ section: 'admin', page: 'organizations' })} aria-label={t('Admin', language)}>
+          <ShieldCheck size={20} /><span>Admin</span>
+        </button>}
       </nav>
     </div>
   );
