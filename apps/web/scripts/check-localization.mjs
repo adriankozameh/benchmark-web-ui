@@ -17,6 +17,7 @@ const files = [
   'src/components/OrganizationMembers.tsx',
   'src/components/StationHardwareEditor.tsx',
   'src/components/StationSites.tsx',
+  'src/components/SiteDialogs.tsx',
   'src/components/stationSiteRules.ts',
   'src/components/DataProviders.tsx',
   'src/components/AdminSubscriptions.tsx',

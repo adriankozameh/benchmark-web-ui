@@ -64,13 +64,51 @@ test('site requests preserve server authorization and capacity conflicts', async
   } finally { globalThis.fetch = previous; }
 });
 
-test('an expired session cannot send a site creation request', async () => {
+test('site rename and deletion use scoped encoded endpoints and handle a 204 response', async () => {
+  const previous = globalThis.fetch;
+  const calls = [];
+  const site = { id: 'site/two', organizationId: 'org/one', name: 'South Farm' };
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    return options.method === 'DELETE' ? new Response(null, { status: 204 }) : new Response(JSON.stringify(site), { status: 200 });
+  };
+  try {
+    const api = new BenchmarkApi('https://api.example.test', async () => 'token');
+    assert.deepEqual(await api.renameSite('org/one', 'site/two', 'South Farm'), site);
+    assert.equal(await api.deleteSite('org/one', 'site/two'), undefined);
+    for (const call of calls) {
+      assert.equal(call.url, 'https://api.example.test/api/v1/organizations/org%2Fone/sites/site%2Ftwo');
+      assert.equal(call.options.headers.get('Authorization'), 'Bearer token');
+    }
+    assert.equal(calls[0].options.method, 'PATCH');
+    assert.deepEqual(JSON.parse(calls[0].options.body), { name: 'South Farm' });
+    assert.equal(calls[1].options.method, 'DELETE');
+    assert.equal(calls[1].options.body, undefined);
+  } finally { globalThis.fetch = previous; }
+});
+
+test('rename and deletion preserve server permission and conflict errors', async () => {
+  const previous = globalThis.fetch;
+  try {
+    const api = new BenchmarkApi('https://api.example.test', async () => 'token');
+    for (const status of [401, 403, 404, 409]) {
+      globalThis.fetch = async () => new Response(JSON.stringify({ message: 'Site mutation rejected' }), { status });
+      for (const operation of [() => api.renameSite('org', 'site', 'Farm'), () => api.deleteSite('org', 'site')]) {
+        await assert.rejects(operation(), error => error instanceof BenchmarkApiError && error.status === status && error.message === 'Site mutation rejected');
+      }
+    }
+  } finally { globalThis.fetch = previous; }
+});
+
+test('an expired session cannot send site mutations', async () => {
   const previous = globalThis.fetch;
   let requests = 0;
   globalThis.fetch = async () => { requests++; throw new Error('Should not call the network'); };
   try {
     const api = new BenchmarkApi('https://api.example.test', async () => null);
     await assert.rejects(api.createSite('org', { name: 'North Farm' }), error => error instanceof BenchmarkApiError && error.status === 401);
+    await assert.rejects(api.renameSite('org', 'site', 'South Farm'), error => error instanceof BenchmarkApiError && error.status === 401);
+    await assert.rejects(api.deleteSite('org', 'site'), error => error instanceof BenchmarkApiError && error.status === 401);
     assert.equal(requests, 0);
   } finally { globalThis.fetch = previous; }
 });

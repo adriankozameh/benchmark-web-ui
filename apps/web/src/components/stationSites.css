@@ -23,6 +23,19 @@
 .station-site-dialog p { color: var(--benchmark-text-muted); font-size: 12px; line-height: 1.75; }
 .station-site-dialog fieldset { display: grid; gap: 16px; padding: 0; margin: 20px 0 0; border: 0; min-width: 0; }
 .station-site-dialog .station-details-actions { justify-content: flex-end; }
+.station-site-dialog .site-delete-confirm { background: #b42318; }
+.station-site-management { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--benchmark-line); }
+.station-site-management summary { cursor: pointer; font-size: 12px; font-weight: 700; }
+.station-site-management > p { color: var(--benchmark-text-muted); font-size: 11px; line-height: 1.65; }
+.station-site-management-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; }
+.station-site-management-row + .station-site-management-row { border-top: 1px solid #edf0f3; }
+.station-site-management-row > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+.station-site-management-row strong, .station-site-management-row span { display: block; }
+.station-site-management-row strong { font-size: 12px; }
+.station-site-management-row span { margin-top: 4px; color: var(--benchmark-text-muted); font-size: 10px; }
+.station-site-management-actions { display: flex; flex-shrink: 0; gap: 8px; }
+.station-site-management-actions button { font-size: 10px; min-height: 34px; padding: 7px 10px; }
+.station-site-management summary:focus-visible { outline: 2px solid #1859a3; outline-offset: 4px; }
 .station-sites-card button:disabled { opacity: .55; cursor: not-allowed; }
 @media (max-width: 550px) {
   .station-sites-card { padding: 16px 14px; }
@@ -31,4 +44,6 @@
   .station-sites-toolbar .field { flex-basis: 100%; max-width: none; }
   .station-directory .station-row { gap: 8px; padding-inline: 6px; }
   .station-directory .station-meta { max-width: 94px; overflow-wrap: anywhere; }
+  .station-site-management-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .station-site-management-actions button { flex: 1; }
 }

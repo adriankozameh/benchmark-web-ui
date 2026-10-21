@@ -1,6 +1,22 @@
 import type { UserLanguage } from '@benchmark/domain';
 
 const spanish: Record<string, string> = {
+  "Manage sites": "Administrar sitios",
+  "Site management": "Administración de sitios",
+  "Delete only empty sites. Every organization must keep at least one site.": "Solo se pueden eliminar sitios vacíos. Cada organización debe conservar al menos un sitio.",
+  "Rename site": "Renombrar sitio",
+  "Delete site": "Eliminar sitio",
+  "Save name": "Guardar nombre",
+  "Saving site…": "Guardando sitio…",
+  "Stations keep their site assignment when you rename a site.": "Las estaciones conservan su asignación al sitio cuando cambias su nombre.",
+  "Every organization must keep at least one site. Create another site before deleting this one.": "Cada organización debe conservar al menos un sitio. Crea otro sitio antes de eliminar este.",
+  "This site contains stations. Move them to another site before deleting it.": "Este sitio contiene estaciones. Muévelas a otro sitio antes de eliminarlo.",
+  "This site is empty. Delete it permanently? This cannot be undone.": "Este sitio está vacío. ¿Quieres eliminarlo de forma permanente? Esta acción no se puede deshacer.",
+  "View stations": "Ver estaciones",
+  "Site renamed:": "Sitio renombrado:",
+  "Site deleted:": "Sitio eliminado:",
+  "A site with this name already exists": "Ya existe un sitio con este nombre",
+  "Site not found": "No se encontró el sitio",
   "Sites": "Sitios",
   "Group your stations by location, farm, or project.": "Agrupa tus estaciones por ubicación, campo o proyecto.",
   "Create site": "Crear sitio",

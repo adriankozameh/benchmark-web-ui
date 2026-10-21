@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ChevronRight, CircleAlert, FolderPlus, LoaderCircle, MapPin } from 'lucide-react';
-import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
+import { useState } from 'react';
+import { ChevronRight, FolderPlus, MapPin, Pencil, Trash2 } from 'lucide-react';
+import { BenchmarkApi } from '@benchmark/api';
 import type { Plan, Site, UserLanguage, WeatherStation } from '@benchmark/domain';
-import { errorMessage, t } from '../language';
-import { canCreateSite, groupStationsBySite, validateSiteName } from './stationSiteRules';
+import { t } from '../language';
+import { canCreateSite, groupStationsBySite } from './stationSiteRules';
+import { DeleteSiteDialog, SiteNameDialog } from './SiteDialogs';
 import './stationSites.css';
 
 type Props = {
@@ -19,6 +20,8 @@ type Props = {
   onSiteFilterChange: (siteId: string) => void;
   onSelectStation: (stationId: string) => void;
   onSiteCreated: (site: Site) => void;
+  onSiteUpdated: (site: Site) => void;
+  onSiteDeleted: (siteId: string) => void;
   onManageBilling: () => void;
   language: UserLanguage;
   onUnauthorized: () => void;
@@ -30,10 +33,10 @@ function siteName(site: Site, language: UserLanguage): string {
 
 export function StationSites({ api, organizationId, plan, canManage, active, sites, stations,
   selectedStationId, siteFilterId, onSiteFilterChange, onSelectStation, onSiteCreated,
-  onManageBilling, language, onUnauthorized }: Props) {
-  const [creating, setCreating] = useState(false);
+  onSiteUpdated, onSiteDeleted, onManageBilling, language, onUnauthorized }: Props) {
+  const [action, setAction] = useState<{ kind: 'create' } | { kind: 'rename' | 'delete'; site: Site } | null>(null);
   const [grouped, setGrouped] = useState(true);
-  const [createdName, setCreatedName] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ label: 'Site created:' | 'Site renamed:' | 'Site deleted:'; name: string } | null>(null);
   const available = canCreateSite(plan, sites.length);
   const filter = sites.some(site => site.id === siteFilterId) ? siteFilterId : '';
   const allGroups = groupStationsBySite(sites, stations);
@@ -61,10 +64,10 @@ export function StationSites({ api, organizationId, plan, canManage, active, sit
         <div><h3 id="station-sites-title">{t('Sites', language)}</h3>
           <p>{t('Group your stations by location, farm, or project.', language)}</p></div>
         {canManage && <button type="button" className="secondary-button" disabled={!active || !available}
-          onClick={() => setCreating(true)}><FolderPlus size={16} />{t('Create site', language)}</button>}
+          onClick={() => setAction({ kind: 'create' })}><FolderPlus size={16} />{t('Create site', language)}</button>}
       </div>
-      {createdName !== null && <p className="station-sites-success" role="status">
-        {t('Site created:', language)} <strong>{createdName}</strong>
+      {notice !== null && <p className="station-sites-success" role="status">
+        {t(notice.label, language)} <strong>{notice.name}</strong>
       </p>}
       {canManage && active && !available && <p className="station-sites-plan">
         {t('FREE includes one site. PRO and PREMIUM allow multiple sites.', language)}{' '}
@@ -82,6 +85,23 @@ export function StationSites({ api, organizationId, plan, canManage, active, sit
         <label className="station-sites-group-toggle"><input type="checkbox" checked={grouped}
           onChange={event => setGrouped(event.target.checked)} /><span>{t('Group by site', language)}</span></label>
       </div>
+      {canManage && sites.length > 0 && <details className="station-site-management">
+        <summary>{t('Manage sites', language)}</summary>
+        <p>{t('Delete only empty sites. Every organization must keep at least one site.', language)}</p>
+        <div role="list" aria-label={t('Site management', language)}>
+          {allGroups.map(({ site, stations: siteStations }) => site && <div key={site.id} className="station-site-management-row" role="listitem">
+            <div><strong>{siteName(site, language)}</strong><span>{t(siteStations.length === 1 ? '1 station' : '{count} stations', language).replace('{count}', String(siteStations.length))}</span></div>
+            <div className="station-site-management-actions">
+              <button type="button" className="secondary-button" disabled={!active}
+                aria-label={`${t('Rename site', language)}: ${siteName(site, language)}`} onClick={() => setAction({ kind: 'rename', site })}>
+                <Pencil size={14} />{t('Rename site', language)}</button>
+              <button type="button" className="secondary-button" disabled={!active}
+                aria-label={`${t('Delete site', language)}: ${siteName(site, language)}`} onClick={() => setAction({ kind: 'delete', site })}>
+                <Trash2 size={14} />{t('Delete site', language)}</button>
+            </div>
+          </div>)}
+        </div>
+      </details>}
     </section>
 
     <div className="station-directory" aria-label={t('Station list', language)}>
@@ -96,78 +116,19 @@ export function StationSites({ api, organizationId, plan, canManage, active, sit
         : <p className="station-site-empty">{t('No stations in this site yet. Choose this site when adding a station.', language)}</p>}
     </div>
 
-    {creating && canManage && active && available && <CreateSiteDialog api={api} organizationId={organizationId}
-      language={language} onUnauthorized={onUnauthorized} onClose={() => setCreating(false)}
-      onCreated={site => { onSiteCreated(site); setCreatedName(site.name); setCreating(false); }} />}
+    {action && action.kind !== 'delete' && canManage && active && (action.kind === 'rename' || available) &&
+      <SiteNameDialog key={action.kind === 'rename' ? action.site.id : 'create'} api={api} organizationId={organizationId}
+        site={action.kind === 'rename' ? action.site : undefined} language={language} onUnauthorized={onUnauthorized}
+        onClose={() => setAction(null)} onSaved={site => {
+          if (action.kind === 'create') onSiteCreated(site);
+          else onSiteUpdated(site);
+          setNotice({ label: action.kind === 'create' ? 'Site created:' : 'Site renamed:', name: site.name });
+          setAction(null);
+        }} />}
+    {action?.kind === 'delete' && canManage && active && <DeleteSiteDialog api={api} organizationId={organizationId}
+      site={action.site} siteCount={sites.length} stationCount={stations.filter(station => station.siteId === action.site.id).length}
+      language={language} onUnauthorized={onUnauthorized} onClose={() => setAction(null)}
+      onShowStations={() => { onSiteFilterChange(action.site.id); setGrouped(true); setAction(null); }}
+      onDeleted={siteId => { onSiteDeleted(siteId); setNotice({ label: 'Site deleted:', name: action.site.name }); setAction(null); }} />}
   </>;
-}
-
-function CreateSiteDialog({ api, organizationId, language, onUnauthorized, onClose, onCreated }: {
-  api: BenchmarkApi;
-  organizationId: string;
-  language: UserLanguage;
-  onUnauthorized: () => void;
-  onClose: () => void;
-  onCreated: (site: Site) => void;
-}) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const mounted = useRef(false);
-  const inFlight = useRef(false);
-  const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [validation, setValidation] = useState<string | null>(null);
-  const [error, setError] = useState<unknown>(null);
-
-  useEffect(() => {
-    mounted.current = true;
-    const element = dialog.current;
-    element?.showModal();
-    return () => { mounted.current = false; element?.close(); };
-  }, []);
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (inFlight.current) return;
-    const invalid = validateSiteName(name);
-    setValidation(invalid);
-    if (invalid) return;
-    inFlight.current = true;
-    setSaving(true);
-    setError(null);
-    try {
-      const site = await api.createSite(organizationId, { name: name.trim() });
-      if (mounted.current) onCreated(site);
-    } catch (cause) {
-      if (!mounted.current) return;
-      if (cause instanceof BenchmarkApiError && cause.status === 401) onUnauthorized();
-      else setError(cause);
-    } finally {
-      inFlight.current = false;
-      if (mounted.current) setSaving(false);
-    }
-  }
-
-  return <dialog ref={dialog} className="station-delete-dialog station-site-dialog"
-    aria-labelledby="create-site-title" aria-describedby="create-site-description"
-    onCancel={event => { event.preventDefault(); if (!inFlight.current) onClose(); }}>
-    <form onSubmit={event => { void submit(event); }}>
-      <h2 id="create-site-title">{t('Create site', language)}</h2>
-      <p id="create-site-description">{t('Sites organize your stations. Creating a site does not add station capacity.', language)}</p>
-      <fieldset disabled={saving}>
-        <label className="field"><span>{t('Site name', language)}</span>
-          <input autoFocus required maxLength={200} value={name} aria-invalid={validation ? true : undefined}
-            aria-describedby={validation ? 'create-site-name-error' : undefined}
-            onChange={event => { setName(event.target.value); setValidation(null); }}
-            placeholder={t('e.g. North Farm', language)} />
-          {validation && <small id="create-site-name-error" className="field-error" role="alert">{t(validation, language)}</small>}
-        </label>
-        {error !== null && <div className="alert error" role="alert"><CircleAlert size={17} /><span>{errorMessage(error, language)}</span></div>}
-        <div className="station-details-actions">
-          <button type="button" className="secondary-button" onClick={onClose}>{t('Cancel', language)}</button>
-          <button type="submit" className="primary-button">{saving ? <LoaderCircle className="spin" size={16} /> : <FolderPlus size={16} />}
-            {t(saving ? 'Creating site…' : 'Create site', language)}</button>
-        </div>
-      </fieldset>
-    </form>
-  </dialog>;
 }

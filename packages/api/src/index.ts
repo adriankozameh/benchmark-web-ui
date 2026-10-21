@@ -276,6 +276,18 @@ export class BenchmarkApi {
     });
   }
 
+  renameSite(organizationId: string, siteId: string, name: string): Promise<Site> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/sites/${encodeURIComponent(siteId)}`, {
+      method: 'PATCH', body: { name },
+    });
+  }
+
+  deleteSite(organizationId: string, siteId: string): Promise<void> {
+    return this.request(`/api/v1/organizations/${encodeURIComponent(organizationId)}/sites/${encodeURIComponent(siteId)}`, {
+      method: 'DELETE', expectNoContent: true,
+    });
+  }
+
   listStations(organizationId: string): Promise<WeatherStation[]> {
     return this.request(`/api/v1/organizations/${organizationId}/stations`);
   }

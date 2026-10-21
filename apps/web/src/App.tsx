@@ -705,6 +705,8 @@ function AuthenticatedApp({
               organizationActive={organization.organizationStatus === 'ACTIVE'}
               onManageBilling={() => navigate({ section: 'settings', page: 'billing' })}
               onSiteCreated={site => setSites(current => current.some(item => item.id === site.id) ? current : [...current, site])}
+              onSiteUpdated={site => setSites(current => current.map(item => item.id === site.id ? site : item))}
+              onSiteDeleted={siteId => setSites(current => current.filter(site => site.id !== siteId))}
               onCreated={refresh} language={language} onUnauthorized={onUnauthorized} plan={organization.plan}
               onLocationChanged={(stationId) => {
                 selectStation(stationId);
@@ -892,6 +894,8 @@ function StationSettings({
   organizationActive,
   onManageBilling,
   onSiteCreated,
+  onSiteUpdated,
+  onSiteDeleted,
 }: {
   api: BenchmarkApi;
   organizationId: string;
@@ -909,6 +913,8 @@ function StationSettings({
   organizationActive: boolean;
   onManageBilling: () => void;
   onSiteCreated: (site: Site) => void;
+  onSiteUpdated: (site: Site) => void;
+  onSiteDeleted: (siteId: string) => void;
 }) {
   const [siteFilterId, setSiteFilterId] = useState('');
   const [showForm, setShowForm] = useState(stations.length === 0);
@@ -919,7 +925,9 @@ function StationSettings({
   const [fieldErrors, setFieldErrors] = useState<StationValidationErrors>({});
 
   useEffect(() => {
-    if (!draft.siteId && sites[0]) setDraft((current) => ({ ...current, siteId: sites[0].id }));
+    if (sites.some(site => site.id === draft.siteId)) return;
+    const fallback = sites[0]?.id ?? '';
+    if (draft.siteId !== fallback) setDraft(current => ({ ...current, siteId: fallback }));
   }, [draft.siteId, sites]);
 
   useEffect(() => {
@@ -995,7 +1003,12 @@ function StationSettings({
       <StationSites api={api} organizationId={organizationId} plan={plan} canManage={canManageSites}
         active={organizationActive} sites={sites} stations={stations} language={language}
         onUnauthorized={onUnauthorized} onManageBilling={onManageBilling}
-        selectedStationId={selectedStationId} siteFilterId={siteFilterId}
+        selectedStationId={selectedStationId} siteFilterId={siteFilterId} onSiteUpdated={onSiteUpdated}
+        onSiteDeleted={siteId => {
+          onSiteDeleted(siteId);
+          if (siteFilterId === siteId) setSiteFilterId('');
+          setDraft(current => current.siteId === siteId ? { ...current, siteId: sites.find(site => site.id !== siteId)?.id ?? '' } : current);
+        }}
         onSiteFilterChange={siteId => { setSiteFilterId(siteId); setSelectedStationId(null); }}
         onSelectStation={stationId => setSelectedStationId(current => current === stationId ? null : stationId)}
         onSiteCreated={site => {
