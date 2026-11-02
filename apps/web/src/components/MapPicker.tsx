@@ -70,8 +70,8 @@ export function MapPicker({ latitude, longitude, onChange, language }: Props) {
       const icon = L.divIcon({
         className: 'benchmark-map-pin-wrap',
         html: '<div class="benchmark-map-pin"><div></div></div>',
-        iconSize: [34, 42],
-        iconAnchor: [17, 40],
+        iconSize: [24, 24],
+        iconAnchor: [12, 28],
       });
       const marker = L.marker(point, { draggable: true, icon }).addTo(map);
       marker.on('dragend', () => {

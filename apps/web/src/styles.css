@@ -265,9 +265,9 @@ button { color: inherit; }
 .map-card { overflow: hidden; min-height: 500px; display: grid; grid-template-rows: 1fr auto; border: 1px solid #dce3e9; border-radius: 9px; background: #f0f3f5; }
 .map-picker { min-height: 450px; width: 100%; }
 .map-caption { display: flex; align-items: center; gap: 7px; padding: 10px 12px; background: white; border-top: 1px solid #e2e7ec; color: #758295; font-size: 9.5px; }
-.benchmark-map-pin-wrap { background: transparent; border: 0; }
-.benchmark-map-pin { position: relative; width: 30px; height: 30px; transform: rotate(45deg); border-radius: 50% 50% 50% 4px; background: var(--benchmark-red); box-shadow: 0 5px 14px rgba(0,0,0,.26); border: 3px solid white; }
-.benchmark-map-pin div { position: absolute; width: 7px; height: 7px; top: 8px; left: 8px; border-radius: 50%; background: white; }
+.benchmark-map-pin-wrap { background: transparent; border: 0; filter: drop-shadow(0 2px 3px rgba(23, 33, 48, .35)); }
+.benchmark-map-pin { position: relative; width: 24px; height: 24px; transform: rotate(-45deg); border-radius: 50% 50% 50% 3px; background: var(--benchmark-red); border: 2px solid white; }
+.benchmark-map-pin div { position: absolute; width: 6px; height: 6px; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; background: white; }
 .benchmark-map-pin.station-pin { background: var(--benchmark-navy); }
 .station-map { height: 320px; width: 100%; margin-bottom: 18px; border: 1px solid var(--benchmark-line); border-radius: 12px; overflow: hidden; z-index: 0; }
 .station-map .leaflet-marker-icon { cursor: pointer; }

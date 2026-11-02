@@ -14,8 +14,8 @@ type Props = {
 const pinIcon = (selected: boolean) => L.divIcon({
   className: 'benchmark-map-pin-wrap',
   html: `<div class="benchmark-map-pin${selected ? '' : ' station-pin'}"><div></div></div>`,
-  iconSize: [34, 42],
-  iconAnchor: [17, 40],
+  iconSize: [24, 24],
+  iconAnchor: [12, 28],
 });
 const SELECTED_ICON = pinIcon(true);
 const STATION_ICON = pinIcon(false);
@@ -61,7 +61,7 @@ export function StationMap({ stations, selectedStationId, onSelect, language }: 
     const markers = markersRef.current;
     for (const station of stations) {
       const marker = L.marker([station.latitude, station.longitude], { icon: STATION_ICON })
-        .bindTooltip(station.name, { direction: 'top', offset: [0, -36] })
+        .bindTooltip(station.name, { direction: 'top', offset: [0, -32] })
         .on('click', () => onSelectRef.current(station.id))
         .addTo(layer);
       marker.getElement()?.setAttribute('aria-label', station.name);
