@@ -7,6 +7,8 @@ import { BurncastDashboard } from './BurncastDashboard';
 import { MetricChart, type ChartPoint } from './ForecastDashboard';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { errorMessage, locale, t } from '../language';
+import { StationPicker, useSiteStations, type SiteFilterProps } from './StationPicker';
+import { StationMap } from './StationMap';
 
 export type ProductKind = 'burncast' | 'farmcast' | 'safecast';
 const METRICS: Record<ProductKind, Array<[string, string, boolean?]>> = {
@@ -19,7 +21,7 @@ const METRICS: Record<ProductKind, Array<[string, string, boolean?]>> = {
     ['UV_INDEX', 'UV index'], ['HEAT_INDEX', 'Heat index'], ['WIND_CHILL', 'Wind chill']],
 };
 const TITLES = { burncast: 'Burncast', farmcast: 'Farmcast', safecast: 'Safecast' };
-export function ForecastProductsDashboard({ api, organizationId, stations, kind, units, language, onUnauthorized, focusStationId, onStationChange, canManage = false }: {
+export function ForecastProductsDashboard({ api, organizationId, stations, kind, units, language, onUnauthorized, focusStationId, onStationChange, canManage = false, sites, siteId, onSiteChange }: SiteFilterProps & {
   api: BenchmarkApi; organizationId: string; stations: WeatherStation[]; kind: ProductKind;
   units: DisplayUnits; language: UserLanguage; onUnauthorized: () => void; focusStationId: string | null; onStationChange: (stationId: string) => void; canManage?: boolean;
 }) {
@@ -43,6 +45,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
   const [error, setError] = useState<string | null>(null);
   const lang = useRef(language); lang.current = language;
   const selected = stations.find(s => s.id === stationId) ?? stations[0];
+  const siteStations = useSiteStations(stations, siteId, selected?.id ?? '');
   selection.current = `${organizationId}/${selected?.id ?? ''}`;
   useEffect(() => {
     appliedSettings.current = null;
@@ -124,9 +127,11 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
     <div className="page-heading-row"><div><h2>{TITLES[kind]}</h2></div>
       <button className="secondary-button" type="button" disabled={loading || !selected} onClick={() => setRevision(v => v + 1)}>{t('Refresh', language)}</button>
     </div>
+    {selected && <StationMap stations={siteStations.visibleStations} selectedStationId={selected.id}
+      onSelect={onStationChange} language={language} />}
     <div className="product-controls">
-      <label className="field"><span>{t('Station', language)}</span><select value={selected?.id ?? ''} onChange={e => onStationChange(e.target.value)}>
-        {stations.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      <StationPicker {...siteStations} sites={sites} stations={stations} stationId={selected?.id ?? ''}
+        language={language} onSiteChange={onSiteChange} onStationChange={onStationChange} />
       {fixedForecastPeriod ? <div className="field"><span>{t('Forecast period', language)}</span><strong>15 {t('days', language)}</strong></div> :
         <label className="field"><span>{t('Forecast period', language)}</span><select value={days} onChange={e => setDays(Number(e.target.value))}>
           {[3, 7, 15].map(value => <option key={value} value={value}>{value} {t('days', language)}</option>)}</select></label>}

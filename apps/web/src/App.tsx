@@ -413,6 +413,7 @@ function AuthenticatedApp({
   const [sites, setSites] = useState<Site[]>([]);
   const [stations, setStations] = useState<WeatherStation[]>([]);
   const [stationByOrganization, setStationByOrganization] = useState<Record<string, string>>({});
+  const [siteByOrganization, setSiteByOrganization] = useState<Record<string, string>>({});
   const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState<string | null>(null);
   const languageRef = useRef<UserLanguage>('en');
@@ -446,10 +447,25 @@ function AuthenticatedApp({
   }, [api, organization?.id, organization?.organizationStatus]);
 
   const stationToView = organization ? stationByOrganization[organization.id] ?? null : null;
+  const siteToView = organization ? siteByOrganization[organization.id] ?? '' : '';
   const selectStation = (stationId: string) => {
-    if (!organization || !stations.some(station => station.id === stationId)) return;
+    const station = stations.find(item => item.id === stationId);
+    if (!organization || !station) return;
     setStationByOrganization(current => ({ ...current, [organization.id]: stationId }));
+    // Keep an active site filter in sync when a station is selected elsewhere (e.g. Settings).
+    setSiteByOrganization(current => current[organization.id] && current[organization.id] !== station.siteId
+      ? { ...current, [organization.id]: station.siteId } : current);
   };
+  const selectSite = (siteId: string) => {
+    if (!organization) return;
+    setSiteByOrganization(current => ({ ...current, [organization.id]: siteId }));
+    const current = stations.find(station => station.id === stationToView) ?? stations[0];
+    const firstInSite = stations.find(station => station.siteId === siteId);
+    if (siteId && current?.siteId !== siteId && firstInSite) {
+      setStationByOrganization(selected => ({ ...selected, [organization.id]: firstInSite.id }));
+    }
+  };
+  const siteFilter = { sites, siteId: siteToView, onSiteChange: selectSite };
 
   const refresh = useCallback(async () => {
     setState('loading');
@@ -659,12 +675,12 @@ function AuthenticatedApp({
             <ForecastProductsDashboard api={api} organizationId={organization.id} stations={stations}
               canManage={organization.role === 'OWNER' || organization.role === 'ADMIN'}
               kind={route.page as 'burncast' | 'farmcast' | 'safecast'} units={units} language={language}
-              onUnauthorized={onUnauthorized} focusStationId={stationToView} onStationChange={selectStation} />
+              onUnauthorized={onUnauthorized} focusStationId={stationToView} onStationChange={selectStation} {...siteFilter} />
           )}
 
           {organization && route.section === 'dashboard' && route.page === 'forecast' && (
             <ForecastDashboard api={api} organizationId={organization.id} stations={stations} units={units} language={language}
-              focusStationId={stationToView} onStationChange={selectStation} onUnauthorized={onUnauthorized} />
+              focusStationId={stationToView} onStationChange={selectStation} onUnauthorized={onUnauthorized} {...siteFilter} />
           )}
 
           {organization && route.section === 'dashboard' && route.page === 'observations' && (
@@ -675,7 +691,7 @@ function AuthenticatedApp({
           {organization && route.section === 'dashboard' && route.page === 'historic' && (
             <ObservationsDashboard api={api} organizationId={organization.id} stations={stations}
               plan={organization.plan} units={units} language={language} focusStationId={stationToView} onStationChange={selectStation}
-              onUnauthorized={onUnauthorized} />
+              onUnauthorized={onUnauthorized} {...siteFilter} />
           )}
 
           {organization && route.section === 'settings' && route.page === 'billing' && (

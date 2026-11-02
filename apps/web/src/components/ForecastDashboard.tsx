@@ -7,6 +7,8 @@ import type { DisplayUnits, StationTimeSeriesPoint, UserLanguage, WeatherStation
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { errorMessage, locale, t } from '../language';
 import { createChartTimeFormatter } from '../chartTime';
+import { StationPicker, useSiteStations, type SiteFilterProps } from './StationPicker';
+import { StationMap } from './StationMap';
 
 const RANGES = [
   { label: '24 hours', hours: 24 },
@@ -81,7 +83,8 @@ function formatMetricValue(metric: string, value: number, units: DisplayUnits, l
 
 export function ForecastDashboard({
   api, organizationId, stations, onUnauthorized, units, language, focusStationId, onStationChange,
-}: {
+  sites, siteId, onSiteChange,
+}: SiteFilterProps & {
   api: BenchmarkApi;
   organizationId: string;
   stations: WeatherStation[];
@@ -107,6 +110,7 @@ export function ForecastDashboard({
   const selectedStationId = stations.some((station) => station.id === stationId)
     ? stationId : stations[0]?.id ?? '';
   const selectedStation = stations.find((station) => station.id === selectedStationId);
+  const siteStations = useSiteStations(stations, siteId, selectedStationId);
   const stationTimeZone = selectedStation?.timeZone ?? 'UTC';
   const displayUnits = units;
   const timeZone = forecastTimeZone?.stationId === selectedStationId
@@ -212,13 +216,11 @@ export function ForecastDashboard({
         </button>
       </div>
 
+      <StationMap stations={siteStations.visibleStations} selectedStationId={selectedStationId}
+        onSelect={onStationChange} language={language} />
       <div className="forecast-controls">
-        <label className="field">
-          <span>{t('Station', language)}</span>
-          <select value={selectedStationId} onChange={(event) => onStationChange(event.target.value)}>
-            {stations.map((station) => <option key={station.id} value={station.id}>{station.name}</option>)}
-          </select>
-        </label>
+        <StationPicker {...siteStations} sites={sites} stations={stations} stationId={selectedStationId}
+          language={language} onSiteChange={onSiteChange} onStationChange={onStationChange} />
         <div className="forecast-range" role="group" aria-label={t('Forecast time range', language)}>
           {RANGES.map((range) => (
             <button key={range.hours} type="button" className={rangeHours === range.hours ? 'selected' : ''}

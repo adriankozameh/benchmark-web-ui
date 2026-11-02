@@ -492,6 +492,7 @@ const spanish: Record<string, string> = {
   'Historical weather data will appear here.': 'Los datos meteorológicos históricos aparecerán aquí.',
   'Benchmark user': 'Usuario de Benchmark', plan: 'plan',
   'Station location map': 'Mapa de ubicación de la estación',
+  'Stations map': 'Mapa de estaciones',
   'Base map': 'Mapa base', Satellite: 'Satélite',
   'Search street address, city, farm, or place': 'Busca una dirección, ciudad, finca o lugar',
   'Searching…': 'Buscando…', 'No matching locations': 'No se encontraron ubicaciones',
