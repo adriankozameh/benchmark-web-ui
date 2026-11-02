@@ -6,6 +6,8 @@ import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { DailyStationObservation, DisplayUnits, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { displayMetricValue } from '../forecastUnits';
 import { errorMessage, t } from '../language';
+import { StationPicker, useSiteStations, type SiteFilterProps } from './StationPicker';
+import { StationMap } from './StationMap';
 import { MetricChart } from './ForecastDashboard';
 import type { ChartPoint } from './ForecastDashboard';
 
@@ -70,7 +72,8 @@ function presentValues(entries: [string, number | null][]): Record<string, numbe
 
 export function ObservationsDashboard({
                                           api, organizationId, stations, plan, units, language, onUnauthorized, focusStationId, onStationChange,
-                                      }: {
+                                          sites, siteId, onSiteChange,
+                                      }: SiteFilterProps & {
     api: BenchmarkApi;
     organizationId: string;
     stations: WeatherStation[];
@@ -108,6 +111,7 @@ export function ObservationsDashboard({
     const selectedStationId = stations.some((station) => station.id === stationId)
         ? stationId : stations[0]?.id ?? '';
     const selectedStation = stations.find((station) => station.id === selectedStationId);
+    const siteStations = useSiteStations(stations, siteId, selectedStationId);
     const stationZone = selectedStation?.timeZone || 'UTC';
     const timeZone = responseZone?.stationId === selectedStationId ? responseZone.value : stationZone;
     const today = localDay(new Date(), timeZone);
@@ -261,12 +265,11 @@ export function ObservationsDashboard({
             </button>
         </div>
 
+        <StationMap stations={siteStations.visibleStations} selectedStationId={selectedStationId}
+                    onSelect={onStationChange} language={language} />
         <form className="forecast-controls observation-controls" onSubmit={applyView}>
-            <label className="field"><span>{t('Station', language)}</span>
-                <select value={selectedStationId} onChange={(event) => onStationChange(event.target.value)}>
-                    {stations.map((station) => <option key={station.id} value={station.id}>{station.name}</option>)}
-                </select>
-            </label>
+            <StationPicker {...siteStations} sites={sites} stations={stations} stationId={selectedStationId}
+                           language={language} onSiteChange={onSiteChange} onStationChange={onStationChange} />
             <label className="field"><span>{t('View from (local day)', language)}</span>
                 <input type="date" required min={earliestDay} value={viewFrom} max={today} onChange={(event) => setViewFrom(event.target.value)} />
             </label>
