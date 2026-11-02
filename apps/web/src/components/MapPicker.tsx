@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import type { UserLanguage } from '@benchmark/domain';
 import { t } from '../language';
+import { createWorldMap } from './worldMap';
 
 type Props = {
   latitude: number | null;
@@ -26,36 +26,16 @@ export function MapPicker({ latitude, longitude, onChange, language }: Props) {
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19,
-    });
-
-    const satellite = L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      { attribution: '&copy; Esri, ArcGIS', maxZoom: 19 },
-    );
-
-    const map = L.map(containerRef.current, {
-      center: FALLBACK_CENTER,
-      zoom: 4,
-      layers: [street],
-      zoomControl: true,
-    });
-
-    L.control.layers({ [t('Base map', language)]: street, [t('Satellite', language)]: satellite }, undefined, {
-      position: 'topright',
-    }).addTo(map);
+    const { map, dispose } = createWorldMap(containerRef.current, { center: FALLBACK_CENTER, zoom: 4 }, language);
 
     map.on('click', (event: L.LeafletMouseEvent) => {
       onChangeRef.current(event.latlng.lat, event.latlng.lng);
     });
 
     mapRef.current = map;
-    window.setTimeout(() => map.invalidateSize(), 0);
 
     return () => {
-      map.remove();
+      dispose();
       mapRef.current = null;
       markerRef.current = null;
     };

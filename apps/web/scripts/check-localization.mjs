@@ -14,6 +14,7 @@ const files = [
   'src/components/ForecastProductsDashboard.tsx',
   'src/components/StationPicker.tsx',
   'src/components/StationMap.tsx',
+  'src/components/worldMap.ts',
   'src/components/BurncastDashboard.tsx',
   'src/components/OrganizationInvitations.tsx',
   'src/components/OrganizationMembers.tsx',

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import type { UserLanguage, WeatherStation } from '@benchmark/domain';
 import { t } from '../language';
+import { createWorldMap } from './worldMap';
 
 type Props = {
   stations: WeatherStation[];
@@ -19,8 +19,6 @@ const pinIcon = (selected: boolean) => L.divIcon({
 });
 const SELECTED_ICON = pinIcon(true);
 const STATION_ICON = pinIcon(false);
-// Web Mercator's latitude limit; the tiled world ends here.
-const WORLD_BOUNDS = L.latLngBounds([-85.0511, -180], [85.0511, 180]);
 
 export function StationMap({ stations, selectedStationId, onSelect, language }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -33,36 +31,11 @@ export function StationMap({ stations, selectedStationId, onSelect, language }: 
     const container = containerRef.current;
     if (!container) return;
 
-    const tileOptions: L.TileLayerOptions = { maxZoom: 19, noWrap: true, bounds: WORLD_BOUNDS };
-    const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      ...tileOptions, attribution: '&copy; OpenStreetMap contributors',
-    });
-    const satellite = L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      { ...tileOptions, attribution: '&copy; Esri, ArcGIS' },
-    );
-    const instance = L.map(container, {
-      center: [39.5, -98.35], zoom: 4, layers: [street],
-      maxBounds: WORLD_BOUNDS, maxBoundsViscosity: 1,
-    });
-    L.control.layers({ [t('Base map', language)]: street, [t('Satellite', language)]: satellite }, undefined, {
-      position: 'topright',
-    }).addTo(instance);
-
-    // Lowest zoom at which the world (256px wide at zoom 0) still fills the viewport, so it is never shown twice.
-    const fitWorld = () => {
-      instance.invalidateSize();
-      const { x, y } = instance.getSize();
-      if (x && y) instance.setMinZoom(Math.ceil(Math.log2(Math.max(x, y) / 256)));
-    };
-    fitWorld();
-    const resize = new ResizeObserver(fitWorld);
-    resize.observe(container);
+    const { map: instance, dispose } = createWorldMap(container, { center: [39.5, -98.35], zoom: 4 }, language);
     setMap(instance);
 
     return () => {
-      resize.disconnect();
-      instance.remove();
+      dispose();
       setMap(null);
     };
   }, [language]);
