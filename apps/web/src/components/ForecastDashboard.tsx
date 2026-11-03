@@ -10,13 +10,21 @@ import { drawKey } from './motion/drawKey';
 import { createChartTimeFormatter } from '../chartTime';
 import { StationPicker, useSiteStations, type SiteFilterProps } from './StationPicker';
 import { StationMap } from './StationMap';
+import { aggregateDaily, dailyRule, dailyWindow, type DailyRule, type DayCoverage } from './forecastDaily';
 
+// `days` is the daily view's span; ranges without it are hourly only.
 const RANGES = [
-  { label: '24 hours', hours: 24 },
-  { label: '3 days', hours: 72 },
-  { label: '7 days', hours: 168 },
-  { label: '15 days', hours: 375 },
+  { label: '24 hours', hours: 24, days: null },
+  { label: '3 days', hours: 72, days: 3 },
+  { label: '7 days', hours: 168, days: 7 },
+  { label: '15 days', hours: 375, days: 15 },
 ] as const;
+
+type Aggregation = 'hourly' | 'daily';
+
+const DAILY_TITLES: Record<DailyRule, string> = {
+  range: 'Daily range', max: 'Daily maximum', sum: 'Daily total', mean: 'Daily average', atMax: 'Daily maximum',
+};
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -65,7 +73,8 @@ const WIND_DIRECTIONS: Record<string, string> = {
   TRANSPORT_WIND_SPEED: 'TRANSPORT_WIND_DIRECTION',
 };
 
-export type ChartPoint = StationTimeSeriesPoint & { time: number };
+/** `coverage` marks daily points aggregated from an incomplete day (see forecastDaily). */
+export type ChartPoint = StationTimeSeriesPoint & { time: number; coverage?: Record<string, DayCoverage> };
 
 function metricLabel(metric: string, language: UserLanguage): string {
   return t(METRIC_LABELS[metric] ?? metric.replaceAll('_', ' ').toLowerCase(), language);
@@ -97,7 +106,9 @@ export function ForecastDashboard({
 }) {
   const stationId = focusStationId ?? stations[0]?.id ?? '';
   const [rangeHours, setRangeHours] = useState<number>(72);
+  const [aggregation, setAggregation] = useState<Aggregation>('hourly');
   const [windowStart, setWindowStart] = useState(() => Math.floor(Date.now() / HOUR_MS) * HOUR_MS);
+  const [windowEnd, setWindowEnd] = useState(() => Math.floor(Date.now() / HOUR_MS) * HOUR_MS + 72 * HOUR_MS);
   const [refreshKey, setRefreshKey] = useState(0);
   const [locationPollAttempts, setLocationPollAttempts] = useState(0);
   const [points, setPoints] = useState<ChartPoint[]>([]);
@@ -113,6 +124,8 @@ export function ForecastDashboard({
   const selectedStation = stations.find((station) => station.id === selectedStationId);
   const siteStations = useSiteStations(stations, siteId, selectedStationId);
   const stationTimeZone = selectedStation?.timeZone ?? 'UTC';
+  const dailyDays = RANGES.find((range) => range.hours === rangeHours)?.days ?? null;
+  const effectiveAggregation: Aggregation = dailyDays ? aggregation : 'hourly';
   const displayUnits = units;
   const timeZone = forecastTimeZone?.stationId === selectedStationId
     ? forecastTimeZone.value : stationTimeZone;
@@ -124,11 +137,16 @@ export function ForecastDashboard({
     setError(null);
     setPoints([]);
 
-    // Include the current forecast hour and exclude older valid times.
-    const start = Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
-    const from = new Date(start).toISOString();
-    const to = new Date(start + rangeHours * HOUR_MS).toISOString();
-    setWindowStart(start);
+    // Hourly: include the current forecast hour and exclude older valid times.
+    // Daily: whole local days from tomorrow, so today's remaining hours never read as a full day.
+    const now = Date.now();
+    const window = effectiveAggregation === 'daily' && dailyDays
+      ? dailyWindow(now, dailyDays, stationTimeZone)
+      : { start: Math.floor(now / HOUR_MS) * HOUR_MS, end: Math.floor(now / HOUR_MS) * HOUR_MS + rangeHours * HOUR_MS };
+    const from = new Date(window.start).toISOString();
+    const to = new Date(window.end).toISOString();
+    setWindowStart(window.start);
+    setWindowEnd(window.end);
     void api.getStationForecast(organizationId, selectedStationId, from, to)
       .then((response) => {
         if (!current) return;
@@ -149,7 +167,7 @@ export function ForecastDashboard({
       .finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [api, organizationId, selectedStationId, selectedStation?.locationRevision,
-      stationTimeZone, rangeHours, refreshKey, onUnauthorized]);
+      stationTimeZone, rangeHours, effectiveAggregation, dailyDays, refreshKey, onUnauthorized]);
 
   useEffect(() => {
     // Keep the displayed range current when the dashboard stays open across an hour boundary.
@@ -182,6 +200,10 @@ export function ForecastDashboard({
     values: Object.fromEntries(Object.entries(point.values).map(([metric, value]) =>
       [metric, displayMetricValue(metric, value, displayUnits)])),
   })), [points, displayUnits]);
+  // Trim to the window first: a point at its closing midnight would otherwise read as a one-hour day.
+  const daily = useMemo(() => effectiveAggregation === 'daily'
+    ? aggregateDaily(displayPoints.filter((point) => point.time >= windowStart && point.time < windowEnd), timeZone) : null,
+    [effectiveAggregation, displayPoints, windowStart, windowEnd, timeZone]);
   const metrics = useMemo(() => {
     const available = [...new Set(points.flatMap((point) => Object.keys(point.values)))];
     // A direction is an angle: a line from 359° to 1° would misleadingly cross
@@ -220,8 +242,19 @@ export function ForecastDashboard({
       <StationMap stations={siteStations.visibleStations} selectedStationId={selectedStationId}
         onSelect={onStationChange} language={language} />
       <div className="forecast-controls">
-        <StationPicker {...siteStations} sites={sites} stations={stations} stationId={selectedStationId}
-          language={language} onSiteChange={onSiteChange} onStationChange={onStationChange} />
+        <div className="forecast-filters">
+          <StationPicker {...siteStations} sites={sites} stations={stations} stationId={selectedStationId}
+            language={language} onSiteChange={onSiteChange} onStationChange={onStationChange} />
+          <label className="field">
+            <span>{t('Aggregation', language)}</span>
+            <select value={effectiveAggregation} disabled={!dailyDays}
+              title={dailyDays ? undefined : t('Daily view is available for 3, 7 and 15 days.', language)}
+              onChange={(event) => setAggregation(event.target.value as Aggregation)}>
+              <option value="hourly">{t('Hourly', language)}</option>
+              <option value="daily">{t('Daily', language)}</option>
+            </select>
+          </label>
+        </div>
         <div className="forecast-range" role="group" aria-label={t('Forecast time range', language)}>
           {RANGES.map((range) => (
             <button key={range.hours} type="button" className={rangeHours === range.hours ? 'selected' : ''}
@@ -240,7 +273,11 @@ export function ForecastDashboard({
           : t('No forecast data was returned for this station and time range.', language)}</div>
       )}
 
-      {!loading && !error && points.length > 0 && (
+      {!loading && !error && daily && points.length > 0 && daily.max.length === 0 && (
+        <div className="forecast-empty">{t('No complete forecast days are available for this range.', language)}</div>
+      )}
+
+      {!loading && !error && points.length > 0 && (!daily || daily.max.length > 0) && (
         <>
           <div className="forecast-provider-filter" role="group" aria-label={t('Visible forecast providers', language)}>
             <span>{t('Providers', language)}</span>
@@ -254,11 +291,16 @@ export function ForecastDashboard({
             ))}
           </div>
           <div className="forecast-chart-grid">
-            {metrics.map((metric) => (
-              <MetricChart key={metric} metric={metric} points={displayPoints} units={displayUnits} language={language}
+            {metrics.map((metric) => {
+              const rule = dailyRule(metric);
+              return <MetricChart key={`${effectiveAggregation}-${metric}`} metric={metric}
+                points={daily ? daily.max : displayPoints}
+                secondaryPoints={daily && rule === 'range' ? daily.min : undefined}
+                title={daily ? `${metricLabel(metric, language)} · ${t(DAILY_TITLES[rule], language)}` : undefined}
+                units={displayUnits} language={language}
                 providers={visibleProviders} colors={colors} timeZone={timeZone}
-                windowStart={windowStart} windowEnd={windowStart + rangeHours * HOUR_MS} />
-            ))}
+                windowStart={windowStart} windowEnd={windowEnd} />;
+            })}
           </div>
           {metrics.length === 0 && <div className="forecast-empty">{t('No numeric metrics were returned.', language)}</div>}
         </>
@@ -302,6 +344,7 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
   }), [points, secondaryPoints, providers, metric]);
   const seriesKey = useMemo(() => drawKey(series.flatMap((item) => item.points.map((point) => point.values[metric]))), [series, metric]);
   const all = series.flatMap((item) => item.points);
+  const hasPartial = all.some((point) => point.coverage?.[metric]);
   const times = [...new Set(all.map((point) => point.time))].sort((a, b) => a - b);
   const values = all.map((point) => point.values[metric]);
   const minTime = windowStart;
@@ -336,9 +379,12 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
       <div className="forecast-chart-heading"><h3>{title ?? metricLabel(metric, language)}{metricUnit(metric, units) ? ` (${metricUnit(metric, units)})` : ''}</h3>
         <span title={timeZone}>{activeTime === null ? timeFormatter.zone(windowStart)
           : timeFormatter.dateTime(activeTime)}</span></div>
-      {secondaryPoints && <div className="observation-range-legend">
-        <span><i />{t('Daily maximum', language)}</span>
-        <span><i className="minimum" />{t('Daily minimum', language)}</span>
+      {(secondaryPoints || hasPartial) && <div className="observation-range-legend">
+        {secondaryPoints && <>
+          <span><i />{t('Daily maximum', language)}</span>
+          <span><i className="minimum" />{t('Daily minimum', language)}</span>
+        </>}
+        {hasPartial && <span><i className="partial" />{t('Partial day', language)}</span>}
       </div>}
       {directionMetric && <p className="forecast-wind-convention">{t('Arrows point toward where the wind comes from · degrees clockwise from true north', language)}</p>}
       {all.length === 0 ? <div className="forecast-chart-blank">{t('Select a provider to view this metric.', language)}</div> : (
@@ -384,6 +430,8 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
                   ? <circle key={index} cx={x(chunk[0].time)} cy={y(chunk[0].values[metric])} r="3" fill={colors[provider]} />
                   : <path key={index} d={chunk.map((point, position) =>
                     `${position === 0 ? 'M' : 'L'}${x(point.time).toFixed(2)} ${y(point.values[metric]).toFixed(2)}`).join(' ')} />)}
+                {providerPoints.filter((point) => point.coverage?.[metric]).map((point) => <circle key={`partial-${point.time}`}
+                  cx={x(point.time)} cy={y(point.values[metric])} r="4" fill="white" strokeWidth="2" strokeDasharray="none" />)}
                 {directionMetric && bound === 'max' && providerPoints
                   .filter((point) => Number.isFinite(point.values[directionMetric]))
                   .map((point) => <WindArrow key={point.time}
@@ -403,6 +451,8 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
               : active.map(({ provider, bound, point }) => <span key={`${provider}-${bound}`}>
                 <i style={{ background: colors[provider] }} />
                 {PROVIDER_LABELS[provider] ?? provider.replaceAll('_', ' ')}{secondaryPoints ? ` ${t(bound === 'max' ? 'Maximum' : 'Minimum', language)}` : ''} <strong>{formatMetricValue(metric, point!.values[metric], units, language)}{metricUnit(metric, units) ? ` ${metricUnit(metric, units)}` : ''}</strong>
+                {point!.coverage?.[metric] && <em className="forecast-partial-note">{t('Partial day ({hours} of {expected} hours)', language)
+                  .replace('{hours}', String(point!.coverage[metric].hours)).replace('{expected}', String(point!.coverage[metric].expected))}</em>}
                 {directionMetric && Number.isFinite(point!.values[directionMetric]) &&
                   <span>· {formatValue(((point!.values[directionMetric] % 360) + 360) % 360, language)}° {t('clockwise from N', language)}</span>}
               </span>)}

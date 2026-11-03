@@ -461,7 +461,11 @@ const spanish: Record<string, string> = {
   "Daily observations use the selected station's local calendar date.":
       'Los valores diarios usan la fecha local de la estación seleccionada.',
   'Daily total': 'Total diario', 'Daily minimum': 'Mínimo diario', 'Daily maximum': 'Máximo diario',
-  'Daily range': 'Máximo y mínimo diarios', Maximum: 'Máximo', Minimum: 'Mínimo',
+  'Daily range': 'Máximo y mínimo diarios', 'Daily average': 'Promedio diario',
+  'Partial day': 'Día parcial', 'Partial day ({hours} of {expected} hours)': 'Día parcial ({hours} de {expected} horas)',
+  'Daily view is available for 3, 7 and 15 days.': 'La vista diaria está disponible para 3, 7 y 15 días.',
+  'No complete forecast days are available for this range.': 'No hay días de pronóstico completos para este rango.',
+  Maximum: 'Máximo', Minimum: 'Mínimo',
   'View from (UTC day)': 'Ver desde (día UTC)',
   'View through (UTC day)': 'Ver hasta (día UTC)',
   'View from (local day)': 'Ver desde (día local)',
