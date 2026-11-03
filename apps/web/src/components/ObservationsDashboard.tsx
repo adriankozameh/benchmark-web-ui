@@ -88,11 +88,11 @@ export function ObservationsDashboard({
     const stationId = focusStationId ?? stations[0]?.id ?? '';
     const [initialToday] = useState(() => localDay(new Date(),
         (stations.find((station) => station.id === focusStationId) ?? stations[0])?.timeZone || 'UTC'));
-    const [viewFrom, setViewFrom] = useState(() => addUtcDays(initialToday, -6));
+    const [viewFrom, setViewFrom] = useState(() => addUtcDays(initialToday, -15));
     const [viewThrough, setViewThrough] = useState(initialToday);
     const [aggregation, setAggregation] = useState<Aggregation>('daily');
     const [appliedView, setAppliedView] = useState<ViewQuery>(() => ({
-        from: addUtcDays(initialToday, -6), through: initialToday, aggregation: 'daily',
+        from: addUtcDays(initialToday, -15), through: initialToday, aggregation: 'daily',
     }));
     const [backfillFrom, setBackfillFrom] = useState(() => addUtcDays(utcDay(new Date()), -30));
     const [backfillThrough, setBackfillThrough] = useState(() => addUtcDays(utcDay(new Date()), -1));
