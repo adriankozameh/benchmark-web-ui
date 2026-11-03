@@ -19,6 +19,9 @@
 .station-site-empty { margin: 0; padding: 16px; border: 1px dashed #d6dee6; border-radius: 9px; color: var(--benchmark-text-muted); font-size: 11px; line-height: 1.65; }
 .station-directory .station-row-name { min-width: 0; overflow-wrap: anywhere; }
 .station-directory .station-row-site { color: #59677a; }
+.station-row-details { padding: 4px 4px 10px; border-top: 1px solid #eef1f4; }
+.station-row-details + .station-row { border-top: 1px solid #eef1f4; border-radius: 0; }
+.station-row-details > .station-details { margin-bottom: 0; box-shadow: none; }
 .station-site-dialog h2 { margin-top: 0; font-size: 20px; }
 .station-site-dialog p { color: var(--benchmark-text-muted); font-size: 12px; line-height: 1.75; }
 .station-site-dialog fieldset { display: grid; gap: 16px; padding: 0; margin: 20px 0 0; border: 0; min-width: 0; }
@@ -44,6 +47,7 @@
   .station-sites-toolbar .field { flex-basis: 100%; max-width: none; }
   .station-directory .station-row { gap: 8px; padding-inline: 6px; }
   .station-directory .station-meta { max-width: 94px; overflow-wrap: anywhere; }
+  .station-row-details { padding-inline: 0; }
   .station-site-management-row { flex-direction: column; align-items: stretch; gap: 10px; }
   .station-site-management-actions button { flex: 1; }
 }

@@ -16,7 +16,7 @@ deleted, even when empty. Only an empty, non-last site can be confirmed for dele
 checks these conditions again under the organization lock, so concurrent changes cannot bypass the
 rules. Failed requests keep the site visible and display the server's error.
 
-A newly created site is selected in the filter and station creation form. Choose the **Site** when
+A newly created site is preselected in the station creation form; the current filter is kept. Choose the **Site** when
 creating a station, or open an existing station, change its **Site**, and select **Save station
 details** to move it. Site assignment is saved on the station and survives a page reload. Site
 creation does not create a station or increase purchased station capacity.

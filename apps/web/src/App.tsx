@@ -1027,18 +1027,15 @@ function StationSettings({
         }}
         onSiteFilterChange={siteId => { setSiteFilterId(siteId); setSelectedStationId(null); }}
         onSelectStation={stationId => setSelectedStationId(current => current === stationId ? null : stationId)}
+        renderStationDetails={station =>
+          <StationHardwareEditor api={api} organizationId={organizationId}
+            station={station} sites={sites} language={language} onChanged={onCreated}
+            canManageProviders={['OWNER', 'ADMIN'].includes(organizationRole)} onManageProviders={onManageProviders}
+            onUnauthorized={onUnauthorized} plan={plan} onLocationChanged={onLocationChanged} />}
         onSiteCreated={site => {
           onSiteCreated(site);
           setDraft(current => ({ ...current, siteId: site.id }));
-          setSiteFilterId(site.id);
-          setSelectedStationId(null);
         }} />
-
-      {stations.filter((station) => station.id === selectedStationId).map((station) =>
-        <StationHardwareEditor key={station.id} api={api} organizationId={organizationId}
-          station={station} sites={sites} language={language} onChanged={onCreated}
-          canManageProviders={['OWNER', 'ADMIN'].includes(organizationRole)} onManageProviders={onManageProviders}
-          onUnauthorized={onUnauthorized} plan={plan} onLocationChanged={onLocationChanged} />)}
 
       {showForm && !atLimit && (
         <form className="station-form-card" onSubmit={submit}>

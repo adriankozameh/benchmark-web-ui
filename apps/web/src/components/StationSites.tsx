@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
+import type { ReactNode } from 'react';
 import { ChevronRight, FolderPlus, MapPin, Pencil, Trash2 } from 'lucide-react';
 import { BenchmarkApi } from '@benchmark/api';
 import type { Plan, Site, UserLanguage, WeatherStation } from '@benchmark/domain';
@@ -19,6 +20,7 @@ type Props = {
   siteFilterId: string;
   onSiteFilterChange: (siteId: string) => void;
   onSelectStation: (stationId: string) => void;
+  renderStationDetails: (station: WeatherStation) => ReactNode;
   onSiteCreated: (site: Site) => void;
   onSiteUpdated: (site: Site) => void;
   onSiteDeleted: (siteId: string) => void;
@@ -32,7 +34,7 @@ function siteName(site: Site, language: UserLanguage): string {
 }
 
 export function StationSites({ api, organizationId, plan, canManage, active, sites, stations,
-  selectedStationId, siteFilterId, onSiteFilterChange, onSelectStation, onSiteCreated,
+  selectedStationId, siteFilterId, onSiteFilterChange, onSelectStation, renderStationDetails, onSiteCreated,
   onSiteUpdated, onSiteDeleted, onManageBilling, language, onUnauthorized }: Props) {
   const [action, setAction] = useState<{ kind: 'create' } | { kind: 'rename' | 'delete'; site: Site } | null>(null);
   const [grouped, setGrouped] = useState(true);
@@ -46,8 +48,11 @@ export function StationSites({ api, organizationId, plan, canManage, active, sit
 
   function renderStation(station: WeatherStation) {
     const site = bySite.get(station.siteId);
-    return <button className={`station-row ${selectedStationId === station.id ? 'selected' : ''}`} type="button"
-      key={station.id} aria-expanded={selectedStationId === station.id} onClick={() => onSelectStation(station.id)}>
+    const expanded = selectedStationId === station.id;
+    const detailsId = `station-details-${station.id}`;
+    return <Fragment key={station.id}>
+      <button className={`station-row ${expanded ? 'selected' : ''}`} type="button"
+      aria-expanded={expanded} aria-controls={expanded ? detailsId : undefined} onClick={() => onSelectStation(station.id)}>
       <div className="station-icon"><MapPin size={17} /></div>
       <div className="station-row-name"><strong>{station.name}</strong>
         {!grouped && <span className="station-row-site">{site ? siteName(site, language) : t('Site unavailable', language)}</span>}
@@ -55,7 +60,9 @@ export function StationSites({ api, organizationId, plan, canManage, active, sit
       </div>
       <div className="station-meta"><span>{station.timeZone}</span><small>{t(station.status, language)}</small></div>
       <ChevronRight className="station-row-chevron" size={17} aria-hidden="true" />
-    </button>;
+    </button>
+      {expanded && <div className="station-row-details" id={detailsId}>{renderStationDetails(station)}</div>}
+    </Fragment>;
   }
 
   return <>
