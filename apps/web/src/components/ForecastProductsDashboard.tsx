@@ -7,6 +7,8 @@ import { BurncastDashboard } from './BurncastDashboard';
 import { MetricChart, type ChartPoint } from './ForecastDashboard';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { errorMessage, locale, t } from '../language';
+import { SuccessCheck } from './motion/SuccessCheck';
+import { RollingNumber } from './motion/RollingNumber';
 import { StationPicker, useSiteStations, type SiteFilterProps } from './StationPicker';
 import { StationMap } from './StationMap';
 
@@ -132,7 +134,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
     <div className="product-controls">
       <StationPicker {...siteStations} sites={sites} stations={stations} stationId={selected?.id ?? ''}
         language={language} onSiteChange={onSiteChange} onStationChange={onStationChange} />
-      {fixedForecastPeriod ? <div className="field"><span>{t('Forecast period', language)}</span><strong>15 {t('days', language)}</strong></div> :
+      {fixedForecastPeriod ? <div className="field"><span>{t('Forecast period', language)}</span><strong className="field-value">15 {t('days', language)}</strong></div> :
         <label className="field"><span>{t('Forecast period', language)}</span><select value={days} onChange={e => setDays(Number(e.target.value))}>
           {[3, 7, 15].map(value => <option key={value} value={value}>{value} {t('days', language)}</option>)}</select></label>}
     </div>
@@ -157,13 +159,13 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
             {t(saving ? 'Saving…' : 'Save season dates', language)}</button>}
         </form>
         <p className="product-note">{t('Dates are saved per station. Choose today or a date within the past five years. Clear a date to disable that total.', language)}</p>
-        {saved && <p role="status">{t('Season dates saved.', language)}</p>}
+        {saved && <p className="success-status" role="status"><SuccessCheck size={16} />{t('Season dates saved.', language)}</p>}
         {saveError && <p className="alert error" role="alert">{saveError}</p>}
         <div className="product-totals">{([
           ['GROWING_DEGREE_DAYS', 'Growing degree days', data.season?.growingDegreeDays],
           ['CHILLING_HOURS', 'Chilling hours', data.season?.chillingHours],
         ] as const).map(([metric, title, total]) => <div key={metric}>
-          <span>{t(title, language)}</span><strong>{format(metric, total?.value ?? undefined)} {metricUnit(metric, units)}</strong>
+          <span>{t(title, language)}</span><strong><RollingNumber value={format(metric, total?.value ?? undefined)} /> {metricUnit(metric, units)}</strong>
           {total ? <><span>{total.startDate} – {total.throughDate} (UTC)</span>
             <span>{total.availableSamples} / {total.expectedSamples} {t('samples available', language)}</span>
             {!total.complete && <span>{t('Incomplete historical data', language)}</span>}</>
@@ -174,7 +176,7 @@ export function ForecastProductsDashboard({ api, organizationId, stations, kind,
         <div className="product-totals">{METRICS.farmcast.filter(([, , daily]) => daily).map(([metric, title]) => {
           const complete = data.products.daily.length > 0 && data.products.daily.every(day => day.values[metric] !== undefined);
           const value = complete ? data.products.daily.reduce((sum, day) => sum + day.values[metric], 0) : undefined;
-          return <div key={metric}><span>{t(title, language)}</span><strong>{format(metric, value)} {metricUnit(metric, units)}</strong></div>;
+          return <div key={metric}><span>{t(title, language)}</span><strong><RollingNumber value={format(metric, value)} /> {metricUnit(metric, units)}</strong></div>;
         })}</div><p className="product-note">{t('Totals cover the selected forecast period, not the historical season. Incomplete periods show a dash.', language)}</p>
       </section>}
       {kind === 'burncast' ? <BurncastDashboard data={data} units={units} language={language} /> : kind === 'safecast' ? <SafecastDashboard data={data} units={units} language={language} /> : <>

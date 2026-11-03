@@ -1,0 +1,73 @@
+/* Motion system. Disabled globally by the prefers-reduced-motion rule in styles.css. */
+:root {
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --ease-roll: cubic-bezier(.34, 1.3, .64, 1);
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+}
+
+/* 01 · Sink, then spring. `scale` is independent of `transform`, so hover lifts keep working. */
+:where(button) {
+  --press-scale: .95;
+  transition: scale 450ms var(--ease-spring), background-color .12s ease, color .12s ease,
+    border-color .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+button:not(:disabled):active {
+  scale: var(--press-scale);
+  transition-duration: 90ms;
+  transition-timing-function: ease-out;
+}
+/* Wide targets sink less, so the edges don't visibly pull in. */
+.station-row, .nav-item, .google-button, .wide { --press-scale: .985; }
+
+/* 03 · Roll, don't jump.
+   Host pages style descendant spans (e.g. `.product-totals span`, `.billing-price span`), so every part
+   is reset first; the doubled class outranks those selectors without !important. */
+.rolling-number.rolling-number, .rolling-number.rolling-number span {
+  display: inline; margin: 0; padding: 0; border: 0; background: none;
+  color: inherit; font-size: inherit; font-weight: inherit; line-height: inherit;
+  letter-spacing: inherit; text-transform: inherit;
+}
+.rolling-number.rolling-number { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rolling-number.rolling-number .rolling-number-text {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+.rolling-number.rolling-number .rolling-digit { position: relative; display: inline-block; clip-path: inset(0); }
+.rolling-number.rolling-number .rolling-digit-sizer { visibility: hidden; }
+.rolling-number.rolling-number .rolling-digit-strip {
+  position: absolute; inset: 0 0 auto; display: flex; flex-direction: column; align-items: center;
+  transition: transform 650ms var(--ease-roll);
+}
+
+/* 05 · Fast, then slow. */
+.expandable {
+  display: grid; grid-template-rows: 0fr; opacity: 0;
+  transition: grid-template-rows 260ms var(--ease-in-out), opacity 200ms ease;
+}
+.expandable.expanded {
+  grid-template-rows: 1fr; opacity: 1;
+  transition: grid-template-rows 350ms var(--ease-out), opacity 250ms ease-out;
+}
+.expandable-content { min-height: 0; overflow: hidden; }
+/* Let dropdowns and focus rings escape once fully open. */
+.expandable.settled > .expandable-content { overflow: visible; }
+
+dialog[open] { animation: dialog-enter 350ms var(--ease-out); }
+dialog[open]::backdrop { animation: backdrop-enter 350ms var(--ease-out); }
+@keyframes dialog-enter { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+@keyframes backdrop-enter { from { opacity: 0; } }
+
+.usage-track span { transition: width 350ms var(--ease-out); }
+
+/* 06 · Draw the win: circle (0–300 ms), then tick (220–470 ms). */
+.success-check { flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.success-check circle, .success-check path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.success-check-circle { animation: draw-stroke 300ms var(--ease-in-out) forwards; }
+.success-check-tick { animation: draw-stroke 250ms var(--ease-out) 220ms forwards; }
+@keyframes draw-stroke { to { stroke-dashoffset: 0; } }
+.success-status { display: flex; align-items: center; gap: 7px; }
+
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled):active { scale: none; }
+}

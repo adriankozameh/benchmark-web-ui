@@ -4,6 +4,8 @@ import { ChevronRight, FolderPlus, MapPin, Pencil, Trash2 } from 'lucide-react';
 import { BenchmarkApi } from '@benchmark/api';
 import type { Plan, Site, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { t } from '../language';
+import { Expandable } from './motion/Expandable';
+import { SuccessCheck } from './motion/SuccessCheck';
 import { canCreateSite, groupStationsBySite } from './stationSiteRules';
 import { DeleteSiteDialog, SiteNameDialog } from './SiteDialogs';
 import './stationSites.css';
@@ -61,7 +63,9 @@ export function StationSites({ api, organizationId, plan, canManage, active, sit
       <div className="station-meta"><span>{station.timeZone}</span><small>{t(station.status, language)}</small></div>
       <ChevronRight className="station-row-chevron" size={17} aria-hidden="true" />
     </button>
-      {expanded && <div className="station-row-details" id={detailsId}>{renderStationDetails(station)}</div>}
+      <Expandable open={expanded} id={detailsId} className="station-row-details-wrap">
+        <div className="station-row-details">{renderStationDetails(station)}</div>
+      </Expandable>
     </Fragment>;
   }
 
@@ -73,8 +77,9 @@ export function StationSites({ api, organizationId, plan, canManage, active, sit
         {canManage && <button type="button" className="secondary-button" disabled={!active || !available}
           onClick={() => setAction({ kind: 'create' })}><FolderPlus size={16} />{t('Create site', language)}</button>}
       </div>
-      {notice !== null && <p className="station-sites-success" role="status">
-        {t(notice.label, language)} <strong>{notice.name}</strong>
+      {notice !== null && <p className="station-sites-success success-status" role="status">
+        <SuccessCheck key={`${notice.label}${notice.name}`} size={16} />
+        <span>{t(notice.label, language)} <strong>{notice.name}</strong></span>
       </p>}
       {canManage && active && !available && <p className="station-sites-plan">
         {t('FREE includes one site. PRO and PREMIUM allow multiple sites.', language)}{' '}

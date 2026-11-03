@@ -3,6 +3,7 @@ import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { CurrentConditions, CurrentConditionReading, DisplayUnits, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { locale, t } from '../language';
+import { RollingNumber } from './motion/RollingNumber';
 
 import thermostatIcon from '../assets/current-conditions/thermostat.svg';
 import minimumIcon from '../assets/current-conditions/cold-temp.svg';
@@ -98,7 +99,7 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
           maskImage: `url("${METRIC_ICONS[metric]}")`, WebkitMaskImage: `url("${METRIC_ICONS[metric]}")`,
           transform: metric === 'WIND_DIRECTION' && reading && Number.isFinite(reading.value)
             ? `rotate(${reading.value}deg)` : undefined,
-        }} /><span>{t(label, language)}</span></dt><dd><strong className={metric === 'WIND_DIRECTION' ? 'current-condition-direction' : undefined}>{value}</strong>{reading && metric !== 'WIND_DIRECTION' && <span>{metricUnit(baseMetric, units)}</span>}</dd>
+        }} /><span>{t(label, language)}</span></dt><dd><strong className={metric === 'WIND_DIRECTION' ? 'current-condition-direction' : undefined}>{metric === 'WIND_DIRECTION' ? value : <RollingNumber value={value} />}</strong>{reading && metric !== 'WIND_DIRECTION' && <span>{metricUnit(baseMetric, units)}</span>}</dd>
         <small className={reading?.source === 'FORECAST' ? 'condition-forecast' : ''}>
           {reading ? t(reading.source === 'OBSERVED' ? 'Observed' : 'Benchmark forecast', language) : t('Unavailable', language)}
         </small>

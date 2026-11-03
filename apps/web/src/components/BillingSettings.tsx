@@ -3,6 +3,8 @@ import { CheckCircle2, CircleAlert, CreditCard, LoaderCircle, ShieldCheck } from
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { BillingInterval, BillingPrice, BillingQuote, BillingSelection, BillingSummary, OrganizationSummary, UserLanguage } from '@benchmark/domain';
 import { errorMessage, locale, t } from '../language';
+import { SuccessCheck } from './motion/SuccessCheck';
+import { RollingNumber } from './motion/RollingNumber';
 import { addSeats, billingPaymentConfirmed, hasPendingBillingPayment, includedSeats, parsePendingPurchase, reallocateIncludedSeats, safeBillingUrl, sameSelection } from './billingSelection';
 import type { PendingPurchase } from './billingSelection';
 import { pollBilling } from './billingPolling';
@@ -51,6 +53,8 @@ function annualSavings(prices: BillingPrice[] | undefined, plan: BillingSelectio
   const amount = monthlyTotal - annual.unitAmount;
   return { amount, percentage: amount * 100 / monthlyTotal, currency: annual.currency };
 }
+
+const BILLING_UPDATED = 'Your subscription has been updated.';
 
 export function BillingSettings({ api, organization, language, onChanged, onUnauthorized, onExit, seatsOnly = false, onBusyChange }: {
   api: BenchmarkApi; organization: OrganizationSummary; language: UserLanguage;
@@ -211,7 +215,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
       } else {
         sessionStorage.removeItem(pendingKey(organization.id));
         clearBillingReturn();
-        setPolling(false); setQuote(null); setNotice('Your subscription has been updated.');
+        setPolling(false); setQuote(null); setNotice(BILLING_UPDATED);
         await reload(); await onChanged();
       }
     });
@@ -247,7 +251,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
       : <><span className="eyebrow">{t('Your subscription', language)}</span><h2>{t('Choose the right plan for your stations', language)}</h2><p>{t('Start with a plan. Add stations and users whenever you need them.', language)}</p></>}</div>
       <button type="button" className="secondary-button" disabled={busy} onClick={() => { void run(refreshBilling); }}>{t('Refresh', language)}</button></div>
     {error && <div className="alert error" role="alert"><CircleAlert size={18} /><span>{error}</span></div>}
-    {notice && <div className="billing-notice" role="status"><CheckCircle2 size={18} /><span>{t(notice, language)}</span>{polling && <LoaderCircle size={16} className="spin" />}</div>}
+    {notice && <div className="billing-notice" role="status">{notice === BILLING_UPDATED ? <SuccessCheck key={notice} /> : <CheckCircle2 size={18} />}<span>{t(notice, language)}</span>{polling && <LoaderCircle size={16} className="spin" />}</div>}
     {summary?.pendingPayment && (() => {
       const failed = paymentFailed(summary, organization.id);
       return <section className={`billing-alert ${failed ? 'failed' : 'pending'}`} role={failed ? 'alert' : 'status'}>
@@ -268,7 +272,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
     {summary && <>
       {active && <section className="billing-panel billing-current"><div><span className="eyebrow">{t('Current plan', language)}</span><h3>{summary.plan} <span className="billing-status">{t(summary.status, language)}</span></h3>
         <p>{t(summary.selection!.interval === 'ANNUAL' ? 'Annual billing' : 'Monthly billing', language)} · {t('Plan next renewal', language)}: {date(summary.currentPeriodEnd, language)}</p></div>
-        {!seatsOnly && <div className="billing-capacity"><strong>{summary.stationsPurchased}</strong><span>{t('Stations', language)}</span></div>}<div className="billing-capacity"><strong>{summary.seatsPurchased}</strong><span>{t('Users', language)}</span></div>
+        {!seatsOnly && <div className="billing-capacity"><strong><RollingNumber value={String(summary.stationsPurchased)} /></strong><span>{t('Stations', language)}</span></div>}<div className="billing-capacity"><strong><RollingNumber value={String(summary.seatsPurchased)} /></strong><span>{t('Users', language)}</span></div>
         <button type="button" className="secondary-button" disabled={busy} onClick={() => { void portal(); }}><CreditCard size={16} />{t('Payments and invoices', language)}</button></section>}
       {organization.organizationStatus === 'SUSPENDED' && <div className="alert error"><CircleAlert size={18} /><span>{t('Your account is suspended. Resolve billing to restore access.', language)}</span></div>}
       {summary.cancelAtPeriodEnd && <div className="billing-notice"><CircleAlert size={18} /><span>{t('Your subscription is scheduled to cancel. Resume it in Payments and invoices before purchasing changes.', language)}</span></div>}
@@ -290,7 +294,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
           const annualPrice = summary.prices.find(price => price.kind === 'PLAN' && price.plan === plan && price.interval === 'ANNUAL');
           return <section className={`billing-plan ${plan.toLowerCase()}`} key={plan}>
           <span className="eyebrow">{plan}</span><h3>{t(plan === 'PRO' ? 'Find your best forecast' : 'Forecasts trained for your station', language)}</h3>
-          <p className="billing-price">{priceLabel('PLAN', plan, billingInterval)}<span> / {t(billingInterval === 'MONTHLY' ? 'month' : 'year', language)}</span></p>
+          <p className="billing-price"><RollingNumber value={priceLabel('PLAN', plan, billingInterval)} /><span> / {t(billingInterval === 'MONTHLY' ? 'month' : 'year', language)}</span></p>
           {billingInterval === 'ANNUAL' && annualPrice && <p className="billing-payment-cadence">{t('{amount} billed annually', language).replace('{amount}', money(annualPrice.unitAmount, annualPrice.currency, language, 0))}</p>}
           {savings && <p className="billing-plan-savings"><span>{t('Save {amount}/year', language).replace('{amount}', money(savings.amount, savings.currency, language, 0))}</span>
             {savings.percentage >= 1 && <span>{' · '}{percentageLabel(savings.percentage)}</span>}</p>}
@@ -320,8 +324,8 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
             <small>{seatPrice ? money(seatPrice.unitAmount, seatPrice.currency, language) : '—'} / {t(billingInterval === 'MONTHLY' ? 'user per month' : 'user per year', language)}</small>
           </div>
         </div>
-        <p>{t('Seats after purchase', language)}: <strong>{summary.seatsPurchased + seatsToAdd}</strong></p>
-        {seatPrice ? <p>{t('Additional recurring cost', language)}: <strong>{money(seatPrice.unitAmount * seatsToAdd, seatPrice.currency, language)} / {t(billingInterval === 'MONTHLY' ? 'month' : 'year', language)}</strong></p>
+        <p>{t('Seats after purchase', language)}: <strong><RollingNumber value={String(summary.seatsPurchased + seatsToAdd)} /></strong></p>
+        {seatPrice ? <p>{t('Additional recurring cost', language)}: <strong><RollingNumber value={money(seatPrice.unitAmount * seatsToAdd, seatPrice.currency, language)} /> / {t(billingInterval === 'MONTHLY' ? 'month' : 'year', language)}</strong></p>
           : <p>{t('Seat pricing is currently unavailable. Refresh billing to try again.', language)}</p>}
         <button type="button" className="primary-button" disabled={blocked || !seatSelection || !seatPrice}
           onClick={() => { if (seatSelection) void review(seatSelection); }}>{t('Review cost', language)}</button>
@@ -332,7 +336,7 @@ export function BillingSettings({ api, organization, language, onChanged, onUnau
           <label className="field"><span>{t('Total stations', language)}</span><input type="number" min={summary.stationsPurchased} max={10000} step="1" value={draft.stationsPurchased} disabled={blocked} onChange={event => { const n=Number(event.target.value); if (Number.isInteger(n) && n >= summary.stationsPurchased && n <= 10000) { setQuote(null); setDraft(reallocateIncludedSeats(draft, draft.plan, n)); } }} /></label>
           <label className="field"><span>{t('Extra users billed monthly', language)}</span><input type="number" min="0" max="10000" step="1" value={draft.monthlySeatAddons} disabled={blocked} onChange={event => { const n=Number(event.target.value); if (Number.isInteger(n) && n >= 0 && n <= 10000) { setQuote(null); setDraft({ ...draft, monthlySeatAddons: n }); } }} /><small>{priceLabel('SEAT', null, 'MONTHLY')} / {t('user per month', language)}</small></label>
           <label className="field"><span>{t('Extra users billed annually', language)}</span><input type="number" min="0" max="10000" step="1" value={draft.annualSeatAddons} disabled={blocked} onChange={event => { const n=Number(event.target.value); if (Number.isInteger(n) && n >= 0 && n <= 10000) { setQuote(null); setDraft({ ...draft, annualSeatAddons: n }); } }} /><small>{priceLabel('SEAT', null, 'ANNUAL')} / {t('user per year', language)}</small></label></div>
-        <p>{t('Included users', language)}: <strong>{includedSeats(draft.plan, draft.stationsPurchased)}</strong> · {t('Total users', language)}: <strong>{includedSeats(draft.plan, draft.stationsPurchased) + draft.monthlySeatAddons + draft.annualSeatAddons}</strong></p>
+        <p>{t('Included users', language)}: <strong><RollingNumber value={String(includedSeats(draft.plan, draft.stationsPurchased))} /></strong> · {t('Total users', language)}: <strong><RollingNumber value={String(includedSeats(draft.plan, draft.stationsPurchased) + draft.monthlySeatAddons + draft.annualSeatAddons)} /></strong></p>
         <p className="muted">{t('Additional station', language)}: {priceLabel('STATION', draft.plan, draft.interval)} / {t(draft.interval === 'MONTHLY' ? 'month' : 'year', language)}. {t('PREMIUM adds 10 included users per station. Stations follow the plan interval; extra users can use either interval.', language)}</p>
         <button type="button" className="primary-button" disabled={blocked || !changed} onClick={() => { void review(draft); }}>{t('Review cost', language)}</button>
       </section>}

@@ -3,6 +3,8 @@ import { CheckCircle2, CircleAlert, LoaderCircle, Plus, RadioTower, Trash2 } fro
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { DataProvider, Plan, ProviderDeletionPreview, ProviderConnectionResult, ProviderCredentials, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { errorMessage, t } from '../language';
+import { Expandable } from './motion/Expandable';
+import { SuccessCheck } from './motion/SuccessCheck';
 import { HardwareSetupAssistant } from './HardwareSetupAssistant';
 import { HARDWARE_PROVIDERS as PROVIDERS } from './hardwareProviders';
 
@@ -85,18 +87,20 @@ export function DataProviders({ api, organizationId, organizationRole, plan, lan
     {!canManage && <p>{t('Only organization Owners and Admins can manage provider accounts.', language)}</p>}
     {error && <div className="alert error" role="alert"><CircleAlert size={18} />{error}
       <button className="text-button" type="button" onClick={() => setReload(value => value + 1)}>{t('Refresh', language)}</button></div>}
-    {notice && <div className="alert neutral" role="status"><CheckCircle2 size={18} />{t(notice, language)}</div>}
-    {canManage && editor && <ProviderEditor key={editor === 'new' ? 'new' : editor.id} api={api}
-      organizationId={organizationId} provider={editor === 'new' ? null : editor} language={language}
-      onUnauthorized={onUnauthorized} onCancel={() => setEditor(null)} onSaved={(provider, validated) => {
-        setProviders(current => current.some(item => item.id === provider.id)
-          ? current.map(item => item.id === provider.id ? provider : item) : [...current, provider]);
-        setResults(current => { const next = { ...current }; delete next[provider.id]; return next; });
-        setEditor(null);
-        setNotice(validated ? provider.provider === 'FAWN'
-          ? 'Provider saved. FAWN uses public data; no credentials were tested.'
-          : 'Provider saved. Connection validation passed.' : 'Provider account updated.');
-      }} />}
+    {notice && <div className="alert neutral" role="status"><SuccessCheck key={notice} />{t(notice, language)}</div>}
+    <Expandable open={canManage && editor !== null}>
+      {canManage && editor && <ProviderEditor key={editor === 'new' ? 'new' : editor.id} api={api}
+        organizationId={organizationId} provider={editor === 'new' ? null : editor} language={language}
+        onUnauthorized={onUnauthorized} onCancel={() => setEditor(null)} onSaved={(provider, validated) => {
+          setProviders(current => current.some(item => item.id === provider.id)
+            ? current.map(item => item.id === provider.id ? provider : item) : [...current, provider]);
+          setResults(current => { const next = { ...current }; delete next[provider.id]; return next; });
+          setEditor(null);
+          setNotice(validated ? provider.provider === 'FAWN'
+            ? 'Provider saved. FAWN uses public data; no credentials were tested.'
+            : 'Provider saved. Connection validation passed.' : 'Provider account updated.');
+        }} />}
+    </Expandable>
     {loading ? <p role="status"><LoaderCircle className="spin" size={18} /> {t('Loading provider accounts…', language)}</p>
       : providers.length === 0 && !error && <div className="station-form-card">
         <RadioTower size={28} /><h3>{t('No provider accounts yet', language)}</h3>

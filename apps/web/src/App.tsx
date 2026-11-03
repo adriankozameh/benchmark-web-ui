@@ -39,6 +39,9 @@ import { SeatPurchaseDialog } from './components/SeatPurchaseDialog';
 import { MapPicker } from './components/MapPicker';
 import { StationHardwareEditor } from './components/StationHardwareEditor';
 import { StationSites } from './components/StationSites';
+import { Expandable } from './components/motion/Expandable';
+import { RollingNumber } from './components/motion/RollingNumber';
+import { SuccessCheck } from './components/motion/SuccessCheck';
 import { errorMessage, t } from './language';
 import { loadAppConfig } from './config';
 import type { AppConfig, ConfigurationIssue } from './config';
@@ -888,7 +891,7 @@ function UserPreferences({ settings, onSave, onUnauthorized }: {
         {saving ? <LoaderCircle className="spin" size={17} /> : <CheckCircle2 size={17} />}
         {t('Save preferences', language)}
       </button>
-      {saved && <span role="status">{t('Saved', language)}</span>}
+      {saved && <span className="success-status" role="status"><SuccessCheck size={17} />{t('Saved', language)}</span>}
     </div>
   </form>;
 }
@@ -1011,7 +1014,7 @@ function StationSettings({
       <div className="usage-card">
         <div>
           <span className="eyebrow">{t('Station capacity', language)}</span>
-          <strong>{stations.length} {t('of', language)} {stationLimit}</strong>
+          <strong><RollingNumber value={String(stations.length)} /> {t('of', language)} <RollingNumber value={String(stationLimit)} /></strong>
         </div>
         <div className="usage-track"><span style={{ width: `${Math.min(100, (stations.length / Math.max(1, stationLimit)) * 100)}%` }} /></div>
       </div>
@@ -1037,7 +1040,7 @@ function StationSettings({
           setDraft(current => ({ ...current, siteId: site.id }));
         }} />
 
-      {showForm && !atLimit && (
+      <Expandable open={showForm && !atLimit}>
         <form className="station-form-card" onSubmit={submit}>
           <div className="form-card-heading">
             <div>
@@ -1134,7 +1137,7 @@ function StationSettings({
             </div>
           </div>
         </form>
-      )}
+      </Expandable>
 
       {atLimit && (
         <div className="alert neutral">
