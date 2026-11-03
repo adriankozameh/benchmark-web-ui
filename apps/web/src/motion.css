@@ -71,3 +71,11 @@ dialog[open]::backdrop { animation: backdrop-enter 350ms var(--ease-out); }
 @media (prefers-reduced-motion: reduce) {
   button:not(:disabled):active { scale: none; }
 }
+
+/* Charts: series draw in left to right, like a pen following the time axis.
+   Negative insets keep strokes and markers at the plot edges unclipped; no fill-mode, so no clip remains. */
+.chart-draw { animation: chart-draw 1600ms cubic-bezier(.33, 1, .68, 1); }
+@keyframes chart-draw {
+  from { clip-path: inset(-12px 100% -12px -12px); }
+  to { clip-path: inset(-12px -12px -12px -12px); }
+}

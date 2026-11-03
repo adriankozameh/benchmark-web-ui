@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { DisplayUnits, ForecastProductsResponse, UserLanguage } from '@benchmark/domain';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { locale, t } from '../language';
+import { drawKey } from './motion/drawKey';
 import { heatCondition, frostbiteCondition } from './safecastConditions';
 import { ink, tableColor } from './burncastColors';
 
@@ -173,6 +174,8 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe }: {
     });
     return result;
   };
+  const seriesKey = drawKey((heat ? [metric, 'RELATIVE_HUMIDITY'] : [metric])
+    .flatMap(key => visible.map(hour => hour.values[key])));
   const select = (index: number) => { setActive(index); setPinned(true); };
   const hover = (index: number) => { if (!pinned) setActive(index); };
   const selected = active === null ? undefined : visible[active];
@@ -194,7 +197,7 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe }: {
         })}
         <line x1={left} x2={left} y1={top} y2={bottom} stroke={color} opacity=".5" />
         {heat && <><line x1={width - right} x2={width - right} y1={top} y2={bottom} stroke="#334154" opacity=".5" />{[0, 25, 50, 75, 100].map(v => <text key={v} x={width - right + 6} y={y('RELATIVE_HUMIDITY', v) + 4} fill="#334154">{v}</text>)}</>}
-        {(heat ? [metric, 'RELATIVE_HUMIDITY'] : [metric]).map(key => groups(key).map((group, groupIndex) => {
+        <g className="chart-draw" key={seriesKey}>{(heat ? [metric, 'RELATIVE_HUMIDITY'] : [metric]).map(key => groups(key).map((group, groupIndex) => {
           const stroke = key === 'RELATIVE_HUMIDITY' ? '#334154' : color;
           const path = group.map((p, i) => `${i ? 'L' : 'M'}${x(p.index)},${y(key, p.value)}`).join(' ');
           return <g key={`${key}-${groupIndex}`}>
@@ -202,7 +205,7 @@ function SafetyChart({ hours, kind, units, language, timeZone, describe }: {
             <path d={path} fill="none" stroke={stroke} strokeWidth={1.5} />
             {group.map(p => <circle key={p.index} cx={x(p.index)} cy={y(key, p.value)} r={1.8} fill="white" stroke={stroke} strokeWidth={1} />)}
           </g>;
-        }))}
+        }))}</g>
         {rows.map(([key, name], row) => <g key={key}>
           <text x={compact ? left : left - 6} y={rowTop(row) + (compact ? -9 : 19)} textAnchor={compact ? 'start' : 'end'} fill="#64748b">{t(name, language)}{key === 'HEAT_INDEX' ? ` (${metricUnit(key, units)})` : ''}</text>
           {visible.map((hour, index) => {

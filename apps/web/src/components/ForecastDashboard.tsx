@@ -6,6 +6,7 @@ import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { DisplayUnits, StationTimeSeriesPoint, UserLanguage, WeatherStation } from '@benchmark/domain';
 import { displayMetricValue, metricUnit } from '../forecastUnits';
 import { errorMessage, locale, t } from '../language';
+import { drawKey } from './motion/drawKey';
 import { createChartTimeFormatter } from '../chartTime';
 import { StationPicker, useSiteStations, type SiteFilterProps } from './StationPicker';
 import { StationMap } from './StationMap';
@@ -299,6 +300,7 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
       ...(secondaryPoints ? [{ provider, bound: 'min' as const, points: matching(secondaryPoints) }] : []),
     ];
   }), [points, secondaryPoints, providers, metric]);
+  const seriesKey = useMemo(() => drawKey(series.flatMap((item) => item.points.map((point) => point.values[metric]))), [series, metric]);
   const all = series.flatMap((item) => item.points);
   const times = [...new Set(all.map((point) => point.time))].sort((a, b) => a - b);
   const values = all.map((point) => point.values[metric]);
@@ -363,6 +365,7 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
             })}
             {activeTime !== null && <line x1={x(activeTime)} x2={x(activeTime)} y1={TOP} y2={HEIGHT - BOTTOM}
               stroke="#9aa9b8" strokeDasharray="4 4" pointerEvents="none" />}
+            <g className="chart-draw" key={seriesKey}>
             {series.map(({ provider, bound, points: providerPoints }) => {
               // Gaps in a provider's timestamps remain gaps in its line.
               const chunks: ChartPoint[][] = [];
@@ -388,6 +391,7 @@ export function MetricChart({ metric, points, secondaryPoints, providers, colors
                     angle={point.values[directionMetric]} />)}
               </g>;
             })}
+            </g>
             {!directionMetric && active.map(({ provider, bound, point }) => <circle key={`${provider}-${bound}`}
               cx={x(point!.time)} cy={y(point!.values[metric])}
               r="5" fill={bound === 'min' && secondaryPoints ? 'white' : colors[provider]}
