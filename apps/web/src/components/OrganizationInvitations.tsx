@@ -4,6 +4,7 @@ import { CircleAlert, LoaderCircle, MailPlus, RefreshCw, UserPlus } from 'lucide
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { OrganizationInvitation, UserLanguage } from '@benchmark/domain';
 import { errorMessage, locale, t } from '../language';
+import { SuccessCheck } from './motion/SuccessCheck';
 
 export function OrganizationInvitations({ api, organizationId, organizationRole, seatLimit, language, onUnauthorized, membershipRevision, onBuySeats,
   capacityActionLabel = 'Buy more seats', disabled = false, onBusyChange, refreshCapacityOnFocus = true }: {
@@ -213,7 +214,7 @@ export function OrganizationInvitations({ api, organizationId, organizationRole,
         </button>
       </form>
       {error && <div className="alert error compact"><CircleAlert size={17} /><span>{error}</span></div>}
-      {notice && <p role="status" className="invitation-notice">{notice}</p>}
+      {notice && <p role="status" className="invitation-notice success-status"><SuccessCheck key={notice} size={16} />{notice}</p>}
       {previewUrl && <p className="invitation-notice">{t('Local preview link:', language)} <a href={previewUrl}>{previewUrl}</a></p>}
       <div className="invitation-list-heading"><h3>{t('Invitations', language)}</h3>
         <button type="button" className="secondary-button" disabled={loading || busy !== null || disabled}

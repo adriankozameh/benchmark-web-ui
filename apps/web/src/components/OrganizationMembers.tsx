@@ -4,6 +4,7 @@ import { CircleAlert, LoaderCircle, RefreshCw, Trash2 } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
 import type { OrganizationMember, UserLanguage } from '@benchmark/domain';
 import { errorMessage, t } from '../language';
+import { SuccessCheck } from './motion/SuccessCheck';
 import { removeMemberAndConfirm } from '../memberRemoval';
 
 type Props = {
@@ -128,7 +129,7 @@ export function OrganizationMembers({ api, organizationId, organizationRole, cur
         onClick={() => setReload(value => value + 1)}><RefreshCw size={15} />{t('Refresh', language)}</button>
     </div>
     {error && <div className="alert error compact" role="alert"><CircleAlert size={17} />{error}</div>}
-    {notice && <p role="status" className="invitation-notice">{notice}</p>}
+    {notice && <p role="status" className="invitation-notice success-status"><SuccessCheck key={notice} size={16} />{notice}</p>}
     {loading ? <p role="status"><LoaderCircle className="spin" size={16} /> {t('Loading members…', language)}</p>
       : members.length === 0 ? !error && <p>{t('No organization members found.', language)}</p>
         : <div className="organization-members-scroll" tabIndex={0} role="region" aria-label={t('Organization members', language)}>

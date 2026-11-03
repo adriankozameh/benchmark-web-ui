@@ -28,7 +28,7 @@ button { color: inherit; }
 .primary-button, .secondary-button, .text-button, .icon-button {
   border: 0;
   cursor: pointer;
-  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  transition: transform .12s ease, scale 450ms var(--ease-spring), box-shadow .12s ease, background .12s ease;
 }
 .primary-button, .secondary-button {
   min-height: 42px;
@@ -174,7 +174,7 @@ button { color: inherit; }
 .station-row + .station-row { border-top: 1px solid #eef1f4; border-radius: 0; }
 .station-row:hover, .station-row.selected { background: #f6f9fc; }
 .station-row:focus-visible { outline: 2px solid var(--benchmark-red); outline-offset: -2px; }
-.station-row-chevron { color: #8290a1; transition: transform .15s ease; }
+.station-row-chevron { color: #8290a1; transition: transform 350ms var(--ease-out); }
 .station-row.selected .station-row-chevron { transform: rotate(90deg); }
 .station-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; background: #fff0f0; color: var(--benchmark-red); }
 .station-row strong, .station-row span, .station-row small { display: block; }
@@ -320,7 +320,7 @@ button { color: inherit; }
   cursor: pointer;
   font-size: 12px;
   font-weight: 760;
-  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  transition: transform .12s ease, scale 450ms var(--ease-spring), box-shadow .12s ease, background .12s ease;
 }
 .google-button:hover {
   transform: translateY(-1px);
@@ -611,9 +611,10 @@ button { color: inherit; }
 .forecast-dashboard .page-heading-row .eyebrow { margin-bottom: 7px; }
 .forecast-controls { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
 .forecast-controls .field { min-width: min(280px, 100%); }
-.station-picker { display: grid; gap: 12px; }
-.forecast-controls .station-picker { width: min(340px, 100%); }
-.product-controls .station-picker { flex: 1; min-width: 180px; }
+/* No wrapping: a wrapping flex row inside another flex row reports a single item's width and stacks. */
+.station-picker { display: flex; align-items: flex-end; gap: 16px; }
+/* A definite width, not just flex-basis: the parent row sizes the picker from its fields' widths. */
+.station-picker .field { flex: 0 1 auto; width: 240px; min-width: min(180px, 100%); }
 .forecast-range { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px; border-radius: 9px; background: #eaf0f5; }
 .forecast-range button { border: 0; border-radius: 6px; padding: 9px 12px; background: transparent; color: #596b80; font-size: 11px; font-weight: 700; cursor: pointer; }
 .forecast-range button.selected { background: white; color: var(--benchmark-navy); box-shadow: 0 2px 6px rgba(20, 35, 50, .1); }
@@ -656,6 +657,8 @@ button { color: inherit; }
 @media (max-width: 767px) {
   .forecast-dashboard .page-heading-row .secondary-button { width: auto; }
   .forecast-controls .field, .forecast-controls .station-picker, .forecast-range { width: 100%; }
+  .station-picker { display: grid; gap: 14px; }
+  .station-picker .field { width: auto; }
   .station-map { height: 240px; }
   .forecast-range button { flex: 1; padding-inline: 5px; }
   .forecast-chart-card { padding-inline: 10px; }
@@ -791,8 +794,10 @@ button { color: inherit; }
 .forecast-product-tabs { display:none; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
 .forecast-product-tabs button { border:1px solid #d8e0e8; border-radius:8px; padding:10px 14px; min-height:44px; background:white; cursor:pointer; font-size:12px; }
 .forecast-product-tabs button.active { background:#334155; color:white; }
-.product-controls { display:flex; flex-wrap:wrap; gap:16px; margin-bottom:16px; }
-.product-controls .field { flex:1; min-width:180px; }
+.product-controls { display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px; margin-bottom:16px; }
+.product-controls > .field { flex:0 1 240px; min-width:min(180px, 100%); }
+.product-controls .field-value { display:flex; align-items:center; min-height:40px; }
+@media (max-width:767px) { .product-controls > *, .product-controls > .field { flex:1 1 100%; } }
 .product-note { color:#637185; font-size:12px; line-height:1.6; }
 .product-table-scroll { max-width:100%; overflow:auto; }
 .product-table-scroll table { border-collapse:collapse; width:100%; font-size:12px; }

@@ -5,6 +5,7 @@ import type { DataProvider, Plan, Site, UserLanguage, WeatherStation } from '@be
 import { AddressSearch } from './AddressSearch';
 import { MapPicker } from './MapPicker';
 import { errorMessage, t } from '../language';
+import { SuccessCheck } from './motion/SuccessCheck';
 
 export function StationHardwareEditor({ api, organizationId, station, sites, language, onChanged, onUnauthorized, plan, onLocationChanged, canManageProviders, onManageProviders }: {
   api: BenchmarkApi;
@@ -194,7 +195,7 @@ export function StationHardwareEditor({ api, organizationId, station, sites, lan
       <span className="station-details-status">{t(station.status, language)}</span>
     </div>
     {error && <div className="alert error compact" role="alert"><CircleAlert size={17} /><span>{error}</span></div>}
-    {saved && <div className="alert neutral compact" role="status"><CheckCircle2 size={17} /><span>{t('Saved', language)}</span></div>}
+    {saved && <div className="alert neutral compact" role="status"><SuccessCheck size={17} /><span>{t('Saved', language)}</span></div>}
     <form className="station-details-section" onSubmit={(event) => void saveStation(event)}>
       <h4>{t('Station location', language)}</h4>
       <div className="station-details-grid">
