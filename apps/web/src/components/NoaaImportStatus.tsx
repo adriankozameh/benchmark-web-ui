@@ -26,7 +26,7 @@ export function NoaaImportStatus({
     onImportFinished: () => void;
 }) {
     const [status, setStatus] = useState<NoaaObservationStatus | null>(null);
-    const [failed, setFailed] = useState(false);
+    const [failure, setFailure] = useState<number | 'network' | null>(null);
     const wasInProgress = useRef(false);
 
     useEffect(() => {
@@ -42,7 +42,7 @@ export function NoaaImportStatus({
                 const finished = wasInProgress.current && (result.state === 'READY' || result.state === 'NO_MATCH');
                 wasInProgress.current = delay !== undefined;
                 setStatus(result);
-                setFailed(false);
+                setFailure(null);
 
                 if (finished) onImportFinished();
                 if (delay !== undefined) timer = setTimeout(check, delay);
@@ -53,7 +53,7 @@ export function NoaaImportStatus({
                     return;
                 }
                 setStatus(null);
-                setFailed(!(error instanceof BenchmarkApiError && error.status === 404));
+                setFailure(error instanceof BenchmarkApiError ? error.status : 'network');
             }
         }
 
@@ -64,7 +64,10 @@ export function NoaaImportStatus({
         };
     }, [api, organizationId, stationId, refreshKey, onUnauthorized, onImportFinished]);
 
-    if (!failed && (!status || status.state === 'NOT_APPLICABLE')) return null;
+    if (status?.state === 'NOT_APPLICABLE') return null;
+
+    const loading = !status && failure === null;
+    const busy = loading || (status !== null && POLL_DELAY[status.state] !== undefined);
 
     const message = status && {
         DISABLED: t('NOAA observation imports are disabled.', language),
@@ -90,12 +93,15 @@ export function NoaaImportStatus({
     }).format(new Date(`${status.loadedThroughUtc}T00:00:00Z`));
 
     return <div className="alert neutral compact" role="status">
-        {status && POLL_DELAY[status.state] !== undefined
+        {busy
             ? <LoaderCircle className="spin" size={18} aria-hidden="true" />
             : <Info size={18} aria-hidden="true" />}
         <div>
             <strong>{t('NOAA observation import', language)}</strong>
-            <span>{failed ? t('Unable to check the NOAA import status.', language) : message}</span>
+            {failure !== null ? <span>
+                {t('Unable to check the NOAA import status.', language)}
+                {typeof failure === 'number' && ` (HTTP ${failure})`}
+            </span> : <span>{loading ? t('Checking NOAA import status…', language) : message}</span>}
             {status?.candidateNoaaStationId &&
                 <span>{t('NOAA station being checked', language)} · {status.candidateNoaaStationId}</span>}
             {status?.selectedNoaaStationId &&

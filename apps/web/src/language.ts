@@ -479,6 +479,7 @@ const spanish: Record<string, string> = {
   '1 month': '1 mes', '3 months': '3 meses', '6 months': '6 meses', '1 year': '1 año',
   'Loading observations…': 'Cargando observaciones…',
   'NOAA observation import': 'Importación de observaciones de NOAA',
+  'Checking NOAA import status…': 'Consultando el estado de la importación de NOAA…',
   'NOAA observation imports are disabled.': 'La importación de observaciones de NOAA está deshabilitada.',
   'Waiting for the NOAA station search to start.': 'Esperando que comience la búsqueda de estaciones NOAA.',
   'Searching for a nearby active NOAA station…': 'Buscando una estación NOAA activa cercana…',
