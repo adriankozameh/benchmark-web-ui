@@ -317,6 +317,15 @@ export type DailyStationObservations = {
   days: DailyStationObservation[];
 };
 
+export type NoaaObservationStatus = {
+  state: 'NOT_APPLICABLE' | 'DISABLED' | 'PENDING' | 'SEARCHING' | 'CHECKING_CANDIDATE'
+    | 'DOWNLOADING' | 'READY' | 'NO_MATCH' | 'RETRYING';
+  selectedNoaaStationId: string | null;
+  distanceKm: number | null;
+  candidateNoaaStationId: string | null;
+  loadedThroughUtc: string | null;
+};
+
 export type ObservationBackfillResponse = {
   organizationId: string;
   stationId: string;
