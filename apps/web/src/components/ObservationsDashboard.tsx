@@ -1,5 +1,5 @@
 import { CurrentConditionsBar } from './CurrentConditionsBar';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { CircleAlert, LoaderCircle, RefreshCw } from 'lucide-react';
 import { BenchmarkApi, BenchmarkApiError } from '@benchmark/api';
@@ -8,6 +8,7 @@ import { displayMetricValue } from '../forecastUnits';
 import { errorMessage, t } from '../language';
 import { StationPicker, useSiteStations, type SiteFilterProps } from './StationPicker';
 import { StationMap } from './StationMap';
+import { NoaaImportStatus } from './NoaaImportStatus';
 import { MetricChart } from './ForecastDashboard';
 import type { ChartPoint } from './ForecastDashboard';
 
@@ -97,6 +98,7 @@ export function ObservationsDashboard({
     const [backfillFrom, setBackfillFrom] = useState(() => addUtcDays(utcDay(new Date()), -30));
     const [backfillThrough, setBackfillThrough] = useState(() => addUtcDays(utcDay(new Date()), -1));
     const [refreshKey, setRefreshKey] = useState(0);
+    const refreshObservations = useCallback(() => setRefreshKey((key) => key + 1), []);
     const [hourlyPoints, setHourlyPoints] = useState<ChartPoint[]>([]);
     const [days, setDays] = useState<DailyStationObservation[]>([]);
     const [responseZone, setResponseZone] = useState<{ stationId: string; value: string } | null>(null);
@@ -112,6 +114,7 @@ export function ObservationsDashboard({
         ? stationId : stations[0]?.id ?? '';
     const selectedStation = stations.find((station) => station.id === selectedStationId);
     const siteStations = useSiteStations(stations, siteId, selectedStationId);
+    const locationRevision = selectedStation?.locationRevision ?? selectedStation?.updatedAt;
     const stationZone = selectedStation?.timeZone || 'UTC';
     const timeZone = responseZone?.stationId === selectedStationId ? responseZone.value : stationZone;
     const today = localDay(new Date(), timeZone);
@@ -179,7 +182,7 @@ export function ObservationsDashboard({
             })
             .finally(() => { if (current) setLoading(false); });
         return () => { current = false; };
-    }, [api, organizationId, selectedStationId, stationZone, appliedView, hourlyWindow,
+    }, [api, organizationId, selectedStationId, locationRevision, stationZone, appliedView, hourlyWindow,
         refreshKey, onUnauthorized]);
 
     useEffect(() => {
@@ -260,7 +263,7 @@ export function ObservationsDashboard({
                 <p>{t("Observations use the selected station's local calendar dates.", language)}</p>
             </div>
             <button type="button" className="secondary-button" disabled={loading}
-                    onClick={() => setRefreshKey((key) => key + 1)}>
+                    onClick={refreshObservations}>
                 <RefreshCw size={15} /> {t('Refresh', language)}
             </button>
         </div>
@@ -304,6 +307,11 @@ export function ObservationsDashboard({
             borderRadius: 8,
             padding: '12px 16px',
         }}>{t('Click Apply to update the charts.', language)}</p>}
+        {selectedStation?.status === 'ACTIVE' && !selectedStation.dataProviderId &&
+            <NoaaImportStatus key={JSON.stringify([organizationId, selectedStation.id, locationRevision])}
+                              api={api} organizationId={organizationId} stationId={selectedStation.id}
+                              refreshKey={refreshKey} units={units} language={language}
+                              onUnauthorized={onUnauthorized} onImportFinished={refreshObservations} />}
         <p>{t('Showing:', language)} {appliedView.from} – {appliedView.through} · {t(hourlyView ? 'Hourly' : 'Daily', language)}</p>
         {!validView && <div className="alert error"><CircleAlert size={18} />
             {t('Choose local dates within the last 12 months to view.', language)}</div>}

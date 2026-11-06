@@ -22,6 +22,7 @@ import type {
   FarmcastSettings,
   ProviderConnectionResult,
   ObservationBackfillResponse,
+  NoaaObservationStatus,
   DailyStationObservations,
   OrganizationInvitation,
   OrganizationMember,
@@ -375,6 +376,16 @@ export class BenchmarkApi {
     const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
       `/stations/${encodeURIComponent(stationId)}/timeseries/observations/daily`;
     return this.request(`${path}?${new URLSearchParams({ from, to })}`);
+  }
+
+  getNoaaObservationStatus(
+    organizationId: string,
+    stationId: string,
+    signal?: AbortSignal,
+  ): Promise<NoaaObservationStatus> {
+    const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/stations/${encodeURIComponent(stationId)}/timeseries/observations/noaa-status`;
+    return this.request(path, { signal });
   }
 
   requestObservationBackfill(

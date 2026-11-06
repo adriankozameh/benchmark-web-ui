@@ -11,6 +11,7 @@ const files = [
   'src/components/MapPicker.tsx',
   'src/components/ForecastDashboard.tsx',
   'src/components/CurrentConditionsBar.tsx',
+  'src/components/NoaaImportStatus.tsx',
   'src/components/ForecastProductsDashboard.tsx',
   'src/components/StationPicker.tsx',
   'src/components/StationMap.tsx',
