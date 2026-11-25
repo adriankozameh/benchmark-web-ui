@@ -404,3 +404,6 @@ export type CurrentConditions = {
   observationStatus: 'LIVE' | 'STALE' | 'UNAVAILABLE' | 'NOT_CONFIGURED' | 'UNSUPPORTED' | 'INACTIVE' | 'PLAN_REQUIRED';
   metrics: Record<string, CurrentConditionReading>;
 };
+export type { GladiatorMetric, GladiatorHorizon, GladiatorWindow, GladiatorStatus,
+  GladiatorDiagnostic, GladiatorRainEvents, GladiatorModelScore, GladiatorDefinition,
+  GladiatorResponse } from './gladiator';

@@ -9,6 +9,9 @@ on that page; station settings select an existing account and its vendor station
 
 # Benchmark UI
 
+Forecast model rankings, preferred-line highlighting and optional accuracy details:
+[Gladiator Ring frontend](GLADIATOR-RING-FRONTEND.md).
+
 ## Personal settings
 
 Open Settings to choose English or Spanish and metric or imperial display units.

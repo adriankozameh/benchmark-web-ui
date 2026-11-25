@@ -339,7 +339,7 @@ export function ObservationsDashboard({
                                         providers={providers} colors={colors} timeZone={timeZone}
                                         windowStart={hourlyView ? hourlyWindow.start : Date.parse(`${addUtcDays(appliedView.from, -1)}T00:00:00Z`)}
                                         windowEnd={hourlyView ? hourlyWindow.end : Date.parse(`${addUtcDays(appliedView.through, 2)}T00:00:00Z`)}
-                                        units={units} language={language} />;
+                                        units={units} language={language} barCadenceMs={hourlyView ? 3600000 : DAY_MS} />;
                 })}
             </div>
         </>}

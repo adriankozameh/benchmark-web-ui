@@ -16,6 +16,10 @@ import type {
   BillingChangeResult,
   Plan,
   CurrentConditions,
+  GladiatorMetric,
+  GladiatorHorizon,
+  GladiatorWindow,
+  GladiatorResponse,
   ForecastProductsResponse,
   ForecastProduct,
   ForecastProductSources,
@@ -62,6 +66,7 @@ type RequestOptions = {
   body?: unknown;
   expectNoContent?: boolean;
   responseType?: 'blob';
+  cache?: RequestCache;
 };
 
 export class BenchmarkApi {
@@ -113,6 +118,7 @@ export class BenchmarkApi {
       method: options.method ?? 'GET',
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      ...(options.cache ? { cache: options.cache } : {}),
     });
 
     if (!response.ok) {
@@ -349,11 +355,20 @@ export class BenchmarkApi {
     stationId: string,
     from: string,
     to: string,
+    signal?: AbortSignal,
   ): Promise<StationTimeSeries> {
     const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
       `/stations/${encodeURIComponent(stationId)}/timeseries/forecast`;
     const params = new URLSearchParams({ from, to });
-    return this.request(`${path}?${params}`);
+    return this.request(`${path}?${params}`, { signal });
+  }
+
+  getGladiator(organizationId: string, stationId: string, metric: GladiatorMetric,
+    hoursFrom0Time: GladiatorHorizon, days: GladiatorWindow, signal?: AbortSignal): Promise<GladiatorResponse> {
+    const path = `/api/v1/organizations/${encodeURIComponent(organizationId)}` +
+      `/stations/${encodeURIComponent(stationId)}/gladiator`;
+    const params = new URLSearchParams({ metric, hoursFrom0Time: String(hoursFrom0Time), days: String(days) });
+    return this.request(`${path}?${params}`, { signal, cache: 'no-store' });
   }
 
   getStationObservations(

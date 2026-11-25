@@ -30,9 +30,10 @@ const PERIODS: Record<CurrentConditionReading['period'], string> = {
   REPORTED_PAST_HOUR: 'Reported in past hour', FORECAST_HOUR: 'Forecast hour', LOCAL_DAY: 'Today — station local time',
 };
 
-export function CurrentConditionsBar({ api, organizationId, station, units, language, onUnauthorized }: {
+export function CurrentConditionsBar({ api, organizationId, station, units, language, onUnauthorized, onLoadingChange }: {
   api: BenchmarkApi; organizationId: string; station: WeatherStation; units: DisplayUnits;
   language: UserLanguage; onUnauthorized: () => void;
+  onLoadingChange?: (loading: boolean) => void;
 }) {
   const [result, setResult] = useState<{ key: string; data: CurrentConditions } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -49,6 +50,7 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
       if (pending) return;
       pending = true;
       setBusy(true);
+      onLoadingChange?.(true);
       try {
         const response = await api.getCurrentConditions(organizationId, station.id, abort.signal);
         if (active && response.stationId === station.id) { setResult({ key, data: response }); setFailed(false); }
@@ -56,14 +58,17 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
         if (!active) return;
         setResult(null); setFailed(true);
         if (error instanceof BenchmarkApiError && error.status === 401) onUnauthorized();
-      } finally { pending = false; if (active) setBusy(false); }
+      } finally {
+        pending = false;
+        if (active) { setBusy(false); onLoadingChange?.(false); }
+      }
     }
     void load();
     const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void load(); }, 15 * 60_000);
     const visible = () => { if (document.visibilityState === 'visible') void load(); };
     document.addEventListener('visibilitychange', visible);
     return () => { active = false; abort.abort(); window.clearInterval(timer); document.removeEventListener('visibilitychange', visible); };
-  }, [api, organizationId, station.id, key, refresh, onUnauthorized]);
+  }, [api, organizationId, station.id, key, refresh, onUnauthorized, onLoadingChange]);
 
   const localTime = (value: string) => new Intl.DateTimeFormat(locale(language), {
     timeZone: data?.timeZone || station.timeZone || 'UTC', month: 'short', day: 'numeric',
@@ -82,9 +87,9 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
     </div>
     <dl className="current-conditions-grid">{METRICS.map(([metric, label]) => {
       const candidate = data?.metrics[metric];
-      // Enforce the display contract even while an older backend is being replaced.
+      // Enforce the source and reporting-period contract for current conditions.
       const reading = candidate && (metric === 'PRECIPITATION_CHANCE'
-        ? candidate.source === 'FORECAST' && ['Benchmark', 'IBM_GRAF'].includes(candidate.provider)
+        ? candidate.source === 'FORECAST' && candidate.provider === 'Benchmark'
         : candidate.source === 'OBSERVED' && (metric !== 'PRECIPITATION_QUANTITY' || candidate.period === 'LOCAL_DAY')) ? candidate : undefined;
       const baseMetric = metric.startsWith('TEMPERATURE_') ? 'TEMPERATURE' : metric;
       const value = reading && Number.isFinite(reading.value)
@@ -92,7 +97,7 @@ export function CurrentConditionsBar({ api, organizationId, station, units, lang
           ? t(COMPASS_DIRECTIONS[Math.round(((reading.value % 360 + 360) % 360) / 45) % 8], language)
           : new Intl.NumberFormat(locale(language), { maximumFractionDigits: metric === 'PRECIPITATION_QUANTITY' ? 2 : 1 })
           .format(displayMetricValue(baseMetric, reading.value, units)) : '—';
-      const details = reading ? `${(reading.provider === 'IBM_GRAF' ? 'Benchmark' : reading.provider.replaceAll('_', ' '))} · ${localTime(reading.validAt)}${reading.periodStart && reading.periodEnd
+      const details = reading ? `${reading.provider.replaceAll('_', ' ')} · ${localTime(reading.validAt)}${reading.periodStart && reading.periodEnd
         ? ` · ${localTime(reading.periodStart)} – ${localTime(reading.periodEnd)}` : ''}` : t('Unavailable', language);
       return <div key={metric} className="current-condition">
         <dt><span className="current-condition-icon" aria-hidden="true" style={{

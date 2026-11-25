@@ -15,7 +15,9 @@
     "test:billing": "node --experimental-strip-types --test scripts/billing.test.mjs",
     "test:sites": "node --experimental-transform-types --test scripts/sites.test.mjs",
     "test:imports": "node --test scripts/module-resolution.test.mjs",
-    "test:forecast-daily": "node --experimental-transform-types --test scripts/forecast-daily.test.mjs"
+    "test:forecast-daily": "node --experimental-transform-types --test scripts/forecast-daily.test.mjs",
+    "test:gladiator": "node --experimental-transform-types --test scripts/gladiator.test.mjs",
+    "test:forecast-bars": "node --experimental-transform-types --test scripts/forecast-bars.test.mjs"
   },
   "dependencies": {
     "@benchmark/api": "workspace:*",

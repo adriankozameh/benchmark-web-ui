@@ -57,3 +57,9 @@ export function displayMetricValue(metric: string, value: number, units: Display
     default: return value; // Percentages, degrees, indexes and unrecognized metrics.
   }
 }
+
+/** Error magnitudes, signed bias and tolerances are differences, not absolute temperatures. */
+export function displayMetricError(metric: string, value: number, units: DisplayUnits): number {
+  if (units === 'IMPERIAL' && ['TEMPERATURE', 'HEAT_INDEX', 'WIND_CHILL'].includes(metric)) return value * 9 / 5;
+  return displayMetricValue(metric, value, units);
+}
